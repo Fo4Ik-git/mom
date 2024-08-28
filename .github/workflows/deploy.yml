@@ -26,13 +26,13 @@ jobs:
       
       - name: Mask and print token
         run: |
-          echo "MY_CUSTOM_TOKEN=${{ secrets.MY_CUSTOM_TOKEN }}"
+          echo "MY_CUSTOM_TOKEN=${{ secrets.GITHUB_TOKEN }}"
         env:
-          MY_CUSTOM_TOKEN: ${{ secrets.MY_CUSTOM_TOKEN }}
+          MY_CUSTOM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           publish_dir: dist/mom/browser
           branch: gh-pages
-          token: ${{ secrets.MY_CUSTOM_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
