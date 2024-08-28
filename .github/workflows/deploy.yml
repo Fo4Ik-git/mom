@@ -23,16 +23,10 @@ jobs:
 
       - name: Build Angular
         run: npm run build
-      
-      - name: Mask and print token
-        run: |
-          echo "MY_CUSTOM_TOKEN=${{ secrets.MY_CUSTOM_TOKEN }}"
-        env:
-          MY_CUSTOM_TOKEN: ${{ secrets.MY_CUSTOM_TOKEN }}
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           publish_dir: dist/mom/browser
-          branch: gh-pages
-          token: ${{ secrets.MY_CUSTOM_TOKEN }}
+          publish_branch: gh-pages
+          personal_token: ${{ secrets.MY_CUSTOM_TOKEN }}
