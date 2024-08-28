@@ -29,4 +29,8 @@ jobs:
         with:
           publish_dir: dist/mom/browser
           publish_branch: gh-pages
+<<<<<<< HEAD
           personal_token: ${{ secrets.MY_CUSTOM_TOKEN }}
+=======
+          personal_token: ${{ secrets.MY_CUSTOM_TOKEN }}
+>>>>>>> ec5502db25e7fe73e60ac5df4acd881644b38d8c
