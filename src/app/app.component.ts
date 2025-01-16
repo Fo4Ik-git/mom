@@ -19,28 +19,28 @@ export class AppComponent {
   products = [
     {
       name: 'Surface',
-      cost: 6,
-      value: 12,
+      cost: 8.1,
+      value: 16,
     },
     {
       name: 'Lakme/BerryWell',
-      cost: 3.8,
+      cost: 3.9,
       value: 9,
     },
     {
       name: 'Oxi',
-      cost: 0.31,
-      value: 1.5,
+      cost: 0.6,
+      value: 1.8,
     },
     {
       name: 'Пудра эконом',
-      cost: 1.3,
-      value: 3.1,
+      cost: 1.43,
+      value: 4,
     },
     {
       name: 'Пудра lux',
-      cost: 2,
-      value: 4.8,
+      cost: 2.3,
+      value: 6,
     },
     {
       name: 'Активи',
@@ -59,8 +59,13 @@ export class AppComponent {
     },
     {
       name: 'База маска',
-      cost: 0.26,
+      cost: 0.3,
       value: 1,
+    },
+    {
+      name: 'Color маска',
+      cost: 2.1,
+      value: 5,
     },
     {
       name: 'Рассходники',
