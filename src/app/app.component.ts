@@ -71,6 +71,7 @@ export class AppComponent {
       name: 'Рассходники',
       cost: 1,
       value: 0,
+      presets: [50, 100, 150, 200]
     },
   ];
 
@@ -84,26 +85,26 @@ export class AppComponent {
     let work = 0;
 
     this.productInputs.forEach((input, index) => {
-      const i = Number(input.nativeElement.value);
+      const count = Number(input.nativeElement.value);
       const product = this.products[index];
-      let s = 0, a = 0;
+      let intermediateSum = 0, consumablesValue = 0;
 
       switch (product.name) {
         case 'Рассходники':
-          a = i;
-          s = 0;
+          consumablesValue = count;
+          intermediateSum = 0;
           break;
         case 'Время':
-          work = product.value * i;
-          s = product.value * i;
+          work = product.value * count;
+          intermediateSum = product.value * count;
           break;
         default:
-          s = product.value * i;
+          intermediateSum = product.value * count;
       }
 
-      const u = product.cost * i;
-      sum += s + a;
-      costSum += u - a;
+      const productCost = product.cost * count;
+      sum += intermediateSum + consumablesValue;
+      costSum += productCost - consumablesValue;
     });
 
     this.result = `
