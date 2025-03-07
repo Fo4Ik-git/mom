@@ -71,7 +71,7 @@ export class AppComponent {
       name: 'Рассходники',
       cost: 1,
       value: 0,
-      presets: [50, 100, 150, 200]
+      presets: [150, 200, 250, 400, 500]
     },
   ];
 
