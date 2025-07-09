@@ -65,7 +65,7 @@ export class AppComponent {
     {
       name: 'Color маска',
       cost: 2.65,
-      value: 5.5,
+      value: 6,
     },
     {
       name: 'Рассходники',
