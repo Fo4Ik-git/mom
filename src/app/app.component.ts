@@ -24,8 +24,8 @@ export class AppComponent {
     },
     {
       name: 'Lakme/BerryWell',
-      cost: 3.9,
-      value: 9,
+      cost: 4.9,
+      value: 10,
     },
     {
       name: 'Oxi',
@@ -34,12 +34,12 @@ export class AppComponent {
     },
     {
       name: 'Пудра эконом',
-      cost: 1.6,
+      cost: 1.7,
       value: 4,
     },
     {
       name: 'Пудра lux',
-      cost: 2.6,
+      cost: 2.8,
       value: 6,
     },
     {
