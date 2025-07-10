@@ -55,7 +55,7 @@ export class AppComponent {
     {
       name: 'Время',
       cost: 0,
-      value: 850,
+      value: 900,
     },
     {
       name: 'База маска',
