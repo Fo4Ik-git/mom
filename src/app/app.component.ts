@@ -17,61 +17,55 @@ export class AppComponent {
   work = 0;
   result = "";
   products = [
-    {
+  {
       name: 'Surface',
-      cost: 8.75,
-      value: 17,
+      cost: 6,
+      value: 12,
     },
     {
       name: 'Lakme/BerryWell',
-      cost: 4.9,
-      value: 10,
+      cost: 4.1,
+      value: 10.2,
     },
     {
       name: 'Oxi',
-      cost: 0.6,
-      value: 1.8,
+      cost: 0.38,
+      value: 1.7,
     },
     {
       name: 'Пудра эконом',
-      cost: 1.7,
-      value: 4,
+      cost: 2.5,
+      value: 5.1,
     },
     {
       name: 'Пудра lux',
-      cost: 2.8,
+      cost: 3,
       value: 6,
     },
     {
       name: 'Активи',
-      cost: 12,
-      value: 50,
+      cost: 13.5,
+      value: 57,
     },
     {
       name: 'Пенная баня',
-      cost: 70,
-      value: 220,
+      cost: 80,
+      value: 250,
     },
     {
       name: 'Время',
       cost: 0,
-      value: 900,
+      value: 1000,
     },
     {
       name: 'База маска',
-      cost: 0.36,
-      value: 1.5,
-    },
-    {
-      name: 'Color маска',
-      cost: 2.65,
-      value: 6,
+      cost: 0.4,
+      value: 1.2,
     },
     {
       name: 'Рассходники',
       cost: 1,
       value: 0,
-      presets: [150, 200, 250, 400, 500]
     },
   ];
 
