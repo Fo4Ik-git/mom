@@ -5,6 +5,10 @@ import { PageShell } from "@/app/components/layout/page-shell";
 import { Button } from "@/app/components/ui/button";
 import { Card } from "@/app/components/ui/card";
 import { Link } from "@/i18n/navigation";
+import {
+  calculatorPublicPath,
+  getMomTemplateCalculator,
+} from "@/lib/calculator-route";
 
 export default async function HomePage({
   params,
@@ -16,6 +20,7 @@ export default async function HomePage({
 
   const session = await auth();
   const t = await getTranslations("home");
+  const momTemplate = await getMomTemplateCalculator();
 
   return (
     <PageShell>
@@ -36,9 +41,11 @@ export default async function HomePage({
               <Link href="/auth/signup">
                 <Button>{t("ctaStart")}</Button>
               </Link>
-              <Link href="/c/mom">
-                <Button variant="outline">{t("ctaDemo")}</Button>
-              </Link>
+              {momTemplate && (
+                <Link href={calculatorPublicPath(momTemplate.id)}>
+                  <Button variant="outline">{t("ctaDemo")}</Button>
+                </Link>
+              )}
             </div>
           )}
         </div>
@@ -47,7 +54,7 @@ export default async function HomePage({
       {session?.user ? (
         <>
           <h3 className="mb-5 text-xl font-semibold">{t("myCalculators")}</h3>
-          <Dashboard />
+          <Dashboard momTemplateId={momTemplate?.id} />
         </>
       ) : (
         <p className="text-muted-foreground">

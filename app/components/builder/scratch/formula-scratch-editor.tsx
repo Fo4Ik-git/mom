@@ -13,7 +13,7 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
 import { emptyBlockExpression } from "@/types/calculator";
 import { formatBlockExpression } from "@/lib/formula/block-format";
@@ -55,8 +55,10 @@ export function FormulaScratchEditor({
   onChange,
 }: FormulaScratchEditorProps) {
   const t = useTranslations("builder");
+  const tc = useTranslations("common");
   const quantityLabel = t("quantityLabel");
 
+  const [mounted, setMounted] = useState(false);
   const [activeBlock, setActiveBlock] = useState<PaletteBlock | null>(null);
   const [activeDragLabel, setActiveDragLabel] = useState<string | null>(null);
   const [activeSlot, setActiveSlot] = useState<SlotPath[] | null>(null);
@@ -70,6 +72,10 @@ export function FormulaScratchEditor({
     () => flattenExpression(expression),
     [expression],
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -253,8 +259,28 @@ export function FormulaScratchEditor({
 
   const canSort = isReorderableChain(expression);
 
+  if (!mounted) {
+    return (
+      <div className="space-y-3 rounded-xl border border-dashed border-accent/40 bg-accent-muted/15 p-3">
+        <p className="text-xs font-medium text-accent">{t("formulaTitle")}</p>
+        <div className="min-h-[52px] rounded-2xl border-2 border-dashed border-accent/30 bg-accent-muted/10 p-3">
+          <p className="text-sm text-muted-foreground">{tc("loading")}</p>
+        </div>
+        <div className="rounded-lg bg-card px-3 py-2">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t("formulaPreview")}
+          </span>
+          <p className="mt-1 text-sm font-medium text-foreground">
+            {preview || "…"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <DndContext
+      id={outputKey}
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}

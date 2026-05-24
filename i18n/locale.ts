@@ -10,6 +10,12 @@ export function stripLocalePrefix(pathname: string): {
       pathname: pathname.replace(/^\/en/, "") || "/",
     };
   }
+  if (pathname === "/uk" || pathname.startsWith("/uk/")) {
+    return {
+      locale: "uk",
+      pathname: pathname.replace(/^\/uk/, "") || "/",
+    };
+  }
   return { locale: "uk", pathname };
 }
 

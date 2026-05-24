@@ -4,22 +4,25 @@ import { auth } from "@/auth";
 import { DynamicCalculator } from "@/app/components/calculator/dynamic-calculator";
 import { PageShell } from "@/app/components/layout/page-shell";
 import { Button } from "@/app/components/ui/button";
-import { db } from "@/lib/db";
-import { Link } from "@/i18n/navigation";
+import {
+  calculatorPublicPath,
+  findCalculatorByRouteParam,
+} from "@/lib/calculator-route";
+import { Link, redirect } from "@/i18n/navigation";
 import { parseCalculatorConfig } from "@/types/calculator";
 
 export default async function CalculatorPage({
   params,
 }: {
-  params: Promise<{ locale: string; slug: string }>;
+  params: Promise<{ locale: string; id: string }>;
 }) {
-  const { locale, slug } = await params;
+  const { locale, id: routeParam } = await params;
   setRequestLocale(locale);
 
   const session = await auth();
   const t = await getTranslations("calculator");
 
-  const calculator = await db.calculator.findUnique({ where: { slug } });
+  const calculator = await findCalculatorByRouteParam(routeParam);
 
   if (!calculator) {
     notFound();
@@ -29,6 +32,12 @@ export default async function CalculatorPage({
   const canView = calculator.isPublic || calculator.isTemplate || isOwner;
 
   if (!canView) {
+    if (!session?.user) {
+      redirect({
+        href: `/auth/signin?callbackUrl=${encodeURIComponent(calculatorPublicPath(calculator.id))}`,
+        locale,
+      });
+    }
     notFound();
   }
 

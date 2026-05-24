@@ -3,9 +3,14 @@ import { auth, signOut } from "@/auth";
 import { LanguageSwitcher } from "@/app/components/language-switcher";
 import { ThemeToggle } from "@/app/components/theme-toggle";
 import { Link } from "@/i18n/navigation";
+import {
+  calculatorPublicPath,
+  getMomTemplateCalculator,
+} from "@/lib/calculator-route";
 
 export async function Header() {
   const session = await auth();
+  const momTemplate = await getMomTemplateCalculator();
   const t = await getTranslations("nav");
   const tc = await getTranslations("common");
 
@@ -27,12 +32,14 @@ export async function Header() {
         </Link>
 
         <nav className="flex items-center gap-1.5 sm:gap-2">
-          <Link
-            href="/c/mom"
-            className="hidden rounded-xl px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground sm:inline"
-          >
-            {t("templateMom")}
-          </Link>
+          {momTemplate && (
+            <Link
+              href={calculatorPublicPath(momTemplate.id)}
+              className="hidden rounded-xl px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground sm:inline"
+            >
+              {t("templateMom")}
+            </Link>
+          )}
           {session?.user ? (
             <>
               <Link

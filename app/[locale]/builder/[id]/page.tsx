@@ -6,6 +6,7 @@ import { CalculatorBuilder } from "@/app/components/builder/calculator-builder";
 import { PageShell } from "@/app/components/layout/page-shell";
 import { db } from "@/lib/db";
 import { Link } from "@/i18n/navigation";
+import { calculatorPublicPath } from "@/lib/calculator-route";
 import { parseCalculatorConfig } from "@/types/calculator";
 
 export default async function EditBuilderPage({
@@ -37,7 +38,7 @@ export default async function EditBuilderPage({
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight">{t("editTitle")}</h1>
         <Link
-          href={`/c/${calculator.slug}`}
+          href={calculatorPublicPath(calculator.id)}
           className="text-sm font-medium text-accent underline"
         >
           {t("openCalculator")}

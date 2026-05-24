@@ -6,6 +6,7 @@ import { Card } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Link, useRouter } from "@/i18n/navigation";
 import { appFetch } from "@/lib/api-client";
+import { calculatorPublicPath } from "@/lib/calculator-route";
 
 interface CalculatorSummary {
   id: string;
@@ -15,7 +16,11 @@ interface CalculatorSummary {
   updatedAt: string;
 }
 
-export function Dashboard() {
+interface DashboardProps {
+  momTemplateId?: string | null;
+}
+
+export function Dashboard({ momTemplateId }: DashboardProps) {
   const t = useTranslations("home");
   const tc = useTranslations("common");
   const router = useRouter();
@@ -56,9 +61,11 @@ export function Dashboard() {
         <Button variant="outline" onClick={cloneMomTemplate} disabled={cloning}>
           {cloning ? t("cloning") : t("cloneMom")}
         </Button>
-        <Link href="/c/mom">
-          <Button variant="ghost">{t("openMomTemplate")}</Button>
-        </Link>
+        {momTemplateId && (
+          <Link href={calculatorPublicPath(momTemplateId)}>
+            <Button variant="ghost">{t("openMomTemplate")}</Button>
+          </Link>
+        )}
       </div>
 
       {calculators.length === 0 ? (
@@ -73,7 +80,10 @@ export function Dashboard() {
                   {calculator.isPublic ? tc("public") : tc("private")}
                 </p>
                 <div className="mt-4 flex gap-3 text-sm">
-                  <Link href={`/c/${calculator.slug}`} className="font-medium text-accent underline">
+                  <Link
+                    href={calculatorPublicPath(calculator.id)}
+                    className="font-medium text-accent underline"
+                  >
                     {tc("open")}
                   </Link>
                   <Link

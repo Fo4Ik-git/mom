@@ -1,18 +1,16 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { db } from "@/lib/db";
 import { toCalculatorResponse } from "@/lib/calculator-service";
+import { findCalculatorByRouteParam } from "@/lib/calculator-route";
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> },
 ) {
-  const { slug } = await params;
+  const { slug: routeParam } = await params;
   const session = await auth();
 
-  const calculator = await db.calculator.findUnique({
-    where: { slug },
-  });
+  const calculator = await findCalculatorByRouteParam(routeParam);
 
   if (!calculator) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
