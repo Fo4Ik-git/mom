@@ -1,6 +1,6 @@
 #!/bin/bash
 # Sync sources to /mnt/ssd/calculator and build on server.
-# Does not modify dev.db — db/ and logs/ on server are excluded from rsync --delete.
+# db/ is excluded from rsync --delete; dev.db is backed up before container start.
 
 set -e
 
@@ -50,6 +50,8 @@ rsync -avz --delete \
   ./ "${REMOTE_SERVER}:${SSD_BASE}/"
 
 scp .env.docker "${REMOTE_SERVER}:${SSD_BASE}/.env.docker"
+
+prestart_ssd_database "${REMOTE_SERVER}"
 
 echo "Building and starting on server..."
 ssh "${REMOTE_SERVER}" <<EOF

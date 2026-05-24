@@ -1,27 +1,27 @@
 import type {
   CalculationField,
   CalculatorConfig,
-  CalculatorConstant,
   InputField,
 } from "@/types/calculator";
+import {
+  createTimeServiceField,
+  type TimeServiceLabels,
+} from "@/lib/calculator/time-service";
 
 export type InputPatternId = "blank" | "costPrice" | "timeService" | "consumables";
 
 export interface InputPatternLabels {
   cost: string;
   price: string;
-  time: string;
-  hourlyRate: string;
   unitPrice: string;
   service: string;
   consumable: string;
-  timeCost: string;
+  time: TimeServiceLabels;
 }
 
 export interface InputPatternResult {
   input: InputField;
   calculations?: CalculationField[];
-  constants?: CalculatorConstant[];
 }
 
 function randomId(prefix: string) {
@@ -51,48 +51,13 @@ export function createInputFromPattern(
       };
     }
     case "timeService": {
-      const timeId = "var_time";
-      const constId = randomId("const");
       return {
-        input: {
-          id: fieldId,
-          label: labels.service,
-          properties: [{ id: timeId, label: labels.time, value: 60 }],
+        input: createTimeServiceField(fieldId, labels.service, labels.time, {
+          timeUnit: "hour",
+          duration: 1,
+          rate: 500,
           defaultQuantity: 1,
-        },
-        constants: [
-          { id: constId, label: labels.hourlyRate, value: 500 },
-        ],
-        calculations: [
-          {
-            id: randomId("calculation"),
-            label: labels.timeCost,
-            expression: {
-              type: "operation",
-              operator: "*",
-              left: {
-                type: "operation",
-                operator: "/",
-                left: {
-                  type: "operand",
-                  operand: {
-                    kind: "property",
-                    fieldId,
-                    propertyId: timeId,
-                  },
-                },
-                right: {
-                  type: "operand",
-                  operand: { kind: "number", value: 60 },
-                },
-              },
-              right: {
-                type: "operand",
-                operand: { kind: "constant", constantId: constId },
-              },
-            },
-          },
-        ],
+        }),
       };
     }
     case "consumables": {
@@ -134,7 +99,6 @@ export function applyInputPattern(
   return {
     ...config,
     inputs: [...config.inputs, result.input],
-    constants: [...(config.constants ?? []), ...(result.constants ?? [])],
     calculations: [...(config.calculations ?? []), ...(result.calculations ?? [])],
   };
 }

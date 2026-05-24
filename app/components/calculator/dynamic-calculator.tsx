@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
+import { isTimeField, timeFieldPreview } from "@/lib/calculator/time-service";
 import { ActionButtons } from "@/app/components/action-buttons";
 import { ResultPanel } from "@/app/components/result-panel";
 import { Card, CardTitle } from "@/app/components/ui/card";
@@ -27,6 +28,7 @@ function buildInitialQuantities(config: CalculatorConfig) {
 
 export function DynamicCalculator({ config }: DynamicCalculatorProps) {
   const t = useTranslations("calculator");
+  const tb = useTranslations("builder");
   const [quantities, setQuantities] = useState<Record<string, number>>(() =>
     buildInitialQuantities(config),
   );
@@ -96,16 +98,28 @@ export function DynamicCalculator({ config }: DynamicCalculatorProps) {
                 {input.label}
               </label>
 
-              <div className="flex flex-wrap gap-2">
-                {input.properties.map((property) => (
-                  <span
-                    key={property.id}
-                    className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"
-                  >
-                    {property.label}: {property.value}
-                  </span>
-                ))}
-              </div>
+              {isTimeField(input) ? (
+                <p className="text-xs text-muted-foreground">
+                  {t("timeServiceHint", {
+                    preview: timeFieldPreview(input, tb),
+                  })}
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {input.properties.map((property) => (
+                    <span
+                      key={property.id}
+                      className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"
+                    >
+                      {property.label}: {property.value}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <span className="text-xs font-medium text-muted-foreground">
+                {isTimeField(input) ? t("timeQuantityLabel") : t("quantityLabel")}
+              </span>
 
               <input
                 id={`qty-${input.id}`}

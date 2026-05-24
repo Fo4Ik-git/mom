@@ -1,27 +1,9 @@
 #!/bin/bash
-# SSD paths for deploy. Database lives on disk — deploy never deletes it.
+# Run on the server (or via ssh from deploy-ssd.sh).
+# Protects SQLite at /mnt/ssd/calculator/db/dev.db — backup, repair, never delete on deploy.
 
-SSD_BASE="/mnt/ssd/calculator"
-SSD_DB_DIR="${SSD_BASE}/db"
-SSD_LOGS_DIR="${SSD_BASE}/logs"
-SSD_DB_FILE="${SSD_DB_DIR}/dev.db"
-SSD_DB_BACKUP_DIR="${SSD_DB_DIR}/backups"
-
-# SQLite in container (directory mount — avoids Docker "file → directory" bug)
-SSD_DATABASE_URL="file:/data/dev.db"
-
-ensure_ssd_dirs() {
-  local remote_server="$1"
-  ssh -t "${remote_server}" "sudo mkdir -p ${SSD_BASE} ${SSD_DB_DIR} ${SSD_LOGS_DIR} ${SSD_DB_BACKUP_DIR} && sudo chown -R \$(id -u):\$(id -g) ${SSD_BASE} 2>/dev/null || sudo chmod -R 777 ${SSD_BASE}"
-  ssh "${remote_server}" "mkdir -p ${SSD_DB_DIR} ${SSD_LOGS_DIR} ${SSD_DB_BACKUP_DIR}"
-}
-
-run_ssd_db_action() {
-  local remote_server="$1"
-  local action="$2"
-  ssh "${remote_server}" \
-    "ACTION='${action}' SSD_BASE='${SSD_BASE}' SSD_DB_DIR='${SSD_DB_DIR}' SSD_DB_FILE='${SSD_DB_FILE}' SSD_DB_BACKUP_DIR='${SSD_DB_BACKUP_DIR}' MAX_DB_BACKUPS='14' bash -s" <<'REMOTE'
 set -euo pipefail
+
 SSD_BASE="${SSD_BASE:-/mnt/ssd/calculator}"
 SSD_DB_DIR="${SSD_DB_DIR:-${SSD_BASE}/db}"
 SSD_DB_FILE="${SSD_DB_FILE:-${SSD_DB_DIR}/dev.db}"
@@ -45,19 +27,24 @@ repair_database_file() {
   if [ ! -d "${SSD_DB_FILE}" ]; then
     return 0
   fi
+
   echo "WARNING: ${SSD_DB_FILE} is a directory (Docker file-mount bug). Recovering..."
+
   local recovered=""
   if [ -f "${SSD_DB_FILE}/dev.db" ]; then
     recovered="${SSD_DB_FILE}/dev.db"
   else
     recovered="$(find "${SSD_DB_FILE}" -maxdepth 3 -type f \( -name 'dev.db' -o -name '*.db' \) 2>/dev/null | head -1 || true)"
   fi
+
   rm -rf "${SSD_DB_FILE}"
+
   if [ -n "${recovered}" ] && [ -f "${recovered}" ]; then
     mv "${recovered}" "${SSD_DB_FILE}"
-    echo "Recovered database from nested file."
+    echo "Recovered database from nested file: ${recovered}"
     return 0
   fi
+
   local latest
   latest="$(ls -1t "${SSD_DB_BACKUP_DIR}"/dev.db.[0-9]* 2>/dev/null | grep -v journal | head -1 || true)"
   if [ -n "${latest}" ] && [ -f "${latest}" ]; then
@@ -65,71 +52,57 @@ repair_database_file() {
     echo "Restored database from backup: ${latest}"
     return 0
   fi
+
   echo "No recovery source found. A new database will be created on container start."
 }
 
 backup_database() {
   repair_database_file
+
   if [ ! -f "${SSD_DB_FILE}" ]; then
-    echo "Database backup skipped (no file yet)."
+    echo "Database backup skipped (no file at ${SSD_DB_FILE})."
     return 0
   fi
+
   local stamp backup
   stamp="$(date +%Y%m%d-%H%M%S)"
   backup="${SSD_DB_BACKUP_DIR}/dev.db.${stamp}"
+
   cp -a "${SSD_DB_FILE}" "${backup}"
   for suffix in -journal -wal -shm; do
     if [ -f "${SSD_DB_FILE}${suffix}" ]; then
       cp -a "${SSD_DB_FILE}${suffix}" "${backup}${suffix}"
     fi
   done
+
   prune_old_backups
-  echo "Database backup: ${backup}"
+  echo "Database backup: ${backup} ($(du -h "${backup}" | cut -f1))"
 }
 
 status_database() {
   repair_database_file
+
   if [ -f "${SSD_DB_FILE}" ]; then
-    echo "Database: ${SSD_DB_FILE} (unchanged by deploy)."
+    echo "Database: ${SSD_DB_FILE} ($(du -h "${SSD_DB_FILE}" | cut -f1), unchanged by deploy sync)"
     local count
     count="$(ls -1 "${SSD_DB_BACKUP_DIR}"/dev.db.[0-9]* 2>/dev/null | grep -v journal | wc -l | tr -d ' ')"
-    echo "Backups in ${SSD_DB_BACKUP_DIR}: ${count} file(s)."
+    echo "Backups: ${SSD_DB_BACKUP_DIR} (${count} file(s), keep last ${MAX_DB_BACKUPS})"
+  elif [ -d "${SSD_DB_FILE}" ]; then
+    echo "Database: ${SSD_DB_FILE} is still a directory — run: $0 repair"
+    exit 1
   else
     echo "Database: ${SSD_DB_FILE} not found yet."
     echo "  It will be created on first container start (migrations + optional admin seed)."
   fi
 }
 
-case "${ACTION}" in
+action="${1:-status}"
+case "${action}" in
   backup) backup_database ;;
   repair) repair_database_file ;;
   status) status_database ;;
-  *) echo "Unknown action: ${ACTION}"; exit 1 ;;
+  *)
+    echo "Usage: $0 {backup|repair|status}"
+    exit 1
+    ;;
 esac
-REMOTE
-}
-
-backup_ssd_database() {
-  run_ssd_db_action "$1" backup
-}
-
-repair_ssd_database() {
-  run_ssd_db_action "$1" repair
-}
-
-prepare_ssd_for_deploy() {
-  local remote_server="$1"
-  ensure_ssd_dirs "${remote_server}"
-  echo "Protecting database before deploy..."
-  run_ssd_db_action "${remote_server}" repair
-  run_ssd_db_action "${remote_server}" backup
-  run_ssd_db_action "${remote_server}" status
-  echo "Schema updates: prisma migrate deploy runs when the container starts."
-}
-
-prestart_ssd_database() {
-  local remote_server="$1"
-  echo "Pre-start database check..."
-  run_ssd_db_action "${remote_server}" repair
-  run_ssd_db_action "${remote_server}" backup
-}

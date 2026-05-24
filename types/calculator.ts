@@ -18,6 +18,9 @@ export const inputFieldSchema = z.object({
   properties: z.array(inputPropertySchema).min(1).max(12),
   defaultQuantity: z.number().optional(),
   presets: z.array(z.number()).optional(),
+  inputMode: z.enum(["standard", "time"]).optional(),
+  timeUnit: z.enum(["hour", "minute"]).optional(),
+  timeAutoTotal: z.boolean().optional(),
 });
 
 export type FormulaOperator = "+" | "-" | "*" | "/";

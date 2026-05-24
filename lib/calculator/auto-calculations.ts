@@ -1,11 +1,16 @@
 import type {
-  BlockExpression,
   CalculationField,
   CalculatorConfig,
   InputField,
   InputProperty,
 } from "@/types/calculator";
 import { quantityTimesProperty } from "@/lib/formula/expression-builders";
+import {
+  buildTimeServiceCalculation,
+  isManagedAutoCalculationId,
+  isTimeField,
+  isTimeServiceCalculationId,
+} from "@/lib/calculator/time-service";
 
 export function autoCalculationId(fieldId: string, propertyId: string) {
   const id = `calc_${fieldId}_${propertyId}`.replace(/__+/g, "_");
@@ -15,7 +20,14 @@ export function autoCalculationId(fieldId: string, propertyId: string) {
 export function isAutoCalculationId(id: string) {
   // Auto IDs: calc_{fieldId}_{propertyId}, e.g. calc_field_paint_var_cost
   // Manual IDs from randomId("calculation") look like calculation_x7k2ab — must not match.
-  return /^calc_field_[a-z0-9_]+_[a-z][a-z0-9_]*$/.test(id);
+  return isManagedAutoCalculationId(id);
+}
+
+export function isPropertyAutoCalculationId(id: string) {
+  return (
+    /^calc_field_[a-z0-9_]+_[a-z][a-z0-9_]*$/.test(id) &&
+    !isTimeServiceCalculationId(id)
+  );
 }
 
 export function autoCalculationLabel(
@@ -47,8 +59,13 @@ export function syncAutoCalculations(
   const desired = new Map<string, CalculationField>();
 
   for (const field of config.inputs) {
+    if (isTimeField(field) && field.timeAutoTotal !== false) {
+      const calc = buildTimeServiceCalculation(field, totalLabel);
+      desired.set(calc.id, calc);
+    }
+
     for (const property of field.properties) {
-      if (!property.autoTotal) {
+      if (isTimeField(field) || !property.autoTotal) {
         continue;
       }
       const calc = buildAutoCalculation(field, property, totalLabel);

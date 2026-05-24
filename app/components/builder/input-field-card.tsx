@@ -5,6 +5,16 @@ import type { InputField, InputProperty } from "@/types/calculator";
 import { slugifyId } from "@/types/calculator";
 import { BuilderCollapsible } from "@/app/components/builder/builder-collapsible";
 import { NumericInput } from "@/app/components/builder/numeric-input";
+import {
+  TIME_DURATION_ID,
+  TIME_RATE_ID,
+  applyTimeUnit,
+  ensureTimeProperties,
+  isTimeField,
+  timeFieldPreview,
+  type TimeServiceLabels,
+  type TimeUnit,
+} from "@/lib/calculator/time-service";
 
 interface InputFieldCardProps {
   field: InputField;
@@ -30,10 +40,27 @@ function formatPresets(presets?: number[]) {
   return presets?.join(", ") ?? "";
 }
 
+function timeServiceLabels(t: (key: string) => string): TimeServiceLabels {
+  return {
+    durationHours: t("timeDurationHours"),
+    durationMinutes: t("timeDurationMinutes"),
+    ratePerHour: t("timeRatePerHour"),
+    ratePerMinute: t("timeRatePerMinute"),
+  };
+}
+
 function fieldSummary(
   field: InputField,
   t: (key: string, values?: { count: number }) => string,
 ) {
+  if (isTimeField(field)) {
+    const parts = [t("fieldSummaryTime")];
+    if (field.timeAutoTotal !== false) {
+      parts.push(t("fieldSummaryAuto", { count: 1 }));
+    }
+    return parts.join(" · ");
+  }
+
   const parts: string[] = [t("fieldSummaryVars", { count: field.properties.length })];
   const autoCount = field.properties.filter((p) => p.autoTotal).length;
   if (autoCount > 0) {
@@ -54,12 +81,25 @@ export function InputFieldCard({
 }: InputFieldCardProps) {
   const t = useTranslations("builder");
   const tc = useTranslations("common");
+  const labels = timeServiceLabels(t);
+  const timeUnit = field.timeUnit ?? "hour";
+  const durationProperty = field.properties.find((p) => p.id === TIME_DURATION_ID);
+  const rateProperty = field.properties.find((p) => p.id === TIME_RATE_ID);
 
   function updateProperty(index: number, patch: Partial<InputProperty>) {
     onChange({
       ...field,
       properties: field.properties.map((prop, i) =>
         i === index ? { ...prop, ...patch } : prop,
+      ),
+    });
+  }
+
+  function updateTimeProperty(propertyId: string, patch: Partial<InputProperty>) {
+    onChange({
+      ...field,
+      properties: ensureTimeProperties(field, labels).map((property) =>
+        property.id === propertyId ? { ...property, ...patch } : property,
       ),
     });
   }
@@ -77,6 +117,15 @@ export function InputFieldCard({
     }
     updateProperty(index, { label, id: slugifyId(label, "var") });
   }
+
+  function setTimeUnit(nextUnit: TimeUnit) {
+    onChange(applyTimeUnit(field, nextUnit, labels));
+  }
+
+  const durationLabel =
+    timeUnit === "hour" ? t("timeDurationHours") : t("timeDurationMinutes");
+  const rateLabel =
+    timeUnit === "hour" ? t("timeRatePerHour") : t("timeRatePerMinute");
 
   return (
     <BuilderCollapsible
@@ -109,31 +158,40 @@ export function InputFieldCard({
         />
       </label>
 
-      <p className="text-xs text-muted-foreground">{t("inputVariablesHint")}</p>
+      {isTimeField(field) ? (
+        <TimeServiceFields
+          timeUnit={timeUnit}
+          durationLabel={durationLabel}
+          rateLabel={rateLabel}
+          duration={durationProperty?.value ?? 1}
+          rate={rateProperty?.value ?? 0}
+          preview={timeFieldPreview(field, t)}
+          timeAutoTotal={field.timeAutoTotal !== false}
+          onDurationChange={(value) =>
+            updateTimeProperty(TIME_DURATION_ID, { value })
+          }
+          onRateChange={(value) => updateTimeProperty(TIME_RATE_ID, { value })}
+          onTimeUnitChange={setTimeUnit}
+          onTimeAutoTotalChange={(checked) =>
+            onChange({ ...field, timeAutoTotal: checked })
+          }
+          t={t}
+        />
+      ) : (
+        <>
+          <p className="text-xs text-muted-foreground">{t("inputVariablesHint")}</p>
 
-      <div className="space-y-2">
-        {field.properties.map((property, index) => (
-          <div
-            key={property.id}
-            className="space-y-2 rounded-xl border border-border/70 bg-card p-3"
-          >
-            <div className="grid gap-2 sm:grid-cols-[1fr_100px_auto]">
-              <input
-                value={property.label}
-                onChange={(e) => updateProperty(index, { label: e.target.value })}
-                onBlur={(e) => syncPropertyIdFromLabel(index, e.target.value)}
-                placeholder={t("variableNamePlaceholder")}
-                className="h-10 rounded-lg border border-border bg-input px-3 text-sm"
-              />
-              <NumericInput
-                value={property.value}
-                onChange={(value) => updateProperty(index, { value })}
-                className="h-10 rounded-lg border border-border bg-input px-3 text-sm"
-              />
-              {field.properties.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() =>
+          <div className="space-y-2">
+            {field.properties.map((property, index) => (
+              <div
+                key={property.id}
+                className="space-y-2 rounded-xl border border-border/70 bg-card p-3"
+              >
+                <VariableInputRow
+                  property={property}
+                  canRemove={field.properties.length > 1}
+                  onUpdate={(patch) => updateProperty(index, patch)}
+                  onRemove={() =>
                     onChange({
                       ...field,
                       properties: field.properties
@@ -145,47 +203,46 @@ export function InputFieldCard({
                         ),
                     })
                   }
-                  className="h-10 text-xs text-destructive sm:px-2"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-            <label className="flex items-start gap-2 text-xs text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={Boolean(property.autoTotal)}
-                onChange={(e) =>
-                  updateProperty(index, { autoTotal: e.target.checked })
-                }
-                className="mt-0.5 size-3.5 accent-accent"
-              />
-              <span>{t("autoTotalHint")}</span>
-            </label>
+                  onLabelBlur={(label) => syncPropertyIdFromLabel(index, label)}
+                  t={t}
+                />
+                <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(property.autoTotal)}
+                    onChange={(e) =>
+                      updateProperty(index, { autoTotal: e.target.checked })
+                    }
+                    className="mt-0.5 size-3.5 accent-accent"
+                  />
+                  <span>{t("autoTotalHint")}</span>
+                </label>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <button
-        type="button"
-        onClick={() =>
-          onChange({
-            ...field,
-            properties: [
-              ...field.properties,
-              { id: randomPropId(), label: t("newVariable"), value: 0 },
-            ],
-          })
-        }
-        className="text-sm font-medium text-accent"
-      >
-        {t("addVariable")}
-      </button>
+          <button
+            type="button"
+            onClick={() =>
+              onChange({
+                ...field,
+                properties: [
+                  ...field.properties,
+                  { id: randomPropId(), label: t("newVariable"), value: 0 },
+                ],
+              })
+            }
+            className="text-sm font-medium text-accent"
+          >
+            {t("addVariable")}
+          </button>
+        </>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block space-y-1.5">
           <span className="text-xs font-medium text-muted-foreground">
-            {t("defaultQuantity")}
+            {isTimeField(field) ? t("timeDefaultQuantity") : t("defaultQuantity")}
           </span>
           <NumericInput
             value={field.defaultQuantity ?? 0}
@@ -208,5 +265,156 @@ export function InputFieldCard({
         </label>
       </div>
     </BuilderCollapsible>
+  );
+}
+
+function TimeServiceFields({
+  timeUnit,
+  durationLabel,
+  rateLabel,
+  duration,
+  rate,
+  preview,
+  timeAutoTotal,
+  onDurationChange,
+  onRateChange,
+  onTimeUnitChange,
+  onTimeAutoTotalChange,
+  t,
+}: {
+  timeUnit: TimeUnit;
+  durationLabel: string;
+  rateLabel: string;
+  duration: number;
+  rate: number;
+  preview: string;
+  timeAutoTotal: boolean;
+  onDurationChange: (value: number) => void;
+  onRateChange: (value: number) => void;
+  onTimeUnitChange: (unit: TimeUnit) => void;
+  onTimeAutoTotalChange: (checked: boolean) => void;
+  t: (key: string, values?: Record<string, string | number>) => string;
+}) {
+  return (
+    <div className="space-y-3 rounded-xl border border-border/70 bg-card p-3">
+      <TimeUnitToggle
+        timeUnit={timeUnit}
+        onTimeUnitChange={onTimeUnitChange}
+        t={t}
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-muted-foreground">
+            {durationLabel}
+          </span>
+          <NumericInput
+            value={duration}
+            onChange={onDurationChange}
+            className="h-10 w-full rounded-lg border border-border bg-input px-3 text-sm"
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-muted-foreground">
+            {rateLabel}
+          </span>
+          <NumericInput
+            value={rate}
+            onChange={onRateChange}
+            className="h-10 w-full rounded-lg border border-border bg-input px-3 text-sm"
+          />
+        </label>
+      </div>
+
+      <p className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+        {t("timeFormulaPreview", { preview })}
+      </p>
+
+      <label className="flex items-start gap-2 text-xs text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={timeAutoTotal}
+          onChange={(e) => onTimeAutoTotalChange(e.target.checked)}
+          className="mt-0.5 size-3.5 accent-accent"
+        />
+        <span>{t("timeAutoTotalHint")}</span>
+      </label>
+    </div>
+  );
+}
+
+function TimeUnitToggle({
+  timeUnit,
+  onTimeUnitChange,
+  t,
+}: {
+  timeUnit: TimeUnit;
+  onTimeUnitChange: (unit: TimeUnit) => void;
+  t: (key: string, values?: Record<string, string | number>) => string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <span className="text-xs font-medium text-muted-foreground">
+        {t("timeUnitLabel")}
+      </span>
+      <div className="flex flex-wrap gap-2">
+        {(["hour", "minute"] as const).map((unit) => (
+          <button
+            key={unit}
+            type="button"
+            onClick={() => onTimeUnitChange(unit)}
+            className={`rounded-full border px-3 py-1.5 text-sm transition ${
+              timeUnit === unit
+                ? "border-accent bg-accent-muted font-medium text-accent-foreground"
+                : "border-border bg-card hover:border-accent/60"
+            }`}
+          >
+            {unit === "hour" ? t("timeUnitHour") : t("timeUnitMinute")}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function VariableInputRow({
+  property,
+  canRemove,
+  onUpdate,
+  onRemove,
+  onLabelBlur,
+  t,
+}: {
+  property: InputProperty;
+  canRemove: boolean;
+  onUpdate: (patch: Partial<InputProperty>) => void;
+  onRemove: () => void;
+  onLabelBlur: (label: string) => void;
+  t: (key: string, values?: Record<string, string | number>) => string;
+}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-[1fr_100px_auto]">
+      <input
+        value={property.label}
+        onChange={(e) => onUpdate({ label: e.target.value })}
+        onBlur={(e) => onLabelBlur(e.target.value)}
+        placeholder={t("variableNamePlaceholder")}
+        className="h-10 rounded-lg border border-border bg-input px-3 text-sm"
+      />
+      <NumericInput
+        value={property.value}
+        onChange={(value) => onUpdate({ value })}
+        className="h-10 rounded-lg border border-border bg-input px-3 text-sm"
+      />
+      {canRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="h-10 text-xs text-destructive sm:px-2"
+        >
+          ×
+        </button>
+      )}
+    </div>
   );
 }

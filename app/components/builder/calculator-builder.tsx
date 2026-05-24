@@ -50,12 +50,15 @@ function patternLabels(t: (key: string) => string) {
   return {
     cost: t("patternLabelCost"),
     price: t("patternLabelPrice"),
-    time: t("patternLabelTime"),
-    hourlyRate: t("patternLabelHourlyRate"),
+    time: {
+      durationHours: t("timeDurationHours"),
+      durationMinutes: t("timeDurationMinutes"),
+      ratePerHour: t("timeRatePerHour"),
+      ratePerMinute: t("timeRatePerMinute"),
+    },
     unitPrice: t("patternLabelUnitPrice"),
     service: t("patternLabelService"),
     consumable: t("patternLabelConsumable"),
-    timeCost: t("patternLabelTimeCost"),
   };
 }
 

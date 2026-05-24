@@ -3,7 +3,7 @@ set -e
 
 cd /app
 
-export DATABASE_URL="${DATABASE_URL:-file:./prisma/dev.db}"
+export DATABASE_URL="${DATABASE_URL:-file:/data/dev.db}"
 
 if [ -f ./prisma/schema.prisma ] && [ -f ./migrate/node_modules/prisma/build/index.js ]; then
   echo "Running Prisma migrations..."

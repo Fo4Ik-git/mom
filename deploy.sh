@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build on your PC → upload image to /mnt/ssd/calculator → run (no build on server).
-# Does not modify dev.db — only prisma migrate deploy on container start.
+# db/ is never synced; dev.db is backed up on the server before container start.
 
 set -e
 
@@ -53,6 +53,8 @@ echo "=== 3/4 Upload to ${SSD_BASE} ==="
 scp docker-compose.deploy.yml "${IMAGE_ARCHIVE}" .env.docker "${REMOTE_SERVER}:${SSD_BASE}/"
 
 echo "=== 4/4 Start on server ==="
+prestart_ssd_database "${REMOTE_SERVER}"
+
 ssh "${REMOTE_SERVER}" <<EOF
 set -e
 cd ${SSD_BASE}
