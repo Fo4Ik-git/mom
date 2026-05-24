@@ -16,6 +16,16 @@ async function main() {
 
   const passwordHash = await hashPassword(adminPassword);
 
+  await prisma.platformSettings.upsert({
+    where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      defaultMaxCalculators: 5,
+      defaultAccessDays: 30,
+    },
+  });
+
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
     update: {

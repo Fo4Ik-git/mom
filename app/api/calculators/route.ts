@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth-session";
+import { requireActiveUser } from "@/lib/auth-session";
+import { UserAccessError, assertCanCreateCalculator } from "@/lib/user-limits";
 import {
   CalculatorValidationError,
   createUniqueSlug,
@@ -24,7 +25,7 @@ const createSchema = z.object({
 
 export async function GET() {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const calculators = await db.calculator.findMany({
       where: { userId: session.user.id, isTemplate: false },
       orderBy: { updatedAt: "desc" },
@@ -33,14 +34,21 @@ export async function GET() {
     return NextResponse.json({
       calculators: calculators.map(toCalculatorResponse),
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof UserAccessError) {
+      return NextResponse.json(
+        { error: error.code, message: error.message },
+        { status: error.code === "banned" ? 403 : 403 },
+      );
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
+    await assertCanCreateCalculator(session.user.id);
     const body = createSchema.parse(await request.json());
     const config = validateCalculatorConfig(body.config);
     const slug = await createUniqueSlug(body.name);
@@ -69,6 +77,12 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       const issues = formatZodIssues(error);
       return NextResponse.json(validationErrorResponse(issues), { status: 400 });
+    }
+    if (error instanceof UserAccessError) {
+      return NextResponse.json(
+        { error: error.code, message: error.message },
+        { status: 403 },
+      );
     }
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

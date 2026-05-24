@@ -12,20 +12,80 @@ enum Role {
   ADMIN
 }
 
+enum BanReason {
+  ACCESS_EXPIRED
+}
+
+/// REGISTRATION — invite to sign up; REFERRAL — future referral campaigns (same redemption flow)
+enum AccessKeyKind {
+  REGISTRATION
+  REFERRAL
+}
+
+model PlatformSettings {
+  id                    String   @id @default("default")
+  defaultMaxCalculators Int      @default(5)
+  /// Default access period for new users (via invite key or admin create without date)
+  defaultAccessDays     Int      @default(30)
+  updatedAt             DateTime @updatedAt
+}
+
+model AccessKey {
+  id             String          @id @default(cuid())
+  code           String          @unique
+  kind           AccessKeyKind   @default(REGISTRATION)
+  label          String?
+  maxUses        Int?
+  usedCount      Int             @default(0)
+  expiresAt      DateTime?
+  /// Override access duration in days; null = PlatformSettings.defaultAccessDays; 0 = unlimited access
+  accessDays     Int?
+  active         Boolean         @default(true)
+  referrerUserId String?
+  referrerUser   User?           @relation("ReferralKeys", fields: [referrerUserId], references: [id], onDelete: SetNull)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  redemptions    AccessKeyRedemption[]
+
+  @@index([kind, active])
+  @@index([referrerUserId])
+}
+
+model AccessKeyRedemption {
+  id          String    @id @default(cuid())
+  accessKeyId String
+  accessKey   AccessKey @relation(fields: [accessKeyId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([accessKeyId, userId])
+  @@index([accessKeyId])
+  @@index([userId])
+}
+
 model User {
-  id            String       @id @default(cuid())
-  name          String?
-  email         String       @unique
-  emailVerified DateTime?
-  passwordHash  String?
-  image         String?
-  role          Role         @default(USER)
-  banned        Boolean      @default(false)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  accounts      Account[]
-  sessions      Session[]
-  calculators   Calculator[]
+  id                String       @id @default(cuid())
+  name              String?
+  email             String       @unique
+  emailVerified     DateTime?
+  passwordHash      String?
+  image             String?
+  role              Role         @default(USER)
+  banned            Boolean      @default(false)
+  banReason         BanReason?
+  /// Per-user cap; null = use PlatformSettings.defaultMaxCalculators
+  maxCalculators    Int?
+  /// When set and in the past, user cannot use builder (admins exempt)
+  accessExpiresAt   DateTime?
+  adminNotes        String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  accounts          Account[]
+  sessions          Session[]
+  calculators          Calculator[]
+  referralKeys         AccessKey[]           @relation("ReferralKeys")
+  accessKeyRedemptions AccessKeyRedemption[]
 }
 
 model Calculator {

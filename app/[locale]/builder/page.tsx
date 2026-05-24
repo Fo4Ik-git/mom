@@ -4,6 +4,8 @@ import { redirect } from "@/i18n/navigation";
 import { CalculatorBuilder } from "@/app/components/builder/calculator-builder";
 import { PageShell } from "@/app/components/layout/page-shell";
 import { emptyCalculatorConfig } from "@/lib/calculator/defaults";
+import { db } from "@/lib/db";
+import { isAccessActive } from "@/lib/user-limits";
 
 export default async function NewBuilderPage({
   params,
@@ -14,8 +16,14 @@ export default async function NewBuilderPage({
   setRequestLocale(locale);
 
   const session = await auth();
-  if (!session?.user) {
+  const userId = session?.user?.id;
+  if (!userId) {
     redirect({ href: "/auth/signin?callbackUrl=/builder", locale });
+  }
+
+  const user = await db.user.findUnique({ where: { id: userId } });
+  if (user && !isAccessActive(user)) {
+    redirect({ href: "/", locale });
   }
 
   const t = await getTranslations("builder");

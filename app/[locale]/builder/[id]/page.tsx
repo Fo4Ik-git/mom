@@ -4,9 +4,10 @@ import { auth } from "@/auth";
 import { redirect } from "@/i18n/navigation";
 import { CalculatorBuilder } from "@/app/components/builder/calculator-builder";
 import { PageShell } from "@/app/components/layout/page-shell";
-import { db } from "@/lib/db";
 import { Link } from "@/i18n/navigation";
 import { calculatorPublicPath } from "@/lib/calculator-route";
+import { db } from "@/lib/db";
+import { isAccessActive } from "@/lib/user-limits";
 import { parseCalculatorConfig } from "@/types/calculator";
 
 export default async function EditBuilderPage({
@@ -21,6 +22,11 @@ export default async function EditBuilderPage({
   const userId = session?.user?.id;
   if (!userId) {
     redirect({ href: `/auth/signin?callbackUrl=/builder/${id}`, locale });
+  }
+
+  const owner = await db.user.findUnique({ where: { id: userId } });
+  if (owner && !isAccessActive(owner)) {
+    redirect({ href: "/", locale });
   }
 
   const calculator = await db.calculator.findFirst({

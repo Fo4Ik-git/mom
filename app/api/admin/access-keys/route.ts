@@ -1,0 +1,93 @@
+import { AccessKeyKind } from "@prisma/client";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { createAccessKey, normalizeAccessKeyCode } from "@/lib/access-keys";
+import { handleAdminApiError } from "@/lib/admin-api-response";
+import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth-session";
+
+const createSchema = z.object({
+  kind: z.nativeEnum(AccessKeyKind).optional(),
+  label: z.string().max(120).optional(),
+  maxUses: z.number().int().min(1).max(100_000).nullable().optional(),
+  expiresAt: z.string().datetime().nullable().optional(),
+  accessDays: z.number().int().min(0).max(3650).nullable().optional(),
+  active: z.boolean().optional(),
+  referrerUserId: z.string().cuid().nullable().optional(),
+  code: z.string().min(4).max(32).optional(),
+});
+
+export async function GET() {
+  try {
+    await requireAdmin();
+
+    const keys = await db.accessKey.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        referrerUser: { select: { id: true, email: true } },
+        _count: { select: { redemptions: true } },
+      },
+    });
+
+    return NextResponse.json({
+      keys: keys.map((key) => ({
+        id: key.id,
+        code: key.code,
+        kind: key.kind,
+        label: key.label,
+        maxUses: key.maxUses,
+        usedCount: key.usedCount,
+        redemptionCount: key._count.redemptions,
+        expiresAt: key.expiresAt?.toISOString() ?? null,
+        accessDays: key.accessDays,
+        active: key.active,
+        referrerUserId: key.referrerUserId,
+        referrerEmail: key.referrerUser?.email ?? null,
+        createdAt: key.createdAt.toISOString(),
+      })),
+    });
+  } catch (error) {
+    return handleAdminApiError(error, "admin/access-keys GET");
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    await requireAdmin();
+    const body = createSchema.parse(await request.json());
+
+    const key = await createAccessKey({
+      kind: body.kind,
+      label: body.label,
+      maxUses: body.maxUses,
+      expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
+      accessDays: body.accessDays,
+      active: body.active,
+      referrerUserId: body.referrerUserId,
+      code: body.code ? normalizeAccessKeyCode(body.code) : undefined,
+    });
+
+    return NextResponse.json(
+      {
+        key: {
+          id: key.id,
+          code: key.code,
+          kind: key.kind,
+          label: key.label,
+          maxUses: key.maxUses,
+          usedCount: key.usedCount,
+          expiresAt: key.expiresAt?.toISOString() ?? null,
+          accessDays: key.accessDays,
+          active: key.active,
+          createdAt: key.createdAt.toISOString(),
+        },
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "invalid_data" }, { status: 400 });
+    }
+    return handleAdminApiError(error, "admin/access-keys POST");
+  }
+}

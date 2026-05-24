@@ -1,7 +1,8 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { auth } from "@/auth";
+import { AdminShell, type AdminNavLink } from "@/app/components/admin/admin-shell";
 import { PageShell } from "@/app/components/layout/page-shell";
-import { Link, redirect } from "@/i18n/navigation";
+import { redirect } from "@/i18n/navigation";
 
 export default async function AdminLayout({
   children,
@@ -20,31 +21,19 @@ export default async function AdminLayout({
     redirect({ href: "/auth/signin?callbackUrl=/admin", locale });
   }
 
-  const links = [
+  const links: AdminNavLink[] = [
     { href: "/admin", label: t("overview") },
     { href: "/admin/users", label: t("users") },
     { href: "/admin/calculators", label: t("calculators") },
-  ] as const;
+    { href: "/admin/keys", label: t("accessKeys") },
+    { href: "/admin/settings", label: t("settings") },
+  ];
 
   return (
-    <PageShell className="max-w-6xl">
-      <div className="flex flex-col gap-8 lg:flex-row">
-        <aside className="lg:w-52">
-          <h1 className="mb-4 text-2xl font-bold">{t("title")}</h1>
-          <nav className="flex flex-row flex-wrap gap-1 lg:flex-col">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="rounded-xl px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </aside>
-        <div className="min-w-0 flex-1">{children}</div>
-      </div>
+    <PageShell className="max-w-none px-2 sm:px-3">
+      <AdminShell title={t("title")} links={links}>
+        {children}
+      </AdminShell>
     </PageShell>
   );
 }

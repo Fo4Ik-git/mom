@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { Card } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Link, useRouter } from "@/i18n/navigation";
+import { appFetch } from "@/lib/api-client";
 
 export function SignInForm() {
   const t = useTranslations("auth");
@@ -22,6 +23,28 @@ export function SignInForm() {
     event.preventDefault();
     setLoading(true);
     setError(null);
+
+    const check = await appFetch("/api/auth/signin-check", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    const checkData = await check.json();
+
+    if (checkData.status === "banned") {
+      setLoading(false);
+      setError(
+        checkData.messageKey
+          ? t(checkData.messageKey as "banReason_ACCESS_EXPIRED")
+          : t("bannedGeneric"),
+      );
+      return;
+    }
+
+    if (checkData.status === "invalid") {
+      setLoading(false);
+      setError(t("signInError"));
+      return;
+    }
 
     const result = await signIn("credentials", {
       email,

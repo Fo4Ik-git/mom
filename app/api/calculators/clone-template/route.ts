@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth-session";
+import { requireActiveUser } from "@/lib/auth-session";
+import { UserAccessError, assertCanCreateCalculator } from "@/lib/user-limits";
 import {
   createUniqueSlug,
   toCalculatorResponse,
@@ -16,7 +17,8 @@ const bodySchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
+    await assertCanCreateCalculator(session.user.id);
     const body = bodySchema.parse(await request.json());
 
     const template = await db.calculator.findFirst({
@@ -49,6 +51,12 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Некорректные данные" }, { status: 400 });
+    }
+    if (error instanceof UserAccessError) {
+      return NextResponse.json(
+        { error: error.code, message: error.message },
+        { status: 403 },
+      );
     }
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

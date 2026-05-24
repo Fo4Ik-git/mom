@@ -16,7 +16,7 @@ export async function Header() {
 
   return (
     <header className="sticky top-0 z-20 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-2 py-3 sm:px-3">
         <Link href="/" className="group flex min-w-0 items-center gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-primary text-sm font-bold text-accent-foreground shadow-card">
             M
@@ -51,7 +51,7 @@ export async function Header() {
               {session.user.role === "ADMIN" && (
                 <Link
                   href="/admin"
-                  className="rounded-xl px-3 py-2 text-sm font-medium text-accent transition hover:bg-accent-muted"
+                  className="rounded-xl border border-accent/40 bg-accent-muted px-3 py-2 text-sm font-semibold text-accent transition hover:bg-accent/20"
                 >
                   {t("admin")}
                 </Link>

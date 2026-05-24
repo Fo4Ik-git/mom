@@ -1,26 +1,31 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import {
+  getAdminAnalytics,
+  type AnalyticsRange,
+} from "@/lib/admin-analytics";
+import { handleAdminApiError } from "@/lib/admin-api-response";
 import { requireAdmin } from "@/lib/auth-session";
 
-export async function GET() {
+const RANGES = new Set<AnalyticsRange>(["24h", "7d", "30d", "90d"]);
+
+function parseRange(value: string | null): AnalyticsRange {
+  if (value && RANGES.has(value as AnalyticsRange)) {
+    return value as AnalyticsRange;
+  }
+  return "7d";
+}
+
+export async function GET(request: Request) {
   try {
     await requireAdmin();
+    const { searchParams } = new URL(request.url);
+    const range = parseRange(searchParams.get("range"));
+    const locale = searchParams.get("locale") ?? "uk-UA";
 
-    const [users, calculators, templates, publicCalculators] =
-      await Promise.all([
-        db.user.count(),
-        db.calculator.count(),
-        db.calculator.count({ where: { isTemplate: true } }),
-        db.calculator.count({ where: { isPublic: true } }),
-      ]);
+    const analytics = await getAdminAnalytics(range, locale);
 
-    return NextResponse.json({
-      users,
-      calculators,
-      templates,
-      publicCalculators,
-    });
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json(analytics);
+  } catch (error) {
+    return handleAdminApiError(error, "admin/stats");
   }
 }
