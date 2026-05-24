@@ -42,12 +42,14 @@ export async function Header() {
           )}
           {session?.user ? (
             <>
-              <Link
-                href="/builder"
-                className="rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-muted"
-              >
-                {t("builder")}
-              </Link>
+              {!session.user.banned && (
+                <Link
+                  href="/builder"
+                  className="rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-muted"
+                >
+                  {t("builder")}
+                </Link>
+              )}
               {session.user.role === "ADMIN" && (
                 <Link
                   href="/admin"

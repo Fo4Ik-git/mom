@@ -1,4 +1,4 @@
-import type { Role } from "@prisma/client";
+import type { BanReason, Role } from "@prisma/client";
 import type { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
@@ -6,6 +6,8 @@ declare module "next-auth" {
     user: {
       id: string;
       role: Role;
+      banned: boolean;
+      banReason: BanReason | null;
     } & DefaultSession["user"];
   }
 

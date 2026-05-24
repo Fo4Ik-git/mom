@@ -27,6 +27,8 @@ model PlatformSettings {
   defaultMaxCalculators Int      @default(5)
   /// Default access period for new users (via invite key or admin create without date)
   defaultAccessDays     Int      @default(30)
+  supportEmail          String?
+  supportTelegram       String?
   updatedAt             DateTime @updatedAt
 }
 

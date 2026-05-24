@@ -13,6 +13,8 @@ export function AdminPlatformSettings() {
   const tc = useTranslations("common");
   const [defaultMax, setDefaultMax] = useState(5);
   const [defaultAccessDays, setDefaultAccessDays] = useState(30);
+  const [supportEmail, setSupportEmail] = useState("");
+  const [supportTelegram, setSupportTelegram] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -33,6 +35,8 @@ export function AdminPlatformSettings() {
         if (typeof data.defaultAccessDays === "number") {
           setDefaultAccessDays(data.defaultAccessDays);
         }
+        setSupportEmail(data.supportEmail ?? "");
+        setSupportTelegram(data.supportTelegram ?? "");
       })
       .finally(() => setLoading(false));
   }, [t]);
@@ -46,6 +50,8 @@ export function AdminPlatformSettings() {
       body: JSON.stringify({
         defaultMaxCalculators: defaultMax,
         defaultAccessDays,
+        supportEmail: supportEmail.trim() || null,
+        supportTelegram: supportTelegram.trim() || null,
       }),
     });
     const data = await response.json();
@@ -68,8 +74,34 @@ export function AdminPlatformSettings() {
       <p className="mb-4 text-sm text-muted-foreground">
         {t("platformSettingsHint")}
       </p>
-      <div className="flex flex-wrap items-end gap-4">
-        <label className="space-y-1">
+      <div className="mb-6 space-y-4 border-b border-border/60 pb-6">
+        <p className="text-sm font-semibold">{t("supportContactTitle")}</p>
+        <p className="text-sm text-muted-foreground">{t("supportContactHint")}</p>
+        <div className="flex max-w-sm flex-col gap-4">
+          <label className="space-y-1.5">
+            <span className="text-sm text-muted-foreground">{t("supportEmail")}</span>
+            <input
+              type="email"
+              value={supportEmail}
+              onChange={(e) => setSupportEmail(e.target.value)}
+              placeholder="support@example.com"
+              className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+            />
+          </label>
+          <label className="space-y-1.5">
+            <span className="text-sm text-muted-foreground">{t("supportTelegram")}</span>
+            <input
+              type="text"
+              value={supportTelegram}
+              onChange={(e) => setSupportTelegram(e.target.value)}
+              placeholder="@username"
+              className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+            />
+          </label>
+        </div>
+      </div>
+      <div className="flex max-w-sm flex-col gap-4">
+        <label className="space-y-1.5">
           <span className="text-sm text-muted-foreground">
             {t("defaultMaxCalculators")}
           </span>
@@ -79,10 +111,10 @@ export function AdminPlatformSettings() {
             max={1000}
             value={defaultMax}
             onChange={(e) => setDefaultMax(Number(e.target.value) || 0)}
-            className="block h-10 w-28 rounded-xl border border-border bg-input px-3 text-sm"
+            className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
           />
         </label>
-        <label className="space-y-1">
+        <label className="space-y-1.5">
           <span className="text-sm text-muted-foreground">
             {t("defaultAccessDays")}
           </span>
@@ -92,18 +124,20 @@ export function AdminPlatformSettings() {
             max={3650}
             value={defaultAccessDays}
             onChange={(e) => setDefaultAccessDays(Number(e.target.value) || 0)}
-            className="block h-10 w-28 rounded-xl border border-border bg-input px-3 text-sm"
+            className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
           />
           <span className="text-xs text-muted-foreground">
             {t("defaultAccessDaysHint")}
           </span>
         </label>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? tc("saving") : tc("save")}
-        </Button>
-        {saved && (
-          <span className="text-sm text-accent">{t("settingsSaved")}</span>
-        )}
+        <div className="flex items-center gap-3 pt-1">
+          <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+            {saving ? tc("saving") : tc("save")}
+          </Button>
+          {saved && (
+            <span className="text-sm text-accent">{t("settingsSaved")}</span>
+          )}
+        </div>
       </div>
     </Card>
   );

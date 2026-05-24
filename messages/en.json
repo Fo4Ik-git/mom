@@ -142,6 +142,10 @@
     "accessKeys": "Access keys",
     "defaultAccessDays": "Default access (days)",
     "defaultAccessDaysHint": "0 = unlimited. Used for new signups and admin-created users.",
+    "supportContactTitle": "Blocked-user contacts",
+    "supportContactHint": "Shown in the account block dialog.",
+    "supportEmail": "Support email",
+    "supportTelegram": "Telegram",
     "accessKeyCreate": "New access key",
     "accessKeyCreateBtn": "Generate key",
     "accessKeyCreating": "Generating…",
@@ -253,6 +257,13 @@
     "inSelectedRange": "+{count} {label} in period",
     "newUsersShort": "users",
     "newCalcsShort": "calculators"
+  },
+  "blocked": {
+    "title": "Access restricted",
+    "contactTitle": "Contact support",
+    "telegram": "Telegram",
+    "noContact": "Support contacts are not configured yet. Please contact the platform administrator.",
+    "signOut": "Sign out"
   },
   "limits": {
     "quota": "Calculators: {current} of {max}",

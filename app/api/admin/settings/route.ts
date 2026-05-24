@@ -10,6 +10,8 @@ import { requireAdmin } from "@/lib/auth-session";
 const updateSchema = z.object({
   defaultMaxCalculators: z.number().int().min(0).max(1000),
   defaultAccessDays: z.number().int().min(0).max(3650),
+  supportEmail: z.string().email().nullable().optional(),
+  supportTelegram: z.string().max(80).nullable().optional(),
 });
 
 export async function GET() {
@@ -19,6 +21,8 @@ export async function GET() {
     return NextResponse.json({
       defaultMaxCalculators: settings.defaultMaxCalculators,
       defaultAccessDays: settings.defaultAccessDays,
+      supportEmail: settings.supportEmail,
+      supportTelegram: settings.supportTelegram,
       updatedAt: settings.updatedAt.toISOString(),
     });
   } catch (error) {
@@ -34,6 +38,8 @@ export async function PATCH(request: Request) {
     return NextResponse.json({
       defaultMaxCalculators: settings.defaultMaxCalculators,
       defaultAccessDays: settings.defaultAccessDays,
+      supportEmail: settings.supportEmail,
+      supportTelegram: settings.supportTelegram,
       updatedAt: settings.updatedAt.toISOString(),
     });
   } catch (error) {

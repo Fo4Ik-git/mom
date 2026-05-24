@@ -17,6 +17,8 @@ export async function getPlatformSettings() {
 export async function updatePlatformSettings(data: {
   defaultMaxCalculators: number;
   defaultAccessDays: number;
+  supportEmail?: string | null;
+  supportTelegram?: string | null;
 }) {
   return db.platformSettings.upsert({
     where: { id: SETTINGS_ID },

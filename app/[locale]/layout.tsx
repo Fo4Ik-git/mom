@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
+import { AccountGate } from "@/app/components/account/account-gate";
 import { ThemeProvider } from "@/app/components/theme-provider";
 import { Providers } from "@/app/providers";
 import { routing } from "@/i18n/routing";
@@ -43,7 +44,9 @@ export default async function LocaleLayout({
     <NextIntlClientProvider messages={messages}>
       <ThemeProvider>
         <Providers>
-          <div className="app-mesh flex min-h-full flex-col">{children}</div>
+          <div className="app-mesh flex min-h-full flex-col">
+            <AccountGate>{children}</AccountGate>
+          </div>
         </Providers>
       </ThemeProvider>
     </NextIntlClientProvider>

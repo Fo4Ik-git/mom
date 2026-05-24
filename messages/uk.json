@@ -142,6 +142,10 @@
     "accessKeys": "Ключі доступу",
     "defaultAccessDays": "Термін доступу за замовч. (дні)",
     "defaultAccessDaysHint": "0 = без обмеження. Для нових реєстрацій і користувачів від адміна.",
+    "supportContactTitle": "Контакти для заблокованих",
+    "supportContactHint": "Показуються користувачу у вікні блокування.",
+    "supportEmail": "Email підтримки",
+    "supportTelegram": "Telegram",
     "accessKeyCreate": "Новий ключ",
     "accessKeyCreateBtn": "Згенерувати",
     "accessKeyCreating": "Генерація…",
@@ -253,6 +257,13 @@
     "inSelectedRange": "+{count} {label} за період",
     "newUsersShort": "користувачів",
     "newCalcsShort": "калькуляторів"
+  },
+  "blocked": {
+    "title": "Доступ обмежено",
+    "contactTitle": "Зв’язок з підтримкою",
+    "telegram": "Telegram",
+    "noContact": "Контакти підтримки ще не налаштовані. Напишіть адміністратору платформи.",
+    "signOut": "Вийти з акаунта"
   },
   "limits": {
     "quota": "Калькулятори: {current} з {max}",

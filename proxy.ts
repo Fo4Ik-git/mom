@@ -41,6 +41,13 @@ export default auth((request) => {
 
   const isLoggedIn = Boolean(request.auth);
   const isAdmin = request.auth?.user?.role === "ADMIN";
+  const isBanned = Boolean(request.auth?.user?.banned) && !isAdmin;
+
+  if (isBanned && barePath.startsWith("/builder")) {
+    return NextResponse.redirect(
+      new URL(withLocalePath("/", locale), request.url),
+    );
+  }
 
   if (barePath.startsWith("/admin") && !isAdmin) {
     return NextResponse.redirect(

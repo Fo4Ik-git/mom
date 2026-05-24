@@ -67,10 +67,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user && token.id) {
         const dbUser = await db.user.findUnique({
           where: { id: String(token.id) },
-          select: { role: true },
+          select: { role: true, banned: true, banReason: true },
         });
         session.user.id = String(token.id);
         session.user.role = dbUser?.role ?? (token.role as Role) ?? Role.USER;
+        session.user.banned = dbUser?.banned ?? false;
+        session.user.banReason = dbUser?.banReason ?? null;
       }
       return session;
     },
