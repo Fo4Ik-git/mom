@@ -63,6 +63,11 @@ export class AppComponent {
       value: 1.2,
     },
     {
+      name: 'Маска Color',
+      cost: 2.5,
+      value: 5,
+    },
+    {
       name: 'Рассходники',
       cost: 1,
       value: 0,
