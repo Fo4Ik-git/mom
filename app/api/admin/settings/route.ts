@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  ACCESS_EXPIRY_CHECK_INTERVALS,
+  isAccessExpiryCheckInterval,
+} from "@/lib/access-expiry-interval";
+import {
   getPlatformSettings,
   updatePlatformSettings,
 } from "@/lib/platform-settings";
@@ -12,7 +16,21 @@ const updateSchema = z.object({
   defaultAccessDays: z.number().int().min(0).max(3650),
   supportEmail: z.string().email().nullable().optional(),
   supportTelegram: z.string().max(80).nullable().optional(),
+  accessExpiryCheckInterval: z
+    .string()
+    .refine(isAccessExpiryCheckInterval)
+    .optional(),
 });
+
+function serializeAccessExpirySettings(
+  settings: Awaited<ReturnType<typeof getPlatformSettings>>,
+) {
+  return {
+    accessExpiryCheckInterval: settings.accessExpiryCheckInterval,
+    accessExpiryCheckLastRunAt:
+      settings.accessExpiryCheckLastRunAt?.toISOString() ?? null,
+  };
+}
 
 export async function GET() {
   try {
@@ -24,6 +42,8 @@ export async function GET() {
       supportEmail: settings.supportEmail,
       supportTelegram: settings.supportTelegram,
       updatedAt: settings.updatedAt.toISOString(),
+      accessExpiryCheckIntervals: ACCESS_EXPIRY_CHECK_INTERVALS,
+      ...serializeAccessExpirySettings(settings),
     });
   } catch (error) {
     return handleAdminApiError(error, "admin/settings GET");
@@ -41,6 +61,7 @@ export async function PATCH(request: Request) {
       supportEmail: settings.supportEmail,
       supportTelegram: settings.supportTelegram,
       updatedAt: settings.updatedAt.toISOString(),
+      ...serializeAccessExpirySettings(settings),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

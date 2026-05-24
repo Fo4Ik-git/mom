@@ -1,3 +1,5 @@
+import type { AccessExpiryCheckInterval } from "@prisma/client";
+import { DEFAULT_ACCESS_EXPIRY_CHECK_INTERVAL } from "@/lib/access-expiry-interval";
 import { db } from "@/lib/db";
 
 const SETTINGS_ID = "default";
@@ -9,6 +11,7 @@ export async function getPlatformSettings() {
       id: SETTINGS_ID,
       defaultMaxCalculators: 5,
       defaultAccessDays: 30,
+      accessExpiryCheckInterval: DEFAULT_ACCESS_EXPIRY_CHECK_INTERVAL,
     },
     update: {},
   });
@@ -19,6 +22,7 @@ export async function updatePlatformSettings(data: {
   defaultAccessDays: number;
   supportEmail?: string | null;
   supportTelegram?: string | null;
+  accessExpiryCheckInterval?: AccessExpiryCheckInterval;
 }) {
   return db.platformSettings.upsert({
     where: { id: SETTINGS_ID },

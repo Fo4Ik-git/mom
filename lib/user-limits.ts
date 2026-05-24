@@ -1,4 +1,5 @@
 import { Role, type User } from "@prisma/client";
+import { isAccessExpiredByCalendarDay } from "@/lib/access-dates";
 import { db } from "@/lib/db";
 import { getPlatformSettings } from "@/lib/platform-settings";
 
@@ -25,7 +26,7 @@ export function isAccessActive(user: Pick<User, "role" | "accessExpiresAt">): bo
   if (!user.accessExpiresAt) {
     return true;
   }
-  return user.accessExpiresAt.getTime() > Date.now();
+  return !isAccessExpiredByCalendarDay(user.accessExpiresAt);
 }
 
 export async function getEffectiveMaxCalculators(

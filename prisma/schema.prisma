@@ -16,6 +16,13 @@ enum BanReason {
   ACCESS_EXPIRED
 }
 
+enum AccessExpiryCheckInterval {
+  OFF
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
 /// REGISTRATION — invite to sign up; REFERRAL — future referral campaigns (same redemption flow)
 enum AccessKeyKind {
   REGISTRATION
@@ -29,6 +36,9 @@ model PlatformSettings {
   defaultAccessDays     Int      @default(30)
   supportEmail          String?
   supportTelegram       String?
+  /// Auto-ban users with expired access (manual run or scheduled)
+  accessExpiryCheckInterval   AccessExpiryCheckInterval @default(OFF)
+  accessExpiryCheckLastRunAt  DateTime?
   updatedAt             DateTime @updatedAt
 }
 

@@ -79,6 +79,27 @@ export async function PATCH(
       data.adminNotes = body.adminNotes;
     }
 
+    if (body.accessExpiresAt !== undefined) {
+      const extendedAccess =
+        body.accessExpiresAt === null ||
+        new Date(body.accessExpiresAt).getTime() > Date.now();
+
+      if (extendedAccess) {
+        const current = await db.user.findUnique({
+          where: { id },
+          select: { banned: true, banReason: true },
+        });
+
+        if (
+          current?.banned &&
+          current.banReason === BanReason.ACCESS_EXPIRED
+        ) {
+          data.banned = false;
+          data.banReason = null;
+        }
+      }
+    }
+
     const user = await db.user.update({
       where: { id },
       data,

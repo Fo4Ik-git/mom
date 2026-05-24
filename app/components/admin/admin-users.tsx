@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Fragment,
   useCallback,
@@ -18,6 +18,11 @@ import { PasswordInput } from "@/app/components/ui/password-input";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
 import { appFetch } from "@/lib/api-client";
 import { adminApiErrorMessage } from "@/lib/admin-api-error";
+import {
+  accessExpiresAtFromDateInput,
+  formatAccessDateShort,
+  formatDateInputLocal,
+} from "@/lib/access-dates";
 import { BAN_REASON_CODES } from "@/lib/ban-reasons";
 
 interface UserRow {
@@ -43,17 +48,6 @@ type UserEdit = {
   adminNotes: string;
   useDefaultLimit: boolean;
 };
-
-function formatDateInput(iso: string | null): string {
-  if (!iso) {
-    return "";
-  }
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-  return date.toISOString().slice(0, 10);
-}
 
 function addMonths(base: Date, months: number): string {
   const next = new Date(base);
@@ -318,6 +312,7 @@ function UserManagePanel({
 export function AdminUsers() {
   const t = useTranslations("admin");
   const tc = useTranslations("common");
+  const locale = useLocale();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [defaultMax, setDefaultMax] = useState(5);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -389,7 +384,7 @@ export function AdminUsers() {
         next[user.id] = {
           maxCalculators:
             user.maxCalculators != null ? String(user.maxCalculators) : "",
-          accessExpiresAt: formatDateInput(user.accessExpiresAt),
+          accessExpiresAt: formatDateInputLocal(user.accessExpiresAt),
           adminNotes: user.adminNotes ?? "",
           useDefaultLimit: user.usesDefaultLimit,
         };
@@ -443,7 +438,7 @@ export function AdminUsers() {
           ? 0
           : Number(edit.maxCalculators),
       accessExpiresAt: edit.accessExpiresAt
-        ? new Date(`${edit.accessExpiresAt}T23:59:59`).toISOString()
+        ? accessExpiresAtFromDateInput(edit.accessExpiresAt)
         : null,
       adminNotes: edit.adminNotes || null,
     });
@@ -510,7 +505,7 @@ export function AdminUsers() {
       base.setTime(Date.now());
     }
     setEdit(userId, {
-      accessExpiresAt: formatDateInput(addMonths(base, months)),
+      accessExpiresAt: formatDateInputLocal(addMonths(base, months)),
     });
   }
 
@@ -523,7 +518,7 @@ export function AdminUsers() {
 
   function accessLabel(user: UserRow) {
     return user.accessExpiresAt
-      ? new Date(user.accessExpiresAt).toLocaleDateString()
+      ? formatAccessDateShort(user.accessExpiresAt, locale)
       : t("accessUnlimited");
   }
 
