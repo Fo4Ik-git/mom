@@ -1,0 +1,62 @@
+{
+  "products": [
+    {
+      "name": "Surface",
+      "cost": 6,
+      "value": 12
+    },
+    {
+      "name": "Lakme/BerryWell",
+      "cost": 4.1,
+      "value": 10.2
+    },
+    {
+      "name": "Oxi",
+      "cost": 0.38,
+      "value": 1.7
+    },
+    {
+      "name": "Пудра эконом",
+      "cost": 2.5,
+      "value": 5.1
+    },
+    {
+      "name": "Пудра lux",
+      "cost": 3,
+      "value": 6
+    },
+    {
+      "name": "Активи",
+      "cost": 13.5,
+      "value": 57
+    },
+    {
+      "name": "Пенная баня",
+      "cost": 80,
+      "value": 250
+    },
+    {
+      "name": "Время",
+      "cost": 0,
+      "value": 1000,
+      "type": "time"
+    },
+    {
+      "name": "База маска",
+      "cost": 0.4,
+      "value": 1.2
+    },
+    {
+      "name": "Маска Color",
+      "cost": 2.5,
+      "value": 5
+    },
+    {
+      "name": "Рассходники",
+      "cost": 1,
+      "value": 0,
+      "type": "consumables",
+      "presets": [150, 200, 250, 400, 500]
+    }
+  ]
+}
