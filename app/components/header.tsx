@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
-import { auth, signOut } from "@/auth";
-import { LanguageSwitcher } from "@/app/components/language-switcher";
-import { ThemeToggle } from "@/app/components/theme-toggle";
+import { auth } from "@/auth";
+import { HeaderNav } from "@/app/components/header-nav";
+import { contentContainerClass } from "@/app/components/layout/page-shell";
 import { Link } from "@/i18n/navigation";
 import {
   calculatorPublicPath,
@@ -11,78 +11,33 @@ import {
 export async function Header() {
   const session = await auth();
   const momTemplate = await getMomTemplateCalculator();
-  const t = await getTranslations("nav");
   const tc = await getTranslations("common");
 
   return (
     <header className="sticky top-0 z-20 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-2 py-3 sm:px-3">
-        <Link href="/" className="group flex min-w-0 items-center gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-primary text-sm font-bold text-accent-foreground shadow-card">
+      <div className={`${contentContainerClass} relative flex items-center justify-between gap-2 py-2.5 sm:gap-3 sm:py-3`}>
+        <Link href="/" className="group flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-primary text-sm font-bold text-accent-foreground shadow-card sm:size-10">
             M
           </span>
           <span className="min-w-0">
             <span className="block truncate text-base font-bold tracking-tight">
               {tc("appName")}
             </span>
-            <span className="block text-xs text-muted-foreground">
+            <span className="hidden text-xs text-muted-foreground sm:block">
               {tc("tagline")}
             </span>
           </span>
         </Link>
 
-        <nav className="flex items-center gap-1.5 sm:gap-2">
-          {momTemplate && (
-            <Link
-              href={calculatorPublicPath(momTemplate.id)}
-              className="hidden rounded-xl px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground sm:inline"
-            >
-              {t("templateMom")}
-            </Link>
-          )}
-          {session?.user ? (
-            <>
-              {!session.user.banned && (
-                <Link
-                  href="/builder"
-                  className="rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-muted"
-                >
-                  {t("builder")}
-                </Link>
-              )}
-              {session.user.role === "ADMIN" && (
-                <Link
-                  href="/admin"
-                  className="rounded-xl border border-accent/40 bg-accent-muted px-3 py-2 text-sm font-semibold text-accent transition hover:bg-accent/20"
-                >
-                  {t("admin")}
-                </Link>
-              )}
-              <form
-                action={async () => {
-                  "use server";
-                  await signOut({ redirectTo: "/" });
-                }}
-              >
-                <button
-                  type="submit"
-                  className="rounded-xl px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                >
-                  {t("signOut")}
-                </button>
-              </form>
-            </>
-          ) : (
-            <Link
-              href="/auth/signin"
-              className="rounded-xl bg-accent px-3.5 py-2 text-sm font-semibold text-accent-foreground shadow-sm transition hover:brightness-110"
-            >
-              {t("signIn")}
-            </Link>
-          )}
-          <LanguageSwitcher />
-          <ThemeToggle />
-        </nav>
+        <HeaderNav
+          signedIn={Boolean(session?.user)}
+          banned={Boolean(session?.user?.banned)}
+          isAdmin={session?.user?.role === "ADMIN"}
+          templateHref={
+            momTemplate ? calculatorPublicPath(momTemplate.id) : null
+          }
+        />
       </div>
     </header>
   );

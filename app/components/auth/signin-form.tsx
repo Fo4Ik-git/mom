@@ -2,18 +2,27 @@
 
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
+import { FormField } from "@/app/components/ui/form-field";
+import { PasswordInput } from "@/app/components/ui/password-input";
 import { Link, useRouter } from "@/i18n/navigation";
 import { appFetch } from "@/lib/api-client";
+
+type SignInCheckResponse = {
+  status?: string;
+  messageKey?: string;
+};
 
 export function SignInForm() {
   const t = useTranslations("auth");
   const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const emailId = useId();
+  const passwordId = useId();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,44 +33,71 @@ export function SignInForm() {
     setLoading(true);
     setError(null);
 
-    const check = await appFetch("/api/auth/signin-check", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    });
-    const checkData = await check.json();
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (checkData.status === "banned") {
+    try {
+      try {
+        const check = await appFetch("/api/auth/signin-check", {
+          method: "POST",
+          body: JSON.stringify({ email: normalizedEmail, password }),
+        });
+
+        let checkData: SignInCheckResponse = {};
+        try {
+          checkData = (await check.json()) as SignInCheckResponse;
+        } catch {
+          // ignore invalid JSON
+        }
+
+        if (check.ok) {
+          if (checkData.status === "banned") {
+            setError(
+              checkData.messageKey
+                ? t(checkData.messageKey as "banReason_ACCESS_EXPIRED")
+                : t("bannedGeneric"),
+            );
+            return;
+          }
+
+          if (checkData.status === "invalid") {
+            setError(t("signInError"));
+            return;
+          }
+
+          if (checkData.status !== "ok") {
+            setError(t("signInError"));
+            return;
+          }
+        } else if (check.status !== 403) {
+          setError(
+            check.status >= 500 ? t("networkError") : t("signInError"),
+          );
+          return;
+        }
+        // 403: pre-check blocked (e.g. dev LAN) — still try credentials sign-in.
+      } catch {
+        // Pre-check failed (network/config) — still try credentials sign-in.
+      }
+
+      const result = await signIn("credentials", {
+        email: normalizedEmail,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error || result?.ok === false) {
+        setError(t("signInError"));
+        return;
+      }
+
+      const callback = searchParams.get("callbackUrl");
+      router.push(callback?.startsWith("/") ? callback : "/");
+      router.refresh();
+    } catch {
+      setError(t("networkError"));
+    } finally {
       setLoading(false);
-      setError(
-        checkData.messageKey
-          ? t(checkData.messageKey as "banReason_ACCESS_EXPIRED")
-          : t("bannedGeneric"),
-      );
-      return;
     }
-
-    if (checkData.status === "invalid") {
-      setLoading(false);
-      setError(t("signInError"));
-      return;
-    }
-
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    setLoading(false);
-
-    if (result?.error) {
-      setError(t("signInError"));
-      return;
-    }
-
-    const callback = searchParams.get("callbackUrl") ?? "/";
-    router.push(callback);
-    router.refresh();
   }
 
   return (
@@ -70,33 +106,37 @@ export function SignInForm() {
         <h1 className="text-2xl font-bold tracking-tight">{t("signInTitle")}</h1>
 
         {error && (
-          <p className="rounded-xl bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+          <p
+            role="alert"
+            className="rounded-xl bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+          >
             {error}
           </p>
         )}
 
-        <label className="block space-y-1.5">
-          <span className="text-sm text-muted-foreground">{tc("email")}</span>
+        <FormField label={tc("email")} htmlFor={emailId}>
           <input
+            id={emailId}
             type="email"
             required
+            autoComplete="email"
+            inputMode="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="block h-11 w-full rounded-xl border border-border bg-input px-3.5 text-sm"
+            className="block h-11 w-full rounded-xl border border-border bg-input px-3.5 text-base sm:text-sm"
           />
-        </label>
+        </FormField>
 
-        <label className="block space-y-1.5">
-          <span className="text-sm text-muted-foreground">{tc("password")}</span>
-          <input
-            type="password"
+        <FormField label={tc("password")} htmlFor={passwordId}>
+          <PasswordInput
+            id={passwordId}
             required
             minLength={8}
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="block h-11 w-full rounded-xl border border-border bg-input px-3.5 text-sm"
           />
-        </label>
+        </FormField>
 
         <Button type="submit" disabled={loading} className="w-full">
           {loading ? t("signingIn") : t("signIn")}

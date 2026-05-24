@@ -30,7 +30,7 @@ export default async function AdminLayout({
   ];
 
   return (
-    <PageShell className="max-w-none px-2 sm:px-3">
+    <PageShell width="full">
       <AdminShell title={t("title")} links={links}>
         {children}
       </AdminShell>

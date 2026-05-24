@@ -6,6 +6,8 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 const nextConfig: NextConfig = {
   // Use the generated client from node_modules (avoids stale Turbopack externals).
   serverExternalPackages: ["@prisma/client"],
+  // Phone / LAN during dev (Next.js blocks /_next/* from other hosts by default).
+  allowedDevOrigins: ["192.168.1.166", "192.168.*"],
 };
 
 export default withNextIntl(nextConfig);

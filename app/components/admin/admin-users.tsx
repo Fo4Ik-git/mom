@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardTitle } from "@/app/components/ui/card";
+import { PasswordInput } from "@/app/components/ui/password-input";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
 import { appFetch } from "@/lib/api-client";
 import { adminApiErrorMessage } from "@/lib/admin-api-error";
@@ -251,19 +252,25 @@ export function AdminUsers() {
               className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
             />
           </label>
-          <label className="space-y-1">
-            <span className="text-sm text-muted-foreground">{tc("password")}</span>
-            <input
-              type="password"
+          <div className="space-y-1">
+            <label
+              htmlFor="admin-new-user-password"
+              className="text-sm text-muted-foreground"
+            >
+              {tc("password")}
+            </label>
+            <PasswordInput
+              id="admin-new-user-password"
               required
               minLength={8}
+              autoComplete="new-password"
               value={newUser.password}
               onChange={(e) =>
                 setNewUser((u) => ({ ...u, password: e.target.value }))
               }
-              className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+              inputClassName="block h-10 w-full rounded-xl border border-border bg-input py-0 pl-3 pr-12 text-base sm:text-sm"
             />
-          </label>
+          </div>
           <label className="space-y-1">
             <span className="text-sm text-muted-foreground">{tc("name")}</span>
             <input

@@ -29,7 +29,7 @@ export default async function NewBuilderPage({
   const t = await getTranslations("builder");
 
   return (
-    <PageShell className="max-w-6xl">
+    <PageShell width="full">
       <h1 className="mb-8 text-3xl font-bold tracking-tight">{t("newTitle")}</h1>
       <CalculatorBuilder initialConfig={emptyCalculatorConfig} />
     </PageShell>

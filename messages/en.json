@@ -15,6 +15,8 @@
     "open": "Open",
     "email": "Email",
     "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "name": "Name",
     "public": "Public",
     "private": "Private",
@@ -29,7 +31,9 @@
     "admin": "Admin",
     "signIn": "Sign in",
     "signOut": "Sign out",
-    "home": "Home"
+    "home": "Home",
+    "menuOpen": "Open menu",
+    "menuClose": "Close menu"
   },
   "home": {
     "heroTitle": "Build calculators for your business",
@@ -58,6 +62,7 @@
     "registerLink": "Sign up",
     "signInLink": "Sign in",
     "signInError": "Invalid email or password",
+    "networkError": "Could not sign in. Check your connection and try again.",
     "bannedGeneric": "Your account has been blocked. Contact an administrator.",
     "banReason_ACCESS_EXPIRED": "Your access has expired. Contact an administrator.",
     "signUpError": "Could not sign up",

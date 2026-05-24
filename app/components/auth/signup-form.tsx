@@ -2,9 +2,11 @@
 
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Card } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
+import { FormField } from "@/app/components/ui/form-field";
+import { PasswordInput } from "@/app/components/ui/password-input";
 import { Link, useRouter } from "@/i18n/navigation";
 import { appFetch } from "@/lib/api-client";
 import { normalizeAccessKeyCode } from "@/lib/access-key-code";
@@ -22,6 +24,7 @@ export function SignUpForm({ initialAccessKey = "" }: { initialAccessKey?: strin
   const t = useTranslations("auth");
   const tc = useTranslations("common");
   const router = useRouter();
+  const passwordId = useId();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -129,7 +132,7 @@ export function SignUpForm({ initialAccessKey = "" }: { initialAccessKey?: strin
       }
 
       const signInResult = await signIn("credentials", {
-        email,
+        email: email.trim().toLowerCase(),
         password,
         redirect: false,
       });
@@ -208,17 +211,16 @@ export function SignUpForm({ initialAccessKey = "" }: { initialAccessKey?: strin
           />
         </label>
 
-        <label className="block space-y-1.5">
-          <span className="text-sm text-muted-foreground">{t("passwordHint")}</span>
-          <input
-            type="password"
+        <FormField label={t("passwordHint")} htmlFor={passwordId}>
+          <PasswordInput
+            id={passwordId}
             required
             minLength={8}
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="block h-11 w-full rounded-xl border border-border bg-input px-3.5 text-sm"
           />
-        </label>
+        </FormField>
 
         <Button
           type="submit"

@@ -110,8 +110,8 @@ export function CalculatorBuilder({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-2">
-        <div className="space-y-5">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(280px,380px)] 2xl:grid-cols-[minmax(0,3.5fr)_minmax(300px,400px)]">
+        <div className="min-w-0 space-y-5">
           <Card>
             <CardTitle className="mb-4">{t("settings")}</CardTitle>
             <div className="space-y-3">
@@ -386,7 +386,7 @@ export function CalculatorBuilder({
           </Button>
         </div>
 
-        <div className="xl:sticky xl:top-24 xl:self-start">
+        <div className="min-w-0 xl:sticky xl:top-24 xl:self-start">
           <h2 className="mb-4 text-lg font-semibold">{t("preview")}</h2>
           <DynamicCalculator config={config} />
         </div>

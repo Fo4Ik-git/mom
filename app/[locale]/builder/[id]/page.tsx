@@ -40,7 +40,7 @@ export default async function EditBuilderPage({
   const t = await getTranslations("builder");
 
   return (
-    <PageShell className="max-w-6xl">
+    <PageShell width="full">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight">{t("editTitle")}</h1>
         <Link

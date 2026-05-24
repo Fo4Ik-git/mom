@@ -44,7 +44,7 @@ export default async function CalculatorPage({
   const config = parseCalculatorConfig(calculator.config);
 
   return (
-    <PageShell className="max-w-2xl">
+    <PageShell width="narrow">
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{calculator.name}</h1>

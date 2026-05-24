@@ -18,7 +18,7 @@ export default async function SignUpPage({
   const initialAccessKey = rawKey ? normalizeAccessKeyCode(rawKey) : "";
 
   return (
-    <PageShell className="flex min-h-[70vh] max-w-lg items-center justify-center">
+    <PageShell width="narrow" className="flex min-h-[70vh] items-center justify-center">
       <SignUpForm initialAccessKey={initialAccessKey} />
     </PageShell>
   );
