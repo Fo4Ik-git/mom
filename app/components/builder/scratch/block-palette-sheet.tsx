@@ -37,7 +37,7 @@ export function BlockPaletteSheet({
   }
 
   return (
-    <div className="lg:hidden">
+    <>
       <button
         type="button"
         aria-label={tc("cancel")}
@@ -82,6 +82,6 @@ export function BlockPaletteSheet({
           />
         </div>
       </div>
-    </div>
+    </>
   );
 }

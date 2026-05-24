@@ -301,17 +301,16 @@ export function FormulaScratchEditor({
     >
       <div className="space-y-3 rounded-xl border border-dashed border-accent/40 bg-accent-muted/15 p-3">
         <p className="text-xs font-medium text-accent">{t("formulaTitle")}</p>
-        <p className="text-xs text-muted-foreground">{t("blocksWorkspaceHint")}</p>
+        {!touchUi && (
+          <p className="text-xs text-muted-foreground">{t("blocksWorkspaceHint")}</p>
+        )}
+        {touchUi && (
+          <p className="text-xs text-muted-foreground">{t("blocksMobileHint")}</p>
+        )}
 
-        <p className="text-xs text-muted-foreground lg:hidden">
-          {t("blocksMobileHint")}
-        </p>
-
-        <BlockPalettePanel
-          className="hidden lg:block"
-          blocks={paletteBlocks}
-          onBlockTap={handleBlockTap}
-        />
+        {!touchUi && (
+          <BlockPalettePanel blocks={paletteBlocks} onBlockTap={handleBlockTap} />
+        )}
 
         {activeSlot && !touchUi && (
           <p className="rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent">
@@ -320,13 +319,15 @@ export function FormulaScratchEditor({
         )}
 
         <div className="flex items-start justify-between gap-2">
-          <p className="hidden text-xs text-muted-foreground lg:block">
-            {canSort ? t("blocksDragReorder") : t("blocksDragSwap")}
-            {" · "}
-            {t("blocksDragGroup")}
-            {" · "}
-            {t("blocksContinueHint")}
-          </p>
+          {!touchUi && (
+            <p className="text-xs text-muted-foreground">
+              {canSort ? t("blocksDragReorder") : t("blocksDragSwap")}
+              {" · "}
+              {t("blocksDragGroup")}
+              {" · "}
+              {t("blocksContinueHint")}
+            </p>
+          )}
           <button
             type="button"
             onClick={() => onChange(emptyBlockExpression())}

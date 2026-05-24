@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { detectTouchBuilderUi } from "@/lib/detect-touch-device";
 
 export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false);
@@ -16,7 +17,25 @@ export function useMediaQuery(query: string): boolean {
   return matches;
 }
 
-/** Phone / tablet — tap-to-insert palette instead of drag-first UI. */
-export function useTouchBuilderUi() {
-  return useMediaQuery("(max-width: 1023px)");
+/** Phone / tablet touch UI — not based on viewport width. */
+export function useTouchBuilderUi(): boolean {
+  const [touchUi, setTouchUi] = useState(() =>
+    typeof window !== "undefined" ? detectTouchBuilderUi() : false,
+  );
+
+  useEffect(() => {
+    const update = () => setTouchUi(detectTouchBuilderUi());
+    update();
+
+    const coarse = window.matchMedia("(pointer: coarse)");
+    const hover = window.matchMedia("(hover: none)");
+    coarse.addEventListener("change", update);
+    hover.addEventListener("change", update);
+    return () => {
+      coarse.removeEventListener("change", update);
+      hover.removeEventListener("change", update);
+    };
+  }, []);
+
+  return touchUi;
 }
