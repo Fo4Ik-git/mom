@@ -8,22 +8,24 @@ import { DraggableBlock } from "@/app/components/builder/scratch/draggable-block
 interface BlockPaletteContentProps {
   blocks: PaletteBlock[];
   onBlockTap: (block: PaletteBlock) => void;
-  /** Desktop: draggable blocks. Mobile sheet: large tap targets only. */
   dragEnabled?: boolean;
+  vertical?: boolean;
 }
 
 function TapBlock({
   block,
   onTap,
+  vertical = false,
 }: {
   block: PaletteBlock;
   onTap: () => void;
+  vertical?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onTap}
-      className={`min-h-[44px] touch-manipulation rounded-xl border px-3 py-2.5 text-left text-sm font-medium shadow-sm active:scale-[0.98] ${BLOCK_COLORS[block.color]}`}
+      className={`min-h-[44px] touch-manipulation rounded-xl border px-3 py-2.5 text-left text-sm font-medium shadow-sm active:scale-[0.98] ${vertical ? "w-full" : ""} ${BLOCK_COLORS[block.color]}`}
     >
       {block.label}
     </button>
@@ -34,6 +36,7 @@ export function BlockPaletteContent({
   blocks,
   onBlockTap,
   dragEnabled = true,
+  vertical = false,
 }: BlockPaletteContentProps) {
   const t = useTranslations("builder");
 
@@ -41,8 +44,27 @@ export function BlockPaletteContent({
   const constants = blocks.filter((b) => b.category === "constant");
   const operators = blocks.filter((b) => b.category === "operator");
   const groups = blocks.filter((b) => b.category === "group");
+  const groupClass = vertical ? "flex flex-col gap-2" : "flex flex-wrap gap-2";
 
-  const BlockButton = dragEnabled ? DraggableBlock : TapBlock;
+  function renderBlock(block: PaletteBlock) {
+    if (dragEnabled) {
+      return (
+        <DraggableBlock
+          key={block.id}
+          block={block}
+          onTap={() => onBlockTap(block)}
+        />
+      );
+    }
+    return (
+      <TapBlock
+        key={block.id}
+        block={block}
+        vertical={vertical}
+        onTap={() => onBlockTap(block)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -50,15 +72,7 @@ export function BlockPaletteContent({
         <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
           {t("blocksVariables")}
         </p>
-        <div className="flex flex-wrap gap-2">
-          {operands.map((block) => (
-            <BlockButton
-              key={block.id}
-              block={block}
-              onTap={() => onBlockTap(block)}
-            />
-          ))}
-        </div>
+        <div className={groupClass}>{operands.map(renderBlock)}</div>
       </div>
 
       {constants.length > 0 && (
@@ -66,15 +80,7 @@ export function BlockPaletteContent({
           <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
             {t("blocksConstants")}
           </p>
-          <div className="flex flex-wrap gap-2">
-            {constants.map((block) => (
-              <BlockButton
-                key={block.id}
-                block={block}
-                onTap={() => onBlockTap(block)}
-              />
-            ))}
-          </div>
+          <div className={groupClass}>{constants.map(renderBlock)}</div>
         </div>
       )}
 
@@ -82,21 +88,9 @@ export function BlockPaletteContent({
         <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
           {t("blocksOperators")}
         </p>
-        <div className="flex flex-wrap gap-2">
-          {operators.map((block) => (
-            <BlockButton
-              key={block.id}
-              block={block}
-              onTap={() => onBlockTap(block)}
-            />
-          ))}
-          {groups.map((block) => (
-            <BlockButton
-              key={block.id}
-              block={block}
-              onTap={() => onBlockTap(block)}
-            />
-          ))}
+        <div className={groupClass}>
+          {operators.map(renderBlock)}
+          {groups.map(renderBlock)}
         </div>
       </div>
     </div>

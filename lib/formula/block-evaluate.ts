@@ -5,11 +5,13 @@ import type {
   CalculatorConstant,
   InputField,
 } from "@/types/calculator";
+import { evaluateAllFormulaFields } from "@/lib/formula/field-graph";
 
-interface EvalContext {
+export interface EvalContext {
   quantities: Record<string, number>;
   inputs: InputField[];
   constants: CalculatorConstant[];
+  calculations: Record<string, number>;
   outputs: Record<string, number>;
   onWarning?: (message: string) => void;
 }
@@ -29,6 +31,13 @@ function evaluateOperand(operand: BlockOperand, context: EvalContext): number {
         throw new Error(`Unknown field: ${operand.fieldId}`);
       }
       return getPropertyValue(input, operand.propertyId);
+    }
+    case "calculation": {
+      const value = context.calculations[operand.calculationId];
+      if (value === undefined) {
+        throw new Error(`Unknown calculation: ${operand.calculationId}`);
+      }
+      return value;
     }
     case "output": {
       const value = context.outputs[operand.outputId];
@@ -96,18 +105,5 @@ export function calculateFromConfig(
   config: CalculatorConfig,
   quantities: Record<string, number>,
 ): Record<string, number> {
-  const results: Record<string, number> = {};
-  const constants = config.constants ?? [];
-
-  for (const output of config.outputs) {
-    const context: EvalContext = {
-      quantities,
-      inputs: config.inputs,
-      constants,
-      outputs: results,
-    };
-    results[output.id] = evaluateBlockExpression(output.expression, context);
-  }
-
-  return results;
+  return evaluateAllFormulaFields(config, quantities).outputs;
 }

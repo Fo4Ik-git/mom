@@ -1,5 +1,6 @@
 import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
 import { evaluateBlockExpression } from "@/lib/formula/block-evaluate";
+import { evaluateAllFormulaFields } from "@/lib/formula/field-graph";
 
 const OP_LABELS: Record<string, string> = {
   "+": "+",
@@ -12,6 +13,7 @@ export function formatBlockExpressionWithValues(
   expression: BlockExpression,
   config: CalculatorConfig,
   quantities: Record<string, number>,
+  calculations: Record<string, number>,
   outputValues: Record<string, number>,
 ): string {
   if (expression.type === "empty") {
@@ -25,6 +27,7 @@ export function formatBlockExpressionWithValues(
         quantities,
         inputs: config.inputs,
         constants: config.constants ?? [],
+        calculations,
         outputs: outputValues,
       },
     );
@@ -36,6 +39,7 @@ export function formatBlockExpressionWithValues(
       expression.inner,
       config,
       quantities,
+      calculations,
       outputValues,
     )})`;
   }
@@ -44,12 +48,14 @@ export function formatBlockExpressionWithValues(
     expression.left,
     config,
     quantities,
+    calculations,
     outputValues,
   );
   const right = formatBlockExpressionWithValues(
     expression.right,
     config,
     quantities,
+    calculations,
     outputValues,
   );
   const op = OP_LABELS[expression.operator] ?? expression.operator;
@@ -67,18 +73,18 @@ export function buildOutputBreakdowns(
   values: Record<string, number>,
 ): Record<string, string> {
   const breakdowns: Record<string, string> = {};
-  const priorOutputs: Record<string, number> = {};
+  const { calculations, outputs } = evaluateAllFormulaFields(config, quantities);
 
   for (const output of config.outputs) {
     const expr = formatBlockExpressionWithValues(
       output.expression,
       config,
       quantities,
-      priorOutputs,
+      calculations,
+      outputs,
     );
-    const result = formatNumber(values[output.id] ?? 0);
+    const result = formatNumber(values[output.id] ?? outputs[output.id] ?? 0);
     breakdowns[output.id] = `${expr} = ${result}`;
-    priorOutputs[output.id] = values[output.id] ?? 0;
   }
 
   return breakdowns;

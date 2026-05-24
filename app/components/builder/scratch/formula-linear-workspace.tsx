@@ -8,6 +8,7 @@ import {
 } from "@dnd-kit/sortable";
 import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
 import { formatBlockOperand } from "@/lib/formula/block-format";
+import type { FormulaTarget } from "@/lib/formula/formula-target";
 import {
   flattenExpression,
   isReorderableChain,
@@ -29,7 +30,7 @@ interface FormulaLinearWorkspaceProps {
   outputKey: string;
   expression: BlockExpression;
   config: CalculatorConfig;
-  outputIndex: number;
+  formulaTarget: FormulaTarget;
   quantityLabel: string;
   nested?: boolean;
   onSlotClear: (path: SlotPath[]) => void;
@@ -52,7 +53,7 @@ function hasGroups(expression: BlockExpression): boolean {
 
 function operandColor(
   token: FlatToken,
-): "quantity" | "property" | "output" | "constant" | "number" {
+): "quantity" | "property" | "output" | "calculation" | "constant" | "number" {
   if (token.kind !== "operand") {
     return "number";
   }
@@ -63,6 +64,8 @@ function operandColor(
       return "property";
     case "output":
       return "output";
+    case "calculation":
+      return "calculation";
     case "constant":
       return "constant";
     default:
@@ -74,7 +77,7 @@ interface SortableTokenProps {
   token: FlatToken;
   outputKey: string;
   config: CalculatorConfig;
-  outputIndex: number;
+  formulaTarget: FormulaTarget;
   quantityLabel: string;
   onSlotClear: (path: SlotPath[]) => void;
   onOperationRemove: (path: SlotPath[]) => void;
@@ -87,7 +90,7 @@ function SortableToken({
   token,
   outputKey,
   config,
-  outputIndex,
+  formulaTarget,
   quantityLabel,
   onSlotClear,
   onOperationRemove,
@@ -143,7 +146,7 @@ function SortableToken({
       ? formatBlockOperand(
           token.operand,
           config,
-          outputIndex,
+          formulaTarget,
           quantityLabel,
         )
       : undefined;
@@ -215,7 +218,7 @@ function ExpressionNode({
   path,
   outputKey,
   config,
-  outputIndex,
+  formulaTarget,
   quantityLabel,
   onSlotClear,
   onOperationRemove,
@@ -237,7 +240,7 @@ function ExpressionNode({
           path={[...path, "inner"]}
           outputKey={outputKey}
           config={config}
-          outputIndex={outputIndex}
+          formulaTarget={formulaTarget}
           quantityLabel={quantityLabel}
           onSlotClear={onSlotClear}
           onOperationRemove={onOperationRemove}
@@ -265,7 +268,7 @@ function ExpressionNode({
         ? formatBlockOperand(
             expression.operand,
             config,
-            outputIndex,
+            formulaTarget,
             quantityLabel,
           )
         : undefined;
@@ -310,7 +313,7 @@ function ExpressionNode({
         path={[...path, "left"]}
         outputKey={outputKey}
         config={config}
-        outputIndex={outputIndex}
+        formulaTarget={formulaTarget}
         quantityLabel={quantityLabel}
         onSlotClear={onSlotClear}
         onOperationRemove={onOperationRemove}
@@ -338,7 +341,7 @@ function ExpressionNode({
         path={[...path, "right"]}
         outputKey={outputKey}
         config={config}
-        outputIndex={outputIndex}
+        formulaTarget={formulaTarget}
         quantityLabel={quantityLabel}
         onSlotClear={onSlotClear}
         onOperationRemove={onOperationRemove}

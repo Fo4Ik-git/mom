@@ -18,6 +18,7 @@ import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
 import { emptyBlockExpression } from "@/types/calculator";
 import { formatBlockExpression } from "@/lib/formula/block-format";
 import { buildPaletteBlocks, type PaletteBlock } from "@/lib/formula/block-palette";
+import type { FormulaTarget } from "@/lib/formula/formula-target";
 import {
   flattenExpression,
   isReorderableChain,
@@ -35,7 +36,6 @@ import {
   type SlotPath,
   type WorkspaceDragData,
 } from "@/lib/formula/block-tree";
-import { BlockPalettePanel } from "@/app/components/builder/scratch/block-palette-panel";
 import { BlockPaletteSheet } from "@/app/components/builder/scratch/block-palette-sheet";
 import { DraggableBlock } from "@/app/components/builder/scratch/draggable-block";
 import { FormulaLinearWorkspace } from "@/app/components/builder/scratch/formula-linear-workspace";
@@ -43,7 +43,7 @@ import { useTouchBuilderUi } from "@/lib/hooks/use-media-query";
 
 interface FormulaScratchEditorProps {
   config: CalculatorConfig;
-  outputIndex: number;
+  formulaTarget: FormulaTarget;
   outputKey: string;
   expression: BlockExpression;
   onChange: (expression: BlockExpression) => void;
@@ -51,7 +51,7 @@ interface FormulaScratchEditorProps {
 
 export function FormulaScratchEditor({
   config,
-  outputIndex,
+  formulaTarget,
   outputKey,
   expression,
   onChange,
@@ -68,8 +68,8 @@ export function FormulaScratchEditor({
   const touchUi = useTouchBuilderUi();
 
   const paletteBlocks = useMemo(
-    () => buildPaletteBlocks(config, outputIndex, quantityLabel),
-    [config, outputIndex, quantityLabel],
+    () => buildPaletteBlocks(config, formulaTarget, quantityLabel),
+    [config, formulaTarget, quantityLabel],
   );
 
   const flatTokens = useMemo(
@@ -108,7 +108,7 @@ export function FormulaScratchEditor({
           ? formatBlockExpression(
               { type: "operand", operand: token.operand },
               config,
-              outputIndex,
+              formulaTarget,
               quantityLabel,
             )
           : token.kind === "operator"
@@ -131,7 +131,7 @@ export function FormulaScratchEditor({
         const inner =
           groupExpr.type === "group" ? groupExpr.inner : groupExpr;
         setActiveDragLabel(
-          `( ${formatBlockExpression(inner, config, outputIndex, quantityLabel)} )`,
+          `( ${formatBlockExpression(inner, config, formulaTarget, quantityLabel)} )`,
         );
         return;
       }
@@ -139,11 +139,11 @@ export function FormulaScratchEditor({
         const slotExpr = getSlotExpression(expression, workspace.path);
         if (slotExpr.type === "operand") {
           setActiveDragLabel(
-            formatBlockExpression(slotExpr, config, outputIndex, quantityLabel),
+            formatBlockExpression(slotExpr, config, formulaTarget, quantityLabel),
           );
         } else if (slotExpr.type === "group") {
           setActiveDragLabel(
-            `( ${formatBlockExpression(slotExpr.inner, config, outputIndex, quantityLabel)} )`,
+            `( ${formatBlockExpression(slotExpr.inner, config, formulaTarget, quantityLabel)} )`,
           );
         }
       }
@@ -253,9 +253,7 @@ export function FormulaScratchEditor({
 
   function handleSlotTap(path: SlotPath[]) {
     setActiveSlot(path);
-    if (touchUi) {
-      setPaletteOpen(true);
-    }
+    setPaletteOpen(true);
   }
 
   function closePalette() {
@@ -266,11 +264,9 @@ export function FormulaScratchEditor({
   const preview = formatBlockExpression(
     expression,
     config,
-    outputIndex,
+    formulaTarget,
     quantityLabel,
   );
-
-  const canSort = isReorderableChain(expression);
 
   if (!mounted) {
     return (
@@ -301,73 +297,57 @@ export function FormulaScratchEditor({
     >
       <div className="space-y-3 rounded-xl border border-dashed border-accent/40 bg-accent-muted/15 p-3">
         <p className="text-xs font-medium text-accent">{t("formulaTitle")}</p>
-        {!touchUi && (
-          <p className="text-xs text-muted-foreground">{t("blocksWorkspaceHint")}</p>
-        )}
-        {touchUi && (
-          <p className="text-xs text-muted-foreground">{t("blocksMobileHint")}</p>
-        )}
+        <p className="text-xs text-muted-foreground">{t("blocksMobileHint")}</p>
 
-        {!touchUi && (
-          <BlockPalettePanel blocks={paletteBlocks} onBlockTap={handleBlockTap} />
-        )}
-
-        {activeSlot && !touchUi && (
-          <p className="rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent">
-            {t("blocksTapToInsert")}
-          </p>
-        )}
-
-        <div className="flex items-start justify-between gap-2">
-          {!touchUi && (
-            <p className="text-xs text-muted-foreground">
-              {canSort ? t("blocksDragReorder") : t("blocksDragSwap")}
-              {" · "}
-              {t("blocksDragGroup")}
-              {" · "}
-              {t("blocksContinueHint")}
+        <div className="space-y-3">
+          {activeSlot && (
+            <p className="rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent">
+              {t("blocksTapToInsert")}
             </p>
           )}
-          <button
-            type="button"
-            onClick={() => onChange(emptyBlockExpression())}
-            className="shrink-0 text-xs text-destructive hover:underline"
-          >
-            {t("blocksClearAll")}
-          </button>
+
+          <div className="flex items-start justify-end">
+            <button
+              type="button"
+              onClick={() => onChange(emptyBlockExpression())}
+              className="shrink-0 text-xs text-destructive hover:underline"
+            >
+              {t("blocksClearAll")}
+            </button>
+          </div>
+
+          <FormulaLinearWorkspace
+            outputKey={outputKey}
+            expression={expression}
+            config={config}
+            formulaTarget={formulaTarget}
+            quantityLabel={quantityLabel}
+            touchUi={touchUi}
+            activeSlotPath={activeSlot}
+            onSlotClear={(path) => onChange(clearSlot(expression, path))}
+            onOperationRemove={(path) =>
+              onChange(removeOperationAt(expression, path))
+            }
+            onGroupRemove={(path) =>
+              onChange(removeGroupAt(expression, path))
+            }
+            onSlotTap={handleSlotTap}
+          />
+
+          <div className="rounded-lg bg-card px-3 py-2">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              {t("formulaPreview")}
+            </span>
+            <p className="mt-1 text-sm font-medium text-foreground">{preview}</p>
+          </div>
         </div>
 
-        <FormulaLinearWorkspace
-          outputKey={outputKey}
-          expression={expression}
-          config={config}
-          outputIndex={outputIndex}
-          quantityLabel={quantityLabel}
-          touchUi={touchUi}
-          activeSlotPath={activeSlot}
-          onSlotClear={(path) => onChange(clearSlot(expression, path))}
-          onOperationRemove={(path) =>
-            onChange(removeOperationAt(expression, path))
-          }
-          onGroupRemove={(path) =>
-            onChange(removeGroupAt(expression, path))
-          }
-          onSlotTap={handleSlotTap}
-        />
-
         <BlockPaletteSheet
-          open={paletteOpen && touchUi}
+          open={paletteOpen}
           blocks={paletteBlocks}
           onBlockTap={handleBlockTap}
           onClose={closePalette}
         />
-
-        <div className="rounded-lg bg-card px-3 py-2">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            {t("formulaPreview")}
-          </span>
-          <p className="mt-1 text-sm font-medium text-foreground">{preview}</p>
-        </div>
       </div>
 
       <DragOverlay dropAnimation={null}>

@@ -1,5 +1,5 @@
 import type { CalculatorConfig } from "@/types/calculator";
-import { evaluateBlockExpression } from "@/lib/formula/block-evaluate";
+import { evaluateAllFormulaFields } from "@/lib/formula/field-graph";
 
 export interface CalculationWarning {
   outputId: string;
@@ -16,35 +16,17 @@ export function calculateFromConfigWithDiagnostics(
   config: CalculatorConfig,
   quantities: Record<string, number>,
 ): CalculationResult {
-  const values: Record<string, number> = {};
   const warnings: CalculationWarning[] = [];
-  const constants = config.constants ?? [];
 
-  for (const output of config.outputs) {
-    const outputLabel = output.label.trim() || output.id;
+  const { outputs } = evaluateAllFormulaFields(config, quantities, (field, message) => {
+    warnings.push({
+      outputId: field.id,
+      outputLabel: field.label.trim() || field.id,
+      message,
+    });
+  });
 
-    try {
-      values[output.id] = evaluateBlockExpression(output.expression, {
-        quantities,
-        inputs: config.inputs,
-        constants,
-        outputs: values,
-        onWarning: (message) => {
-          warnings.push({ outputId: output.id, outputLabel, message });
-        },
-      });
-    } catch (error) {
-      values[output.id] = 0;
-      warnings.push({
-        outputId: output.id,
-        outputLabel,
-        message:
-          error instanceof Error ? error.message : "Помилка у формулі",
-      });
-    }
-  }
-
-  return { values, warnings };
+  return { values: outputs, warnings };
 }
 
 export function calculateFromConfig(

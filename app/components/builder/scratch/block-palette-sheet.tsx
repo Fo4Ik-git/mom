@@ -48,9 +48,9 @@ export function BlockPaletteSheet({
         role="dialog"
         aria-modal
         aria-labelledby="block-palette-sheet-title"
-        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[min(88vh,640px)] flex-col rounded-t-2xl border-t border-border bg-card shadow-card-lg"
+        className="fixed inset-y-0 right-0 z-50 flex w-[min(100%,20rem)] max-w-full flex-col border-l border-border bg-card shadow-card-lg sm:w-72"
       >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="flex shrink-0 items-start justify-between gap-2 border-b border-border px-4 py-3">
           <div className="min-w-0">
             <h3
               id="block-palette-sheet-title"
@@ -74,6 +74,7 @@ export function BlockPaletteSheet({
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
           <BlockPaletteContent
             blocks={blocks}
+            vertical
             dragEnabled={false}
             onBlockTap={(block) => {
               onBlockTap(block);

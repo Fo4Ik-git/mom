@@ -3,6 +3,7 @@ import type {
   BlockOperand,
   CalculatorConfig,
 } from "@/types/calculator";
+import type { FormulaTarget } from "@/lib/formula/formula-target";
 import { getInputById, getPropertyLabel } from "@/lib/formula/operand-labels";
 
 const OP_LABELS: Record<string, string> = {
@@ -15,7 +16,7 @@ const OP_LABELS: Record<string, string> = {
 export function formatBlockOperand(
   operand: BlockOperand,
   config: CalculatorConfig,
-  outputIndex: number,
+  target: FormulaTarget,
   quantityLabel: string,
 ): string {
   switch (operand.kind) {
@@ -30,16 +31,21 @@ export function formatBlockOperand(
       }
       return `${input.label} · ${getPropertyLabel(input, operand.propertyId)}`;
     }
-    case "output": {
-      const output = config.outputs.find((o) => o.id === operand.outputId);
-      if (!output) {
+    case "calculation": {
+      if (operand.calculationId === target.fieldId) {
         return "?";
       }
-      const idx = config.outputs.findIndex((o) => o.id === operand.outputId);
-      if (idx >= outputIndex) {
-        return `${output.label}?`;
+      const calculation = (config.calculations ?? []).find(
+        (item) => item.id === operand.calculationId,
+      );
+      return calculation?.label ?? "?";
+    }
+    case "output": {
+      if (operand.outputId === target.fieldId) {
+        return "?";
       }
-      return output.label;
+      const output = config.outputs.find((o) => o.id === operand.outputId);
+      return output?.label ?? "?";
     }
     case "number":
       return String(operand.value);
@@ -57,7 +63,7 @@ export function formatBlockOperand(
 export function formatBlockExpression(
   expression: BlockExpression,
   config: CalculatorConfig,
-  outputIndex: number,
+  target: FormulaTarget,
   quantityLabel: string,
 ): string {
   if (expression.type === "empty") {
@@ -68,7 +74,7 @@ export function formatBlockExpression(
     return formatBlockOperand(
       expression.operand,
       config,
-      outputIndex,
+      target,
       quantityLabel,
     );
   }
@@ -77,7 +83,7 @@ export function formatBlockExpression(
     const inner = formatBlockExpression(
       expression.inner,
       config,
-      outputIndex,
+      target,
       quantityLabel,
     );
     return `(${inner})`;
@@ -86,13 +92,13 @@ export function formatBlockExpression(
   const left = formatBlockExpression(
     expression.left,
     config,
-    outputIndex,
+    target,
     quantityLabel,
   );
   const right = formatBlockExpression(
     expression.right,
     config,
-    outputIndex,
+    target,
     quantityLabel,
   );
   const op = OP_LABELS[expression.operator] ?? expression.operator;

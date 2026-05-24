@@ -12,6 +12,7 @@ import { useRouter } from "@/i18n/navigation";
 import { appFetch } from "@/lib/api-client";
 import type {
   BlockExpression,
+  CalculationField,
   CalculatorConfig,
   CalculatorConstant,
   InputField,
@@ -51,6 +52,14 @@ function emptyOutput(): OutputField {
   };
 }
 
+function emptyCalculation(): CalculationField {
+  return {
+    id: randomId("calc"),
+    label: "",
+    expression: emptyBlockExpression(),
+  };
+}
+
 function emptyConstant(): CalculatorConstant {
   return {
     id: randomId("const"),
@@ -76,6 +85,7 @@ export function CalculatorBuilder({
   const [config, setConfig] = useState<CalculatorConfig>({
     ...initialConfig,
     constants: initialConfig.constants ?? [],
+    calculations: initialConfig.calculations ?? [],
   });
   const [error, setError] = useState<string | null>(null);
   const [errorIssues, setErrorIssues] = useState<string[]>([]);
@@ -251,6 +261,109 @@ export function CalculatorBuilder({
           <section className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <div>
+                <h2 className="text-lg font-semibold">{t("calculationFields")}</h2>
+                <p className="text-sm text-muted-foreground">
+                  {t("calculationFieldsDesc")}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setConfig((c) => ({
+                    ...c,
+                    calculations: [...(c.calculations ?? []), emptyCalculation()],
+                  }))
+                }
+                className="shrink-0 rounded-xl bg-accent-muted px-3 py-2 text-sm font-medium text-accent"
+              >
+                {t("addCalculation")}
+              </button>
+            </div>
+
+            {(config.calculations ?? []).length === 0 ? (
+              <p className="rounded-xl border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
+                {t("calculationFieldsEmpty")}
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {(config.calculations ?? []).map((calculation, index) => (
+                  <div
+                    key={calculation.id}
+                    className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <label className="block flex-1 space-y-1.5">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {t("calculationFieldName")}
+                        </span>
+                        <input
+                          value={calculation.label}
+                          onChange={(e) => {
+                            const label = e.target.value;
+                            setConfig((c) => ({
+                              ...c,
+                              calculations: (c.calculations ?? []).map((item, i) =>
+                                i === index ? { ...item, label } : item,
+                              ),
+                            }));
+                          }}
+                          onBlur={(e) => {
+                            const label = e.target.value.trim();
+                            if (!label) {
+                              return;
+                            }
+                            setConfig((c) => ({
+                              ...c,
+                              calculations: (c.calculations ?? []).map((item, i) =>
+                                i === index
+                                  ? { ...item, label, id: slugifyId(label, "calc") }
+                                  : item,
+                              ),
+                            }));
+                          }}
+                          placeholder={t("calculationFieldNamePlaceholder")}
+                          className="h-11 w-full rounded-xl border border-border bg-input px-3.5 text-sm font-medium"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConfig((c) => ({
+                            ...c,
+                            calculations: (c.calculations ?? []).filter(
+                              (_, i) => i !== index,
+                            ),
+                          }))
+                        }
+                        className="mt-6 text-xs text-destructive underline"
+                      >
+                        {tc("delete")}
+                      </button>
+                    </div>
+
+                    <FormulaBuilder
+                      config={config}
+                      formulaTarget={{ fieldId: calculation.id }}
+                      fieldKey={calculation.id}
+                      expression={calculation.expression}
+                      onChange={(expression) =>
+                        setConfig((c) => ({
+                          ...c,
+                          calculations: (c.calculations ?? []).map((item, i) =>
+                            i === index ? { ...item, expression } : item,
+                          ),
+                        }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
                 <h2 className="text-lg font-semibold">{t("outputFields")}</h2>
                 <p className="text-sm text-muted-foreground">
                   {t("outputFieldsDesc")}
@@ -347,8 +460,8 @@ export function CalculatorBuilder({
 
                   <FormulaBuilder
                     config={config}
-                    outputIndex={index}
-                    outputKey={output.id}
+                    formulaTarget={{ fieldId: output.id }}
+                    fieldKey={output.id}
                     expression={output.expression}
                     onChange={(expression) =>
                       setConfig((c) => ({

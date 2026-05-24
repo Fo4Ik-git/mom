@@ -37,6 +37,7 @@ export const blockOperandSchema = z.discriminatedUnion("kind", [
     propertyId: z.string(),
   }),
   z.object({ kind: z.literal("output"), outputId: z.string() }),
+  z.object({ kind: z.literal("calculation"), calculationId: z.string() }),
   z.object({ kind: z.literal("number"), value: z.number() }),
   z.object({ kind: z.literal("constant"), constantId: z.string() }),
 ]);
@@ -91,21 +92,35 @@ export const outputFieldSchema = z.object({
   highlight: z.boolean().optional(),
 });
 
+const expressionFieldSchema = z.object({
+  id: idSchema,
+  label: z.string().min(1).max(120),
+  expression: blockExpressionSchema,
+});
+
+function normalizeExpressionFields(items: unknown) {
+  if (!Array.isArray(items)) {
+    return items;
+  }
+  return items.map((item) => {
+    const row = item as Record<string, unknown>;
+    return {
+      ...row,
+      expression: normalizeBlockExpression(row.expression),
+    };
+  });
+}
+
 export const calculatorConfigSchema = z.object({
   version: z.literal(2).optional().default(2),
   inputs: z.array(inputFieldSchema).min(1).max(50),
   constants: z.array(calculatorConstantSchema).max(30).optional().default([]),
+  calculations: z
+    .preprocess(normalizeExpressionFields, z.array(expressionFieldSchema).max(30))
+    .optional()
+    .default([]),
   outputs: z.preprocess(
-    (outputs) =>
-      Array.isArray(outputs)
-        ? outputs.map((output) => {
-            const row = output as Record<string, unknown>;
-            return {
-              ...row,
-              expression: normalizeBlockExpression(row.expression),
-            };
-          })
-        : outputs,
+    normalizeExpressionFields,
     z.array(
       z.object({
         id: idSchema,
@@ -119,6 +134,11 @@ export const calculatorConfigSchema = z.object({
 
 export type InputProperty = z.infer<typeof inputPropertySchema>;
 export type InputField = z.infer<typeof inputFieldSchema>;
+export type CalculationField = {
+  id: string;
+  label: string;
+  expression: BlockExpression;
+};
 export type OutputField = {
   id: string;
   label: string;
@@ -129,6 +149,7 @@ export type CalculatorConfig = {
   version?: 2;
   inputs: InputField[];
   constants?: CalculatorConstant[];
+  calculations?: CalculationField[];
   outputs: OutputField[];
 };
 
@@ -291,6 +312,7 @@ function migrateLegacyConfig(record: Record<string, unknown>): CalculatorConfig 
     version: 2,
     inputs,
     constants: [],
+    calculations: [],
     outputs,
   });
 }

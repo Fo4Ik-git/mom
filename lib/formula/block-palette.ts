@@ -1,10 +1,18 @@
 import type { BlockOperand, CalculatorConfig, FormulaOperator } from "@/types/calculator";
+import type { FormulaTarget } from "@/lib/formula/formula-target";
 
 export type PaletteBlock = {
   id: string;
   label: string;
   category: "operand" | "operator" | "constant" | "group";
-  color: "quantity" | "property" | "output" | "operator" | "constant" | "group";
+  color:
+    | "quantity"
+    | "property"
+    | "output"
+    | "calculation"
+    | "operator"
+    | "constant"
+    | "group";
   dragData:
     | { kind: "operand"; operand: BlockOperand }
     | { kind: "operator"; operator: FormulaOperator }
@@ -13,7 +21,7 @@ export type PaletteBlock = {
 
 export function buildPaletteBlocks(
   config: CalculatorConfig,
-  outputIndex: number,
+  target: FormulaTarget,
   quantityLabel: string,
 ): PaletteBlock[] {
   const blocks: PaletteBlock[] = [];
@@ -48,7 +56,26 @@ export function buildPaletteBlocks(
     }
   }
 
-  config.outputs.slice(0, outputIndex).forEach((output) => {
+  for (const calculation of config.calculations ?? []) {
+    if (calculation.id === target.fieldId) {
+      continue;
+    }
+    blocks.push({
+      id: `k-${calculation.id}`,
+      label: calculation.label,
+      category: "operand",
+      color: "calculation",
+      dragData: {
+        kind: "operand",
+        operand: { kind: "calculation", calculationId: calculation.id },
+      },
+    });
+  }
+
+  for (const output of config.outputs) {
+    if (output.id === target.fieldId) {
+      continue;
+    }
     blocks.push({
       id: `o-${output.id}`,
       label: output.label,
@@ -59,7 +86,7 @@ export function buildPaletteBlocks(
         operand: { kind: "output", outputId: output.id },
       },
     });
-  });
+  }
 
   (config.constants ?? []).forEach((constant) => {
     blocks.push({
@@ -99,6 +126,8 @@ export const BLOCK_COLORS = {
   quantity: "bg-sky-500/15 text-sky-800 border-sky-400/50 dark:text-sky-200",
   property: "bg-accent/15 text-accent border-accent/40",
   output: "bg-emerald-500/15 text-emerald-800 border-emerald-400/50 dark:text-emerald-200",
+  calculation:
+    "bg-orange-500/15 text-orange-800 border-orange-400/50 dark:text-orange-200",
   operator: "bg-amber-500/20 text-amber-900 border-amber-400/60 dark:text-amber-100",
   constant: "bg-violet-500/15 text-violet-800 border-violet-400/50 dark:text-violet-200",
   group: "bg-violet-500/10 text-violet-800 border-violet-400/40 dark:text-violet-200",

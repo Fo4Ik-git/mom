@@ -14,6 +14,7 @@ export const emptyCalculatorConfig: CalculatorConfig = {
     },
   ],
   constants: [{ id: "const_factor", label: "Коефіцієнт", value: 1.2 }],
+  calculations: [],
   outputs: [
     {
       id: "output_total",

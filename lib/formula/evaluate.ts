@@ -1,5 +1,8 @@
-import type { CalculatorConfig } from "@/types/calculator";
-import { evaluateBlockExpression } from "@/lib/formula/block-evaluate";
+import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
+import {
+  evaluateAllFormulaFields,
+  validateFieldGraph,
+} from "@/lib/formula/field-graph";
 
 export { evaluateBlockExpression } from "@/lib/formula/block-evaluate";
 export {
@@ -13,48 +16,60 @@ export interface FormulaError {
   message: string;
 }
 
+function validateFieldExpression(
+  label: string,
+  expression: BlockExpression,
+  fieldLabelPrefix: string,
+): FormulaError | null {
+  if (expression.type === "empty") {
+    return {
+      message: `${fieldLabelPrefix} «${label}»: формула порожня — додайте блоки в логіку розрахунку`,
+    };
+  }
+  return null;
+}
+
 export function validateConfigFormulas(config: CalculatorConfig): FormulaError[] {
   const errors: FormulaError[] = [];
-  const dummyQuantities = Object.fromEntries(
-    config.inputs.map((input) => [input.id, 1]),
-  );
+
+  for (const calculation of config.calculations ?? []) {
+    const label = calculation.label.trim() || calculation.id;
+    const error = validateFieldExpression(
+      label,
+      calculation.expression,
+      "Поле розрахунку",
+    );
+    if (error) {
+      errors.push(error);
+    }
+  }
 
   for (const output of config.outputs) {
-    const outputLabel = output.label.trim() || output.id;
-
-    if (output.expression.type === "empty") {
-      errors.push({
-        message: `Результат «${outputLabel}»: формула порожня — додайте блоки в логіку розрахунку`,
-      });
-      continue;
+    const label = output.label.trim() || output.id;
+    const error = validateFieldExpression(label, output.expression, "Результат");
+    if (error) {
+      errors.push(error);
     }
+  }
 
-    try {
-      const priorResults: Record<string, number> = {};
-      const outputIndex = config.outputs.findIndex((o) => o.id === output.id);
+  for (const message of validateFieldGraph(config)) {
+    errors.push({ message });
+  }
 
-      for (const prior of config.outputs.slice(0, outputIndex)) {
-        priorResults[prior.id] = evaluateBlockExpression(prior.expression, {
-          quantities: dummyQuantities,
-          inputs: config.inputs,
-          constants: config.constants ?? [],
-          outputs: priorResults,
-        });
-      }
+  if (errors.length > 0) {
+    return errors;
+  }
 
-      evaluateBlockExpression(output.expression, {
-        quantities: dummyQuantities,
-        inputs: config.inputs,
-        constants: config.constants ?? [],
-        outputs: priorResults,
-      });
-    } catch (error) {
-      errors.push({
-        message: `Результат «${outputLabel}»: ${
-          error instanceof Error ? error.message : "помилка у формулі"
-        }`,
-      });
-    }
+  try {
+    evaluateAllFormulaFields(
+      config,
+      Object.fromEntries(config.inputs.map((input) => [input.id, 1])),
+    );
+  } catch (error) {
+    errors.push({
+      message:
+        error instanceof Error ? error.message : "Помилка у формулах калькулятора",
+    });
   }
 
   return errors;
