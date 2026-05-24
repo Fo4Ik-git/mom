@@ -14,6 +14,7 @@ import {
   type FlatToken,
 } from "@/lib/formula/block-tokens";
 import type { SlotPath } from "@/lib/formula/block-tree";
+import { slotPathsEqual } from "@/lib/formula/slot-path";
 import {
   CONTINUE_PATH,
   showContinuationAfter,
@@ -35,6 +36,8 @@ interface FormulaLinearWorkspaceProps {
   onOperationRemove: (path: SlotPath[]) => void;
   onGroupRemove: (path: SlotPath[]) => void;
   onSlotTap: (path: SlotPath[]) => void;
+  touchUi?: boolean;
+  activeSlotPath?: SlotPath[] | null;
 }
 
 function hasGroups(expression: BlockExpression): boolean {
@@ -76,6 +79,8 @@ interface SortableTokenProps {
   onSlotClear: (path: SlotPath[]) => void;
   onOperationRemove: (path: SlotPath[]) => void;
   onSlotTap: (path: SlotPath[]) => void;
+  touchUi?: boolean;
+  activeSlotPath?: SlotPath[] | null;
 }
 
 function SortableToken({
@@ -87,7 +92,11 @@ function SortableToken({
   onSlotClear,
   onOperationRemove,
   onSlotTap,
+  touchUi = false,
+  activeSlotPath = null,
 }: SortableTokenProps) {
+  const sortableEnabled = !touchUi;
+
   const {
     attributes,
     listeners,
@@ -98,6 +107,7 @@ function SortableToken({
   } = useSortable({
     id: token.id,
     data: { source: "workspace-token", tokenId: token.id },
+    disabled: !sortableEnabled,
   });
 
   const style = {
@@ -112,9 +122,12 @@ function SortableToken({
       <div
         ref={setNodeRef}
         style={style}
-        className="cursor-grab touch-manipulation active:cursor-grabbing"
-        {...listeners}
-        {...attributes}
+        className={
+          sortableEnabled
+            ? "cursor-grab touch-manipulation active:cursor-grabbing"
+            : ""
+        }
+        {...(sortableEnabled ? { ...listeners, ...attributes } : {})}
       >
         <OperatorChip
           operator={token.operator}
@@ -139,9 +152,12 @@ function SortableToken({
     <div
       ref={setNodeRef}
       style={style}
-      className="cursor-grab touch-manipulation active:cursor-grabbing"
-      {...listeners}
-      {...attributes}
+      className={
+        sortableEnabled
+          ? "cursor-grab touch-manipulation active:cursor-grabbing"
+          : ""
+      }
+      {...(sortableEnabled ? { ...listeners, ...attributes } : {})}
     >
       <BlockSlot
         slotId={slotId}
@@ -154,6 +170,7 @@ function SortableToken({
         filledLabel={filledLabel}
         color={token.kind === "operand" ? operandColor(token) : "empty"}
         compact
+        isActive={slotPathsEqual(activeSlotPath, token.path)}
         onClear={
           token.kind === "operand"
             ? () => onSlotClear(token.path)
@@ -173,10 +190,12 @@ function ContinuationSlot({
   outputKey,
   path,
   onSlotTap,
+  activeSlotPath,
 }: {
   outputKey: string;
   path: SlotPath[];
   onSlotTap: (path: SlotPath[]) => void;
+  activeSlotPath?: SlotPath[] | null;
 }) {
   const pathKey = path.join("-") || "root";
   return (
@@ -185,6 +204,7 @@ function ContinuationSlot({
       path={path}
       expression={{ type: "empty" }}
       compact
+      isActive={slotPathsEqual(activeSlotPath, path)}
       onTap={() => onSlotTap(path)}
     />
   );
@@ -201,6 +221,8 @@ function ExpressionNode({
   onOperationRemove,
   onGroupRemove,
   onSlotTap,
+  touchUi = false,
+  activeSlotPath = null,
 }: ExpressionNodeProps) {
   if (expression.type === "group") {
     const groupPath = path;
@@ -221,12 +243,15 @@ function ExpressionNode({
           onOperationRemove={onOperationRemove}
           onGroupRemove={onGroupRemove}
           onSlotTap={onSlotTap}
+          touchUi={touchUi}
+          activeSlotPath={activeSlotPath}
         />
         {showContinuationInsideGroup(expression.inner) && (
           <ContinuationSlot
             outputKey={outputKey}
             path={[...path, "inner", "continue"]}
             onSlotTap={onSlotTap}
+            activeSlotPath={activeSlotPath}
           />
         )}
       </GroupBracket>
@@ -266,7 +291,8 @@ function ExpressionNode({
         filledLabel={filledLabel}
         color={color}
         compact
-        draggable={expression.type === "operand"}
+        draggable={expression.type === "operand" && !touchUi}
+        isActive={slotPathsEqual(activeSlotPath, path)}
         onClear={
           expression.type === "operand"
             ? () => onSlotClear(path)
@@ -290,18 +316,21 @@ function ExpressionNode({
         onOperationRemove={onOperationRemove}
         onGroupRemove={onGroupRemove}
         onSlotTap={onSlotTap}
+        touchUi={touchUi}
+        activeSlotPath={activeSlotPath}
       />
       {showContinuationAfterLeft(expression) && (
         <ContinuationSlot
           outputKey={outputKey}
           path={[...path, "left", "continue"]}
           onSlotTap={onSlotTap}
+          activeSlotPath={activeSlotPath}
         />
       )}
       <OperatorChip
         operator={expression.operator}
         path={path}
-        draggable
+        draggable={!touchUi}
         onRemove={() => onOperationRemove(path)}
       />
       <ExpressionNode
@@ -315,6 +344,8 @@ function ExpressionNode({
         onOperationRemove={onOperationRemove}
         onGroupRemove={onGroupRemove}
         onSlotTap={onSlotTap}
+        touchUi={touchUi}
+        activeSlotPath={activeSlotPath}
       />
     </>
   );
@@ -328,7 +359,9 @@ export function FormulaLinearWorkspace({
   const { expression, outputKey } = props;
   const tokens = flattenExpression(expression);
   const canSort =
-    isReorderableChain(expression) && !hasGroups(expression);
+    isReorderableChain(expression) &&
+    !hasGroups(expression) &&
+    !props.touchUi;
 
   const inner = canSort ? (
     <SortableContext
@@ -344,6 +377,7 @@ export function FormulaLinearWorkspace({
             outputKey={outputKey}
             path={CONTINUE_PATH}
             onSlotTap={props.onSlotTap}
+            activeSlotPath={props.activeSlotPath}
           />
         )}
       </div>
@@ -356,6 +390,7 @@ export function FormulaLinearWorkspace({
           outputKey={outputKey}
           path={CONTINUE_PATH}
           onSlotTap={props.onSlotTap}
+          activeSlotPath={props.activeSlotPath}
         />
       )}
     </div>

@@ -18,6 +18,7 @@ interface BlockSlotProps {
   draggable?: boolean;
   onClear?: () => void;
   onTap?: () => void;
+  isActive?: boolean;
 }
 
 export function BlockSlot({
@@ -31,6 +32,7 @@ export function BlockSlot({
   draggable = false,
   onClear,
   onTap,
+  isActive = false,
 }: BlockSlotProps) {
   const filled = isExpressionFilled(expression);
 
@@ -81,16 +83,22 @@ export function BlockSlot({
       } ${
         isOver
           ? "border-accent bg-accent/20 ring-2 ring-accent/30"
-          : filled
-            ? BLOCK_COLORS[color]
-            : BLOCK_COLORS.empty
+          : isActive && !filled
+            ? "border-accent bg-accent/15 ring-2 ring-accent/40"
+            : filled
+              ? BLOCK_COLORS[color]
+              : BLOCK_COLORS.empty
       }`}
       {...(draggable && filled ? { ...listeners, ...attributes } : {})}
     >
       <button
         type="button"
-        onClick={onTap}
-        className={`flex h-full w-full items-center text-left ${compact ? "gap-0" : "flex-col items-start justify-center"}`}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onTap?.();
+        }}
+        className={`flex h-full min-h-[44px] w-full touch-manipulation items-center text-left ${compact ? "gap-0" : "flex-col items-start justify-center"}`}
       >
         {!compact && label && (
           <span className="text-[10px] uppercase tracking-wide opacity-70">

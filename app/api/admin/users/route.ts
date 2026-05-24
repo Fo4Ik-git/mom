@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import {
+  buildAdminUsersSearchWhere,
+  parseAdminUsersPage,
+  parseAdminUsersPageSize,
+} from "@/lib/admin-users-list";
 import { handleAdminApiError } from "@/lib/admin-api-response";
 import { requireAdmin } from "@/lib/auth-session";
 import { hashPassword } from "@/lib/password";
@@ -23,53 +28,88 @@ const createSchema = z.object({
   adminNotes: z.string().max(500).optional(),
 });
 
-export async function GET() {
+const userSelect = {
+  id: true,
+  email: true,
+  name: true,
+  role: true,
+  banned: true,
+  banReason: true,
+  maxCalculators: true,
+  accessExpiresAt: true,
+  adminNotes: true,
+  createdAt: true,
+} as const;
+
+async function mapUserRow(
+  user: {
+    id: string;
+    email: string;
+    name: string | null;
+    role: Role;
+    banned: boolean;
+    banReason: "ACCESS_EXPIRED" | null;
+    maxCalculators: number | null;
+    accessExpiresAt: Date | null;
+    adminNotes: string | null;
+    createdAt: Date;
+  },
+) {
+  const max = await getEffectiveMaxCalculators(user);
+  const calculatorsCount = await countUserCalculators(user.id);
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    banned: user.banned,
+    banReason: user.banReason,
+    maxCalculators: user.maxCalculators,
+    effectiveMaxCalculators: max,
+    accessExpiresAt: user.accessExpiresAt?.toISOString() ?? null,
+    accessActive: isAccessActive(user),
+    adminNotes: user.adminNotes,
+    createdAt: user.createdAt.toISOString(),
+    calculatorsCount,
+    usesDefaultLimit: user.maxCalculators == null && user.role !== Role.ADMIN,
+  };
+}
+
+export async function GET(request: Request) {
   try {
     await requireAdmin();
-    const platform = await getPlatformSettings();
+    const { searchParams } = new URL(request.url);
+    const q = (searchParams.get("q") ?? "").trim();
+    const page = parseAdminUsersPage(searchParams.get("page"));
+    const pageSize = parseAdminUsersPageSize(searchParams.get("pageSize"));
+    const where = buildAdminUsersSearchWhere(q);
+    const skip = (page - 1) * pageSize;
 
-    const users = await db.user.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        banned: true,
-        banReason: true,
-        maxCalculators: true,
-        accessExpiresAt: true,
-        adminNotes: true,
-        createdAt: true,
-      },
-    });
-
-    const rows = await Promise.all(
-      users.map(async (user) => {
-        const max = await getEffectiveMaxCalculators(user);
-        const calculatorsCount = await countUserCalculators(user.id);
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          banned: user.banned,
-          banReason: user.banReason,
-          maxCalculators: user.maxCalculators,
-          effectiveMaxCalculators: max,
-          accessExpiresAt: user.accessExpiresAt?.toISOString() ?? null,
-          accessActive: isAccessActive(user),
-          adminNotes: user.adminNotes,
-          createdAt: user.createdAt.toISOString(),
-          calculatorsCount,
-          usesDefaultLimit: user.maxCalculators == null && user.role !== Role.ADMIN,
-        };
+    const [total, users, platform] = await Promise.all([
+      db.user.count({ where }),
+      db.user.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: pageSize,
+        select: userSelect,
       }),
-    );
+      getPlatformSettings(),
+    ]);
+
+    const rows = await Promise.all(users.map(mapUserRow));
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const safePage = Math.min(page, totalPages);
 
     return NextResponse.json({
       users: rows,
       defaultMaxCalculators: platform.defaultMaxCalculators,
+      pagination: {
+        page: safePage,
+        pageSize,
+        total,
+        totalPages,
+      },
     });
   } catch (error) {
     return handleAdminApiError(error, "admin/users GET");
@@ -103,36 +143,12 @@ export async function POST(request: Request) {
         accessExpiresAt,
         adminNotes: body.adminNotes,
       },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        banned: true,
-        banReason: true,
-        maxCalculators: true,
-        accessExpiresAt: true,
-        createdAt: true,
-      },
+      select: userSelect,
     });
 
-    const calculatorsCount = await countUserCalculators(user.id);
-    const effectiveMaxCalculators = await getEffectiveMaxCalculators(user);
+    const row = await mapUserRow(user);
 
-    return NextResponse.json(
-      {
-        user: {
-          ...user,
-          accessExpiresAt: user.accessExpiresAt?.toISOString() ?? null,
-          accessActive: isAccessActive(user),
-          createdAt: user.createdAt.toISOString(),
-          calculatorsCount,
-          effectiveMaxCalculators,
-          usesDefaultLimit: user.maxCalculators == null && user.role !== Role.ADMIN,
-        },
-      },
-      { status: 201 },
-    );
+    return NextResponse.json({ user: row }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "invalid_data" }, { status: 400 });

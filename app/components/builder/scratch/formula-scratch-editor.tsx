@@ -36,8 +36,10 @@ import {
   type WorkspaceDragData,
 } from "@/lib/formula/block-tree";
 import { BlockPalettePanel } from "@/app/components/builder/scratch/block-palette-panel";
+import { BlockPaletteSheet } from "@/app/components/builder/scratch/block-palette-sheet";
 import { DraggableBlock } from "@/app/components/builder/scratch/draggable-block";
 import { FormulaLinearWorkspace } from "@/app/components/builder/scratch/formula-linear-workspace";
+import { useTouchBuilderUi } from "@/lib/hooks/use-media-query";
 
 interface FormulaScratchEditorProps {
   config: CalculatorConfig;
@@ -62,6 +64,8 @@ export function FormulaScratchEditor({
   const [activeBlock, setActiveBlock] = useState<PaletteBlock | null>(null);
   const [activeDragLabel, setActiveDragLabel] = useState<string | null>(null);
   const [activeSlot, setActiveSlot] = useState<SlotPath[] | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const touchUi = useTouchBuilderUi();
 
   const paletteBlocks = useMemo(
     () => buildPaletteBlocks(config, outputIndex, quantityLabel),
@@ -244,10 +248,19 @@ export function FormulaScratchEditor({
     };
     applyToSlot(path, dragData);
     setActiveSlot(null);
+    setPaletteOpen(false);
   }
 
   function handleSlotTap(path: SlotPath[]) {
     setActiveSlot(path);
+    if (touchUi) {
+      setPaletteOpen(true);
+    }
+  }
+
+  function closePalette() {
+    setPaletteOpen(false);
+    setActiveSlot(null);
   }
 
   const preview = formatBlockExpression(
@@ -290,16 +303,24 @@ export function FormulaScratchEditor({
         <p className="text-xs font-medium text-accent">{t("formulaTitle")}</p>
         <p className="text-xs text-muted-foreground">{t("blocksWorkspaceHint")}</p>
 
-        <BlockPalettePanel blocks={paletteBlocks} onBlockTap={handleBlockTap} />
+        <p className="text-xs text-muted-foreground lg:hidden">
+          {t("blocksMobileHint")}
+        </p>
 
-        {activeSlot && (
+        <BlockPalettePanel
+          className="hidden lg:block"
+          blocks={paletteBlocks}
+          onBlockTap={handleBlockTap}
+        />
+
+        {activeSlot && !touchUi && (
           <p className="rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent">
             {t("blocksTapToInsert")}
           </p>
         )}
 
         <div className="flex items-start justify-between gap-2">
-          <p className="text-xs text-muted-foreground">
+          <p className="hidden text-xs text-muted-foreground lg:block">
             {canSort ? t("blocksDragReorder") : t("blocksDragSwap")}
             {" · "}
             {t("blocksDragGroup")}
@@ -321,6 +342,8 @@ export function FormulaScratchEditor({
           config={config}
           outputIndex={outputIndex}
           quantityLabel={quantityLabel}
+          touchUi={touchUi}
+          activeSlotPath={activeSlot}
           onSlotClear={(path) => onChange(clearSlot(expression, path))}
           onOperationRemove={(path) =>
             onChange(removeOperationAt(expression, path))
@@ -329,6 +352,13 @@ export function FormulaScratchEditor({
             onChange(removeGroupAt(expression, path))
           }
           onSlotTap={handleSlotTap}
+        />
+
+        <BlockPaletteSheet
+          open={paletteOpen && touchUi}
+          blocks={paletteBlocks}
+          onBlockTap={handleBlockTap}
+          onClose={closePalette}
         />
 
         <div className="rounded-lg bg-card px-3 py-2">

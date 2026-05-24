@@ -81,8 +81,11 @@ export function OperatorChip({
       </span>
       <button
         type="button"
-        onClick={onRemove}
-        className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-[10px] text-white shadow-sm"
+        onClick={(event) => {
+          event.stopPropagation();
+          onRemove();
+        }}
+        className="absolute -right-1.5 -top-1.5 flex size-6 min-h-[28px] min-w-[28px] touch-manipulation items-center justify-center rounded-full bg-destructive text-[10px] text-white shadow-sm"
         aria-label="Remove operator"
       >
         ×

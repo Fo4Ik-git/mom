@@ -1,7 +1,17 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Fragment, useEffect, useState, type ReactNode } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  ADMIN_USERS_PAGE_SIZES,
+  type AdminUsersPageSize,
+} from "@/lib/admin-users-list";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardTitle } from "@/app/components/ui/card";
 import { PasswordInput } from "@/app/components/ui/password-input";
@@ -26,6 +36,13 @@ interface UserRow {
   usesDefaultLimit: boolean;
   createdAt: string;
 }
+
+type UserEdit = {
+  maxCalculators: string;
+  accessExpiresAt: string;
+  adminNotes: string;
+  useDefaultLimit: boolean;
+};
 
 function formatDateInput(iso: string | null): string {
   if (!iso) {
@@ -67,6 +84,237 @@ function StatusBadge({
   );
 }
 
+function UserStatusSection({
+  user,
+  t,
+  tc,
+}: {
+  user: UserRow;
+  t: ReturnType<typeof useTranslations<"admin">>;
+  tc: ReturnType<typeof useTranslations<"common">>;
+}) {
+  if (user.banned) {
+    return (
+      <div className="space-y-1">
+        <StatusBadge tone="danger">{tc("banned")}</StatusBadge>
+        {user.banReason && (
+          <p className="text-[11px] text-muted-foreground">
+            {t(`banReason_${user.banReason}`)}
+          </p>
+        )}
+      </div>
+    );
+  }
+  if (user.accessActive) {
+    return <StatusBadge tone="success">{tc("active")}</StatusBadge>;
+  }
+  return (
+    <StatusBadge tone="warning">{t("accessExpired")}</StatusBadge>
+  );
+}
+
+function UserManagePanel({
+  user,
+  edit,
+  defaultMax,
+  pendingBanId,
+  banReason,
+  t,
+  tc,
+  onToggleRole,
+  onUnban,
+  onStartBan,
+  onCancelBan,
+  onConfirmBan,
+  onBanReasonChange,
+  onEditChange,
+  onExtendAccess,
+  onSave,
+}: {
+  user: UserRow;
+  edit: UserEdit;
+  defaultMax: number;
+  pendingBanId: string | null;
+  banReason: "ACCESS_EXPIRED";
+  t: ReturnType<typeof useTranslations<"admin">>;
+  tc: ReturnType<typeof useTranslations<"common">>;
+  onToggleRole: () => void;
+  onUnban: () => void;
+  onStartBan: () => void;
+  onCancelBan: () => void;
+  onConfirmBan: () => void;
+  onBanReasonChange: (reason: "ACCESS_EXPIRED") => void;
+  onEditChange: (patch: Partial<UserEdit>) => void;
+  onExtendAccess: (months: number) => void;
+  onSave: () => void;
+}) {
+  return (
+    <div className="border-t border-border/60 bg-muted/25 px-4 py-5">
+      <div className="mb-5 flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10 min-h-[44px] flex-1 px-4 text-xs sm:flex-none sm:text-sm"
+          onClick={onToggleRole}
+        >
+          {user.role === "ADMIN" ? t("removeAdmin") : t("makeAdmin")}
+        </Button>
+        {user.banned ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 min-h-[44px] flex-1 px-4 text-xs sm:flex-none sm:text-sm"
+            onClick={onUnban}
+          >
+            {t("unban")}
+          </Button>
+        ) : pendingBanId === user.id ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-10 min-h-[44px] flex-1 px-4 text-xs sm:flex-none sm:text-sm"
+            onClick={onCancelBan}
+          >
+            {t("banCancel")}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 min-h-[44px] flex-1 border-destructive/40 px-4 text-xs text-destructive hover:bg-destructive/10 sm:flex-none sm:text-sm"
+            onClick={onStartBan}
+          >
+            {t("ban")}
+          </Button>
+        )}
+      </div>
+
+      {pendingBanId === user.id && !user.banned && (
+        <div className="mb-5 space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-foreground">
+              {t("banSelectReason")}
+            </span>
+            <select
+              value={banReason}
+              onChange={(e) =>
+                onBanReasonChange(e.target.value as "ACCESS_EXPIRED")
+              }
+              className="block h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:text-sm"
+            >
+              {BAN_REASON_CODES.map((code) => (
+                <option key={code} value={code}>
+                  {t(`banReason_${code}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            type="button"
+            className="h-11 w-full bg-destructive text-sm text-destructive-foreground hover:brightness-110 sm:w-auto"
+            onClick={onConfirmBan}
+          >
+            {t("banConfirm")}
+          </Button>
+        </div>
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-3">
+          <p className="text-sm font-semibold">{t("limitsTitle")}</p>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={edit.useDefaultLimit}
+              disabled={user.role === "ADMIN"}
+              onChange={(e) =>
+                onEditChange({ useDefaultLimit: e.target.checked })
+              }
+            />
+            {t("useDefaultLimit", { max: defaultMax })}
+          </label>
+          {!edit.useDefaultLimit && user.role !== "ADMIN" && (
+            <label className="block space-y-1">
+              <span className="text-sm text-muted-foreground">
+                {t("maxCalculators")}
+              </span>
+              <input
+                type="number"
+                min={0}
+                value={edit.maxCalculators}
+                onChange={(e) =>
+                  onEditChange({ maxCalculators: e.target.value })
+                }
+                className="block h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:max-w-xs sm:text-sm"
+              />
+            </label>
+          )}
+        </div>
+        <div className="space-y-3">
+          <p className="text-sm font-semibold">{t("accessTitle")}</p>
+          <label className="block space-y-1">
+            <span className="text-sm text-muted-foreground">
+              {t("accessUntil")}
+            </span>
+            <input
+              type="date"
+              value={edit.accessExpiresAt}
+              onChange={(e) =>
+                onEditChange({ accessExpiresAt: e.target.value })
+              }
+              className="block h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:max-w-xs sm:text-sm"
+            />
+          </label>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 w-full text-xs sm:w-auto sm:text-sm"
+              onClick={() => onExtendAccess(1)}
+            >
+              {t("extend1Month")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 w-full text-xs sm:w-auto sm:text-sm"
+              onClick={() => onExtendAccess(12)}
+            >
+              {t("extend1Year")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 w-full text-xs sm:w-auto sm:text-sm"
+              onClick={() => onEditChange({ accessExpiresAt: "" })}
+            >
+              {t("accessUnlimited")}
+            </Button>
+          </div>
+        </div>
+        <label className="block space-y-1 lg:col-span-2">
+          <span className="text-sm text-muted-foreground">{t("adminNotes")}</span>
+          <textarea
+            rows={2}
+            value={edit.adminNotes}
+            onChange={(e) => onEditChange({ adminNotes: e.target.value })}
+            className="block w-full rounded-xl border border-border bg-input px-3 py-2 text-base sm:text-sm"
+          />
+        </label>
+        <div className="lg:col-span-2">
+          <Button
+            type="button"
+            className="h-11 w-full text-sm sm:w-auto"
+            onClick={onSave}
+          >
+            {tc("save")}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AdminUsers() {
   const t = useTranslations("admin");
   const tc = useTranslations("common");
@@ -76,8 +324,19 @@ export function AdminUsers() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [pendingBanId, setPendingBanId] = useState<string | null>(null);
   const [banReason, setBanReason] = useState<"ACCESS_EXPIRED">("ACCESS_EXPIRED");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<AdminUsersPageSize>(10);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 10,
+    total: 0,
+    totalPages: 1,
+  });
 
   const [newUser, setNewUser] = useState({
     email: "",
@@ -88,53 +347,77 @@ export function AdminUsers() {
     accessExpiresAt: "",
   });
 
-  const [edits, setEdits] = useState<
-    Record<
-      string,
-      {
-        maxCalculators: string;
-        accessExpiresAt: string;
-        adminNotes: string;
-        useDefaultLimit: boolean;
-      }
-    >
-  >({});
+  const [edits, setEdits] = useState<Record<string, UserEdit>>({});
 
-  async function load() {
+  const load = useCallback(async () => {
+    setLoading(true);
     setLoadError(null);
-    const response = await appFetch("/api/admin/users");
+
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+    if (searchQuery) {
+      params.set("q", searchQuery);
+    }
+
+    const response = await appFetch(`/api/admin/users?${params}`);
     const data = await response.json();
+    setLoading(false);
+
     if (!response.ok) {
       setLoadError(adminApiErrorMessage(data, t));
       setUsers([]);
       return;
     }
-    setUsers(data.users ?? []);
+
+    const loadedUsers: UserRow[] = data.users ?? [];
+    setUsers(loadedUsers);
     if (typeof data.defaultMaxCalculators === "number") {
       setDefaultMax(data.defaultMaxCalculators);
     }
-
-    const nextEdits: typeof edits = {};
-    for (const user of data.users ?? []) {
-      nextEdits[user.id] = {
-        maxCalculators:
-          user.maxCalculators != null ? String(user.maxCalculators) : "",
-        accessExpiresAt: formatDateInput(user.accessExpiresAt),
-        adminNotes: user.adminNotes ?? "",
-        useDefaultLimit: user.usesDefaultLimit,
-      };
+    if (data.pagination) {
+      setPagination(data.pagination);
+      if (data.pagination.page !== page) {
+        setPage(data.pagination.page);
+      }
     }
-    setEdits(nextEdits);
-  }
+
+    setEdits((current) => {
+      const next = { ...current };
+      for (const user of loadedUsers) {
+        next[user.id] = {
+          maxCalculators:
+            user.maxCalculators != null ? String(user.maxCalculators) : "",
+          accessExpiresAt: formatDateInput(user.accessExpiresAt),
+          adminNotes: user.adminNotes ?? "",
+          useDefaultLimit: user.usesDefaultLimit,
+        };
+      }
+      return next;
+    });
+
+    setExpandedId((current) =>
+      current && loadedUsers.some((u) => u.id === current) ? current : null,
+    );
+  }, [page, pageSize, searchQuery, t]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, pageSize]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
-  async function updateUser(
-    id: string,
-    patch: Record<string, unknown>,
-  ) {
+  async function updateUser(id: string, patch: Record<string, unknown>) {
     const response = await appFetch(`/api/admin/users/${id}`, {
       method: "PATCH",
       body: JSON.stringify(patch),
@@ -211,10 +494,7 @@ export function AdminUsers() {
     await load();
   }
 
-  function setEdit(
-    userId: string,
-    patch: Partial<(typeof edits)[string]>,
-  ) {
+  function setEdit(userId: string, patch: Partial<UserEdit>) {
     setEdits((current) => ({
       ...current,
       [userId]: { ...current[userId], ...patch },
@@ -234,12 +514,174 @@ export function AdminUsers() {
     });
   }
 
+  function quotaLabel(user: UserRow) {
+    if (user.role === "ADMIN" || user.effectiveMaxCalculators == null) {
+      return t("unlimited");
+    }
+    return `${user.calculatorsCount} / ${user.effectiveMaxCalculators}`;
+  }
+
+  function accessLabel(user: UserRow) {
+    return user.accessExpiresAt
+      ? new Date(user.accessExpiresAt).toLocaleDateString()
+      : t("accessUnlimited");
+  }
+
+  function renderManagePanel(user: UserRow, edit: UserEdit) {
+    return (
+      <UserManagePanel
+        user={user}
+        edit={edit}
+        defaultMax={defaultMax}
+        pendingBanId={pendingBanId}
+        banReason={banReason}
+        t={t}
+        tc={tc}
+        onToggleRole={() =>
+          updateUser(user.id, {
+            role: user.role === "ADMIN" ? "USER" : "ADMIN",
+          })
+        }
+        onUnban={() => {
+          setPendingBanId(null);
+          updateUser(user.id, { banned: false });
+        }}
+        onStartBan={() => {
+          setBanReason("ACCESS_EXPIRED");
+          setPendingBanId(user.id);
+        }}
+        onCancelBan={() => setPendingBanId(null)}
+        onConfirmBan={() => {
+          updateUser(user.id, { banned: true, banReason });
+          setPendingBanId(null);
+        }}
+        onBanReasonChange={setBanReason}
+        onEditChange={(patch) => setEdit(user.id, patch)}
+        onExtendAccess={(months) => extendAccess(user.id, months)}
+        onSave={() => saveUserLimits(user)}
+      />
+    );
+  }
+
+  const inputClass =
+    "block h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:h-10 sm:text-sm";
+
+  const rangeFrom =
+    pagination.total === 0
+      ? 0
+      : (pagination.page - 1) * pagination.pageSize + 1;
+  const rangeTo = Math.min(
+    pagination.page * pagination.pageSize,
+    pagination.total,
+  );
+
+  function renderUserMobileCard(user: UserRow) {
+    const edit = edits[user.id];
+    const isExpanded = expandedId === user.id;
+
+    return (
+      <article key={user.id} className="bg-card/90">
+        <div className="space-y-3 p-4">
+          <div>
+            <p className="break-all font-medium text-foreground">
+              {user.email}
+            </p>
+            {user.name && (
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {user.name}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <StatusBadge tone={user.role === "ADMIN" ? "accent" : "neutral"}>
+              {user.role}
+            </StatusBadge>
+            <UserStatusSection user={user} t={t} tc={tc} />
+          </div>
+
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+            <div>
+              <dt className="text-xs text-muted-foreground">{t("access")}</dt>
+              <dd className="font-medium">{accessLabel(user)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">
+                {t("calculatorsQuota")}
+              </dt>
+              <dd className="font-medium">{quotaLabel(user)}</dd>
+            </div>
+          </dl>
+
+          <Button
+            type="button"
+            variant={isExpanded ? "primary" : "outline"}
+            className="h-11 w-full text-sm"
+            onClick={() => setExpandedId(isExpanded ? null : user.id)}
+          >
+            {isExpanded ? t("hideDetails") : t("manage")}
+          </Button>
+        </div>
+
+        {isExpanded && edit && renderManagePanel(user, edit)}
+      </article>
+    );
+  }
+
+  function renderUserTableRow(user: UserRow) {
+    const edit = edits[user.id];
+    const isExpanded = expandedId === user.id;
+
+    return (
+      <Fragment key={user.id}>
+        <tr className="border-b border-border/60">
+          <td className="px-4 py-3">
+            <p className="font-medium">{user.email}</p>
+            {user.name && (
+              <p className="text-xs text-muted-foreground">{user.name}</p>
+            )}
+          </td>
+          <td className="px-4 py-3">
+            <StatusBadge tone={user.role === "ADMIN" ? "accent" : "neutral"}>
+              {user.role}
+            </StatusBadge>
+          </td>
+          <td className="px-4 py-3">
+            <UserStatusSection user={user} t={t} tc={tc} />
+          </td>
+          <td className="px-4 py-3 text-xs">{accessLabel(user)}</td>
+          <td className="px-4 py-3">{quotaLabel(user)}</td>
+          <td className="px-4 py-3 text-right">
+            <Button
+              type="button"
+              variant={isExpanded ? "primary" : "outline"}
+              className="h-9 px-4 text-xs"
+              onClick={() => setExpandedId(isExpanded ? null : user.id)}
+            >
+              {isExpanded ? t("hideDetails") : t("manage")}
+            </Button>
+          </td>
+        </tr>
+        {isExpanded && edit && (
+          <tr>
+            <td colSpan={6} className="p-0">
+              {renderManagePanel(user, edit)}
+            </td>
+          </tr>
+        )}
+      </Fragment>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <AdminErrorAlert message={loadError} />
       <Card>
         <CardTitle className="mb-4">{t("createUser")}</CardTitle>
-        <form onSubmit={handleCreateUser} className="grid gap-3 sm:grid-cols-2">
+        <form
+          onSubmit={handleCreateUser}
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+        >
           <label className="space-y-1">
             <span className="text-sm text-muted-foreground">{tc("email")}</span>
             <input
@@ -249,7 +691,7 @@ export function AdminUsers() {
               onChange={(e) =>
                 setNewUser((u) => ({ ...u, email: e.target.value }))
               }
-              className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+              className={inputClass}
             />
           </label>
           <div className="space-y-1">
@@ -268,7 +710,7 @@ export function AdminUsers() {
               onChange={(e) =>
                 setNewUser((u) => ({ ...u, password: e.target.value }))
               }
-              inputClassName="block h-10 w-full rounded-xl border border-border bg-input py-0 pl-3 pr-12 text-base sm:text-sm"
+              inputClassName={`${inputClass} py-0 pl-3 pr-12`}
             />
           </div>
           <label className="space-y-1">
@@ -279,7 +721,7 @@ export function AdminUsers() {
               onChange={(e) =>
                 setNewUser((u) => ({ ...u, name: e.target.value }))
               }
-              className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+              className={inputClass}
             />
           </label>
           <label className="space-y-1">
@@ -292,7 +734,7 @@ export function AdminUsers() {
                   role: e.target.value as "USER" | "ADMIN",
                 }))
               }
-              className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+              className={inputClass}
             >
               <option value="USER">USER</option>
               <option value="ADMIN">ADMIN</option>
@@ -310,7 +752,7 @@ export function AdminUsers() {
               onChange={(e) =>
                 setNewUser((u) => ({ ...u, maxCalculators: e.target.value }))
               }
-              className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+              className={inputClass}
             />
           </label>
           <label className="space-y-1">
@@ -323,11 +765,11 @@ export function AdminUsers() {
               onChange={(e) =>
                 setNewUser((u) => ({ ...u, accessExpiresAt: e.target.value }))
               }
-              className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+              className={inputClass}
             />
           </label>
-          <div className="flex items-end sm:col-span-2">
-            <Button type="submit" disabled={creating}>
+          <div className="sm:col-span-2">
+            <Button type="submit" disabled={creating} className="h-11 w-full sm:w-auto">
               {creating ? t("creatingUser") : t("createUser")}
             </Button>
           </div>
@@ -337,291 +779,118 @@ export function AdminUsers() {
         )}
       </Card>
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card/90 shadow-card">
-        <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="border-b border-border bg-muted/40">
-            <tr>
-              <th className="px-4 py-3 font-medium">{tc("email")}</th>
-              <th className="px-4 py-3 font-medium">{t("role")}</th>
-              <th className="px-4 py-3 font-medium">{t("status")}</th>
-              <th className="px-4 py-3 font-medium">{t("access")}</th>
-              <th className="px-4 py-3 font-medium">{t("calculatorsQuota")}</th>
-              <th className="px-4 py-3 text-right font-medium">{t("actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => {
-              const edit = edits[user.id];
-              const isExpanded = expandedId === user.id;
-              const quotaLabel =
-                user.role === "ADMIN"
-                  ? t("unlimited")
-                  : user.effectiveMaxCalculators == null
-                    ? t("unlimited")
-                    : `${user.calculatorsCount} / ${user.effectiveMaxCalculators}`;
+      <Card className="overflow-hidden p-0">
+        <div className="space-y-3 border-b border-border p-4">
+          <CardTitle className="mb-0">{t("usersListTitle")}</CardTitle>
+          <label className="block space-y-1">
+            <span className="sr-only">{t("usersSearchPlaceholder")}</span>
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder={t("usersSearchPlaceholder")}
+              className={inputClass}
+              autoComplete="off"
+            />
+          </label>
+          <p className="text-sm text-muted-foreground">
+            {loading
+              ? tc("loading")
+              : pagination.total === 0
+                ? t("usersNoResults")
+                : t("usersShowing", {
+                    from: rangeFrom,
+                    to: rangeTo,
+                    total: pagination.total,
+                  })}
+          </p>
+        </div>
 
-              return (
-                <Fragment key={user.id}>
-                  <tr className="border-b border-border/60">
-                    <td className="px-4 py-3">
-                      <p className="font-medium">{user.email}</p>
-                      {user.name && (
-                        <p className="text-xs text-muted-foreground">
-                          {user.name}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge
-                        tone={user.role === "ADMIN" ? "accent" : "neutral"}
-                      >
-                        {user.role}
-                      </StatusBadge>
-                    </td>
-                    <td className="px-4 py-3">
-                      {user.banned ? (
-                        <div className="space-y-1">
-                          <StatusBadge tone="danger">{tc("banned")}</StatusBadge>
-                          {user.banReason && (
-                            <p className="text-[11px] text-muted-foreground">
-                              {t(`banReason_${user.banReason}`)}
-                            </p>
-                          )}
-                        </div>
-                      ) : user.accessActive ? (
-                        <StatusBadge tone="success">{tc("active")}</StatusBadge>
-                      ) : (
-                        <StatusBadge tone="warning">
-                          {t("accessExpired")}
-                        </StatusBadge>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      {user.accessExpiresAt
-                        ? new Date(user.accessExpiresAt).toLocaleDateString()
-                        : t("accessUnlimited")}
-                    </td>
-                    <td className="px-4 py-3">{quotaLabel}</td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        type="button"
-                        variant={isExpanded ? "primary" : "outline"}
-                        className="h-9 px-4 text-xs"
-                        onClick={() =>
-                          setExpandedId(isExpanded ? null : user.id)
-                        }
-                      >
-                        {t("manage")}
-                      </Button>
-                    </td>
+        {loading ? (
+          <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+            {tc("loading")}
+          </p>
+        ) : users.length === 0 ? (
+          <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+            {t("usersNoResults")}
+          </p>
+        ) : (
+          <>
+            <div className="divide-y divide-border lg:hidden">
+              {users.map(renderUserMobileCard)}
+            </div>
+
+            <div className="hidden lg:block">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-border bg-muted/40">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">{tc("email")}</th>
+                    <th className="px-4 py-3 font-medium">{t("role")}</th>
+                    <th className="px-4 py-3 font-medium">{t("status")}</th>
+                    <th className="px-4 py-3 font-medium">{t("access")}</th>
+                    <th className="px-4 py-3 font-medium">
+                      {t("calculatorsQuota")}
+                    </th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      {t("actions")}
+                    </th>
                   </tr>
-                  {isExpanded && edit && (
-                    <tr className="bg-muted/25">
-                      <td colSpan={6} className="border-b border-border/60 px-4 py-5">
-                        <p className="mb-4 text-sm font-semibold text-foreground">
-                          {user.email}
-                        </p>
-                        <div className="mb-5 flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="h-9 px-4 text-xs"
-                            onClick={() =>
-                              updateUser(user.id, {
-                                role: user.role === "ADMIN" ? "USER" : "ADMIN",
-                              })
-                            }
-                          >
-                            {user.role === "ADMIN"
-                              ? t("removeAdmin")
-                              : t("makeAdmin")}
-                          </Button>
-                          {user.banned ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="h-9 px-4 text-xs"
-                              onClick={() => {
-                                setPendingBanId(null);
-                                updateUser(user.id, { banned: false });
-                              }}
-                            >
-                              {t("unban")}
-                            </Button>
-                          ) : pendingBanId === user.id ? (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="h-9 px-4 text-xs"
-                              onClick={() => setPendingBanId(null)}
-                            >
-                              {t("banCancel")}
-                            </Button>
-                          ) : (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="h-9 border-destructive/40 px-4 text-xs text-destructive hover:bg-destructive/10"
-                              onClick={() => {
-                                setBanReason("ACCESS_EXPIRED");
-                                setPendingBanId(user.id);
-                              }}
-                            >
-                              {t("ban")}
-                            </Button>
-                          )}
-                        </div>
-                        {pendingBanId === user.id && !user.banned && (
-                          <div className="mb-5 flex flex-wrap items-end gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-                            <label className="min-w-[200px] flex-1 space-y-1.5">
-                              <span className="text-sm font-medium text-foreground">
-                                {t("banSelectReason")}
-                              </span>
-                              <select
-                                value={banReason}
-                                onChange={(e) =>
-                                  setBanReason(
-                                    e.target.value as "ACCESS_EXPIRED",
-                                  )
-                                }
-                                className="block h-10 w-full max-w-sm rounded-xl border border-border bg-input px-3 text-sm"
-                              >
-                                {BAN_REASON_CODES.map((code) => (
-                                  <option key={code} value={code}>
-                                    {t(`banReason_${code}`)}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <Button
-                              type="button"
-                              className="h-10 bg-destructive px-4 text-xs text-destructive-foreground hover:brightness-110"
-                              onClick={() => {
-                                updateUser(user.id, {
-                                  banned: true,
-                                  banReason,
-                                });
-                                setPendingBanId(null);
-                              }}
-                            >
-                              {t("banConfirm")}
-                            </Button>
-                          </div>
-                        )}
-                        <div className="grid gap-4 lg:grid-cols-2">
-                          <div className="space-y-3">
-                            <p className="text-sm font-semibold">
-                              {t("limitsTitle")}
-                            </p>
-                            <label className="flex items-center gap-2 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={edit.useDefaultLimit}
-                                disabled={user.role === "ADMIN"}
-                                onChange={(e) =>
-                                  setEdit(user.id, {
-                                    useDefaultLimit: e.target.checked,
-                                  })
-                                }
-                              />
-                              {t("useDefaultLimit", { max: defaultMax })}
-                            </label>
-                            {!edit.useDefaultLimit && user.role !== "ADMIN" && (
-                              <label className="block space-y-1">
-                                <span className="text-sm text-muted-foreground">
-                                  {t("maxCalculators")}
-                                </span>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={edit.maxCalculators}
-                                  onChange={(e) =>
-                                    setEdit(user.id, {
-                                      maxCalculators: e.target.value,
-                                    })
-                                  }
-                                  className="block h-10 w-full max-w-xs rounded-xl border border-border bg-input px-3 text-sm"
-                                />
-                              </label>
-                            )}
-                          </div>
-                          <div className="space-y-3">
-                            <p className="text-sm font-semibold">
-                              {t("accessTitle")}
-                            </p>
-                            <label className="block space-y-1">
-                              <span className="text-sm text-muted-foreground">
-                                {t("accessUntil")}
-                              </span>
-                              <input
-                                type="date"
-                                value={edit.accessExpiresAt}
-                                onChange={(e) =>
-                                  setEdit(user.id, {
-                                    accessExpiresAt: e.target.value,
-                                  })
-                                }
-                                className="block h-10 w-full max-w-xs rounded-xl border border-border bg-input px-3 text-sm"
-                              />
-                            </label>
-                            <div className="flex flex-wrap gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => extendAccess(user.id, 1)}
-                              >
-                                {t("extend1Month")}
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => extendAccess(user.id, 12)}
-                              >
-                                {t("extend1Year")}
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() =>
-                                  setEdit(user.id, { accessExpiresAt: "" })
-                                }
-                              >
-                                {t("accessUnlimited")}
-                              </Button>
-                            </div>
-                          </div>
-                          <label className="block space-y-1 lg:col-span-2">
-                            <span className="text-sm text-muted-foreground">
-                              {t("adminNotes")}
-                            </span>
-                            <textarea
-                              rows={2}
-                              value={edit.adminNotes}
-                              onChange={(e) =>
-                                setEdit(user.id, { adminNotes: e.target.value })
-                              }
-                              className="block w-full rounded-xl border border-border bg-input px-3 py-2 text-sm"
-                            />
-                          </label>
-                          <div className="lg:col-span-2">
-                            <Button
-                              type="button"
-                              className="h-9 px-5 text-sm"
-                              onClick={() => saveUserLimits(user)}
-                            >
-                              {tc("save")}
-                            </Button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              );
+                </thead>
+                <tbody>{users.map(renderUserTableRow)}</tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        <div className="flex flex-col gap-3 border-t border-border p-4">
+          <p className="text-sm text-muted-foreground">
+            {t("usersPage", {
+              page: pagination.page,
+              pages: pagination.totalPages,
             })}
-          </tbody>
-        </table>
-      </div>
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
+              <span className="text-muted-foreground">{t("usersPageSize")}</span>
+              <select
+                value={pageSize}
+                onChange={(e) =>
+                  setPageSize(Number(e.target.value) as AdminUsersPageSize)
+                }
+                className="h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:h-10 sm:w-32 sm:text-sm"
+              >
+                {ADMIN_USERS_PAGE_SIZES.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 flex-1 sm:flex-none"
+                disabled={loading || pagination.page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                {t("usersPrev")}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 flex-1 sm:flex-none"
+                disabled={loading || pagination.page >= pagination.totalPages}
+                onClick={() =>
+                  setPage((p) => Math.min(pagination.totalPages, p + 1))
+                }
+              >
+                {t("usersNext")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }
