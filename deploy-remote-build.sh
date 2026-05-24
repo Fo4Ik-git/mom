@@ -1,6 +1,6 @@
 #!/bin/bash
 # Sync sources to /mnt/ssd/calculator and build on server.
-# Does not modify dev.db — only prisma migrate deploy on container start.
+# Does not modify dev.db — db/ and logs/ on server are excluded from rsync --delete.
 
 set -e
 
@@ -40,6 +40,7 @@ rsync -avz --delete \
   --exclude '.git' \
   --exclude 'prisma/*.db' \
   --exclude 'prisma/*.db-journal' \
+  --exclude 'db/' \
   --exclude 'logs' \
   --exclude '.idea' \
   --exclude '.DS_Store' \
