@@ -3,11 +3,15 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { DynamicCalculator } from "@/app/components/calculator/dynamic-calculator";
+import { AddInputPatternMenu } from "@/app/components/builder/add-input-pattern-menu";
+import {
+  BuilderCollapsible,
+  BuilderSection,
+} from "@/app/components/builder/builder-collapsible";
 import { FormulaBuilder } from "@/app/components/builder/formula-builder";
 import { ConstantsCard } from "@/app/components/builder/constants-card";
 import { InputFieldCard } from "@/app/components/builder/input-field-card";
 import { Button } from "@/app/components/ui/button";
-import { Card, CardTitle } from "@/app/components/ui/card";
 import { useRouter } from "@/i18n/navigation";
 import { appFetch } from "@/lib/api-client";
 import type {
@@ -15,10 +19,20 @@ import type {
   CalculationField,
   CalculatorConfig,
   CalculatorConstant,
-  InputField,
   OutputField,
 } from "@/types/calculator";
 import { emptyBlockExpression, slugifyId } from "@/types/calculator";
+import { formatBlockExpression } from "@/lib/formula/block-format";
+import { isAutoCalculationId } from "@/lib/calculator/auto-calculations";
+import {
+  finalizeConfig,
+  removeInputField,
+  updateInputField,
+} from "@/lib/calculator/config-sync";
+import {
+  applyInputPattern,
+  type InputPatternId,
+} from "@/lib/calculator/input-patterns";
 
 interface CalculatorBuilderProps {
   calculatorId?: string;
@@ -32,16 +46,35 @@ function randomId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function emptyInput(): InputField {
+function patternLabels(t: (key: string) => string) {
   return {
-    id: randomId("field"),
-    label: "",
-    properties: [
-      { id: "cost", label: "", value: 0 },
-      { id: "price", label: "", value: 0 },
-    ],
-    defaultQuantity: 0,
+    cost: t("patternLabelCost"),
+    price: t("patternLabelPrice"),
+    time: t("patternLabelTime"),
+    hourlyRate: t("patternLabelHourlyRate"),
+    unitPrice: t("patternLabelUnitPrice"),
+    service: t("patternLabelService"),
+    consumable: t("patternLabelConsumable"),
+    timeCost: t("patternLabelTimeCost"),
   };
+}
+
+function formulaSummary(
+  config: CalculatorConfig,
+  expression: BlockExpression,
+  fieldId: string,
+  quantityLabel: string,
+) {
+  const preview = formatBlockExpression(
+    expression,
+    config,
+    { fieldId },
+    quantityLabel,
+  );
+  if (!preview || preview === "…") {
+    return "…";
+  }
+  return preview.length > 52 ? `${preview.slice(0, 52)}…` : preview;
 }
 
 function emptyOutput(): OutputField {
@@ -54,7 +87,7 @@ function emptyOutput(): OutputField {
 
 function emptyCalculation(): CalculationField {
   return {
-    id: randomId("calc"),
+    id: randomId("calculation"),
     label: "",
     expression: emptyBlockExpression(),
   };
@@ -78,6 +111,7 @@ export function CalculatorBuilder({
   const t = useTranslations("builder");
   const tc = useTranslations("common");
   const router = useRouter();
+  const quantityLabel = t("quantityLabel");
 
   const [name, setName] = useState(initialName ?? t("newTitle"));
   const [description, setDescription] = useState(initialDescription);
@@ -90,6 +124,16 @@ export function CalculatorBuilder({
   const [error, setError] = useState<string | null>(null);
   const [errorIssues, setErrorIssues] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const autoTotalSuffix = t("autoTotalSuffix");
+
+  function applyPattern(patternId: InputPatternId) {
+    setConfig((current) =>
+      finalizeConfig(
+        applyInputPattern(current, patternId, patternLabels(t)),
+        autoTotalSuffix,
+      ),
+    );
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -118,13 +162,19 @@ export function CalculatorBuilder({
     router.refresh();
   }
 
+  const manualCalculations = (config.calculations ?? []).filter(
+    (c) => !isAutoCalculationId(c.id),
+  );
+  const autoCalculations = (config.calculations ?? []).filter((c) =>
+    isAutoCalculationId(c.id),
+  );
+
   return (
     <div className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(280px,380px)] 2xl:grid-cols-[minmax(0,3.5fr)_minmax(300px,400px)]">
         <div className="min-w-0 space-y-5">
-          <Card>
-            <CardTitle className="mb-4">{t("settings")}</CardTitle>
-            <div className="space-y-3">
+          <BuilderSection title={t("settings")} defaultOpen={false}>
+            <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
               <label className="block space-y-1.5">
                 <span className="text-sm text-muted-foreground">{t("title")}</span>
                 <input
@@ -154,63 +204,43 @@ export function CalculatorBuilder({
                 {t("publicToggle")}
               </label>
             </div>
-          </Card>
+          </BuilderSection>
 
-          <section className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <h2 className="text-lg font-semibold">{t("inputFields")}</h2>
-                <p className="text-sm text-muted-foreground">
-                  {t("inputFieldsDesc")}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setConfig((c) => ({
-                    ...c,
-                    inputs: [...c.inputs, emptyInput()],
-                  }))
-                }
-                className="shrink-0 rounded-xl bg-accent-muted px-3 py-2 text-sm font-medium text-accent"
-              >
-                {t("addInput")}
-              </button>
-            </div>
-
+          <BuilderSection
+            title={t("inputFields")}
+            description={t("inputFieldsDesc")}
+            count={config.inputs.length}
+            defaultOpen
+            actions={<AddInputPatternMenu onSelect={applyPattern} />}
+          >
             <div className="space-y-3">
               {config.inputs.map((field, index) => (
                 <InputFieldCard
                   key={field.id}
                   field={field}
                   canRemove={config.inputs.length > 1}
+                  defaultOpen={
+                    index === config.inputs.length - 1 && !field.label.trim()
+                  }
                   onChange={(updated) =>
-                    setConfig((c) => ({
-                      ...c,
-                      inputs: c.inputs.map((f, i) =>
-                        i === index ? updated : f,
-                      ),
-                    }))
+                    setConfig((current) =>
+                      updateInputField(current, index, updated, autoTotalSuffix),
+                    )
                   }
                   onRemove={() =>
-                    setConfig((c) => ({
-                      ...c,
-                      inputs: c.inputs.filter((_, i) => i !== index),
-                    }))
+                    setConfig((current) => removeInputField(current, index))
                   }
                 />
               ))}
             </div>
-          </section>
+          </BuilderSection>
 
-          <section className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <h2 className="text-lg font-semibold">{t("constants")}</h2>
-                <p className="text-sm text-muted-foreground">
-                  {t("constantsDesc")}
-                </p>
-              </div>
+          <BuilderSection
+            title={t("constants")}
+            description={t("constantsDesc")}
+            count={(config.constants ?? []).length}
+            defaultOpen={false}
+            actions={
               <button
                 type="button"
                 onClick={() =>
@@ -223,8 +253,8 @@ export function CalculatorBuilder({
               >
                 {t("addConstant")}
               </button>
-            </div>
-
+            }
+          >
             {(config.constants ?? []).length === 0 ? (
               <p className="rounded-xl border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
                 {t("constantsEmpty")}
@@ -256,16 +286,14 @@ export function CalculatorBuilder({
                 ))}
               </div>
             )}
-          </section>
+          </BuilderSection>
 
-          <section className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <h2 className="text-lg font-semibold">{t("calculationFields")}</h2>
-                <p className="text-sm text-muted-foreground">
-                  {t("calculationFieldsDesc")}
-                </p>
-              </div>
+          <BuilderSection
+            title={t("calculationFields")}
+            description={t("calculationFieldsDesc")}
+            count={(config.calculations ?? []).length}
+            defaultOpen={manualCalculations.length > 0}
+            actions={
               <button
                 type="button"
                 onClick={() =>
@@ -278,21 +306,47 @@ export function CalculatorBuilder({
               >
                 {t("addCalculation")}
               </button>
-            </div>
-
+            }
+          >
             {(config.calculations ?? []).length === 0 ? (
               <p className="rounded-xl border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
                 {t("calculationFieldsEmpty")}
               </p>
             ) : (
-              <div className="space-y-4">
-                {(config.calculations ?? []).map((calculation, index) => (
-                  <div
-                    key={calculation.id}
-                    className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <label className="block flex-1 space-y-1.5">
+              <div className="space-y-3">
+                {manualCalculations.map((calculation) => {
+                  const index = (config.calculations ?? []).findIndex(
+                    (item) => item.id === calculation.id,
+                  );
+                  return (
+                    <BuilderCollapsible
+                      key={calculation.id}
+                      title={calculation.label.trim() || t("unnamedField")}
+                      subtitle={formulaSummary(
+                        config,
+                        calculation.expression,
+                        calculation.id,
+                        quantityLabel,
+                      )}
+                      defaultOpen={!calculation.label.trim()}
+                      headerActions={
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setConfig((c) => ({
+                              ...c,
+                              calculations: (c.calculations ?? []).filter(
+                                (_, i) => i !== index,
+                              ),
+                            }))
+                          }
+                          className="rounded-lg px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
+                        >
+                          {tc("delete")}
+                        </button>
+                      }
+                    >
+                      <label className="block space-y-1.5">
                         <span className="text-xs font-medium text-muted-foreground">
                           {t("calculationFieldName")}
                         </span>
@@ -325,50 +379,73 @@ export function CalculatorBuilder({
                           className="h-11 w-full rounded-xl border border-border bg-input px-3.5 text-sm font-medium"
                         />
                       </label>
-                      <button
-                        type="button"
-                        onClick={() =>
+                      <FormulaBuilder
+                        config={config}
+                        formulaTarget={{ fieldId: calculation.id }}
+                        fieldKey={calculation.id}
+                        expression={calculation.expression}
+                        onChange={(expression) =>
                           setConfig((c) => ({
                             ...c,
-                            calculations: (c.calculations ?? []).filter(
-                              (_, i) => i !== index,
+                            calculations: (c.calculations ?? []).map((item, i) =>
+                              i === index ? { ...item, expression } : item,
                             ),
                           }))
                         }
-                        className="mt-6 text-xs text-destructive underline"
-                      >
-                        {tc("delete")}
-                      </button>
-                    </div>
+                      />
+                    </BuilderCollapsible>
+                  );
+                })}
 
-                    <FormulaBuilder
-                      config={config}
-                      formulaTarget={{ fieldId: calculation.id }}
-                      fieldKey={calculation.id}
-                      expression={calculation.expression}
-                      onChange={(expression) =>
-                        setConfig((c) => ({
-                          ...c,
-                          calculations: (c.calculations ?? []).map((item, i) =>
-                            i === index ? { ...item, expression } : item,
-                          ),
-                        }))
-                      }
-                    />
-                  </div>
-                ))}
+                {autoCalculations.length > 0 && (
+                  <BuilderSection
+                    title={t("autoCalcSection")}
+                    count={autoCalculations.length}
+                    defaultOpen={false}
+                  >
+                    <div className="space-y-2">
+                      {autoCalculations.map((calculation) => (
+                        <BuilderCollapsible
+                          key={calculation.id}
+                          title={calculation.label}
+                          subtitle={formulaSummary(
+                            config,
+                            calculation.expression,
+                            calculation.id,
+                            quantityLabel,
+                          )}
+                          badge={
+                            <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-200">
+                              {t("autoCalcBadge")}
+                            </span>
+                          }
+                          defaultOpen={false}
+                        >
+                          <p className="text-xs text-muted-foreground">
+                            {t("autoCalcHint")}
+                          </p>
+                          <FormulaBuilder
+                            config={config}
+                            formulaTarget={{ fieldId: calculation.id }}
+                            fieldKey={calculation.id}
+                            expression={calculation.expression}
+                            onChange={() => undefined}
+                          />
+                        </BuilderCollapsible>
+                      ))}
+                    </div>
+                  </BuilderSection>
+                )}
               </div>
             )}
-          </section>
+          </BuilderSection>
 
-          <section className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <h2 className="text-lg font-semibold">{t("outputFields")}</h2>
-                <p className="text-sm text-muted-foreground">
-                  {t("outputFieldsDesc")}
-                </p>
-              </div>
+          <BuilderSection
+            title={t("outputFields")}
+            description={t("outputFieldsDesc")}
+            count={config.outputs.length}
+            defaultOpen
+            actions={
               <button
                 type="button"
                 onClick={() =>
@@ -381,49 +458,24 @@ export function CalculatorBuilder({
               >
                 {t("addOutput")}
               </button>
-            </div>
-
-            <div className="space-y-4">
+            }
+          >
+            <div className="space-y-3">
               {config.outputs.map((output, index) => (
-                <div
+                <BuilderCollapsible
                   key={output.id}
-                  className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <label className="block flex-1 space-y-1.5">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {t("outputFieldName")}
-                      </span>
-                      <input
-                        value={output.label}
-                        onChange={(e) => {
-                          const label = e.target.value;
-                          setConfig((c) => ({
-                            ...c,
-                            outputs: c.outputs.map((o, i) =>
-                              i === index ? { ...o, label } : o,
-                            ),
-                          }));
-                        }}
-                        onBlur={(e) => {
-                          const label = e.target.value.trim();
-                          if (!label) {
-                            return;
-                          }
-                          setConfig((c) => ({
-                            ...c,
-                            outputs: c.outputs.map((o, i) =>
-                              i === index
-                                ? { ...o, label, id: slugifyId(label, "output") }
-                                : o,
-                            ),
-                          }));
-                        }}
-                        placeholder={t("outputFieldNamePlaceholder")}
-                        className="h-11 w-full rounded-xl border border-border bg-input px-3.5 text-sm font-medium"
-                      />
-                    </label>
-                    {config.outputs.length > 1 && (
+                  title={output.label.trim() || t("unnamedField")}
+                  subtitle={formulaSummary(
+                    config,
+                    output.expression,
+                    output.id,
+                    quantityLabel,
+                  )}
+                  defaultOpen={
+                    index === config.outputs.length - 1 && !output.label.trim()
+                  }
+                  headerActions={
+                    config.outputs.length > 1 ? (
                       <button
                         type="button"
                         onClick={() =>
@@ -432,12 +484,46 @@ export function CalculatorBuilder({
                             outputs: c.outputs.filter((_, i) => i !== index),
                           }))
                         }
-                        className="mt-6 text-xs text-destructive underline"
+                        className="rounded-lg px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
                       >
                         {tc("delete")}
                       </button>
-                    )}
-                  </div>
+                    ) : undefined
+                  }
+                >
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {t("outputFieldName")}
+                    </span>
+                    <input
+                      value={output.label}
+                      onChange={(e) => {
+                        const label = e.target.value;
+                        setConfig((c) => ({
+                          ...c,
+                          outputs: c.outputs.map((o, i) =>
+                            i === index ? { ...o, label } : o,
+                          ),
+                        }));
+                      }}
+                      onBlur={(e) => {
+                        const label = e.target.value.trim();
+                        if (!label) {
+                          return;
+                        }
+                        setConfig((c) => ({
+                          ...c,
+                          outputs: c.outputs.map((o, i) =>
+                            i === index
+                              ? { ...o, label, id: slugifyId(label, "output") }
+                              : o,
+                          ),
+                        }));
+                      }}
+                      placeholder={t("outputFieldNamePlaceholder")}
+                      className="h-11 w-full rounded-xl border border-border bg-input px-3.5 text-sm font-medium"
+                    />
+                  </label>
 
                   <label className="flex items-center gap-2 text-xs">
                     <input
@@ -472,10 +558,10 @@ export function CalculatorBuilder({
                       }))
                     }
                   />
-                </div>
+                </BuilderCollapsible>
               ))}
             </div>
-          </section>
+          </BuilderSection>
 
           {error && (
             <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">

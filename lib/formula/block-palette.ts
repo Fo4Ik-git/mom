@@ -1,10 +1,11 @@
-import type { BlockOperand, CalculatorConfig, FormulaOperator } from "@/types/calculator";
+import type { BlockOperand, BlockExpression, CalculatorConfig, FormulaOperator } from "@/types/calculator";
 import type { FormulaTarget } from "@/lib/formula/formula-target";
+import type { FormulaSnippetPick } from "@/lib/formula/formula-snippets";
 
 export type PaletteBlock = {
   id: string;
   label: string;
-  category: "operand" | "operator" | "constant" | "group";
+  category: "operand" | "operator" | "constant" | "group" | "snippet";
   color:
     | "quantity"
     | "property"
@@ -12,11 +13,20 @@ export type PaletteBlock = {
     | "calculation"
     | "operator"
     | "constant"
-    | "group";
+    | "group"
+    | "snippet";
   dragData:
     | { kind: "operand"; operand: BlockOperand }
     | { kind: "operator"; operator: FormulaOperator }
-    | { kind: "group" };
+    | { kind: "group" }
+    | { kind: "expression"; expression: BlockExpression };
+  pick?: FormulaSnippetPick;
+  meta?: {
+    groupId?: string;
+    groupLabel?: string;
+    title?: string;
+    hint?: string;
+  };
 };
 
 export function buildPaletteBlocks(
@@ -27,11 +37,18 @@ export function buildPaletteBlocks(
   const blocks: PaletteBlock[] = [];
 
   for (const input of config.inputs) {
+    const label = input.label.trim() || "…";
     blocks.push({
       id: `q-${input.id}`,
-      label: `${input.label} · ${quantityLabel}`,
+      label: `${label} · ${quantityLabel}`,
       category: "operand",
       color: "quantity",
+      meta: {
+        groupId: input.id,
+        groupLabel: label,
+        title: quantityLabel,
+        hint: label,
+      },
       dragData: {
         kind: "operand",
         operand: { kind: "quantity", fieldId: input.id },
@@ -41,9 +58,15 @@ export function buildPaletteBlocks(
     for (const property of input.properties) {
       blocks.push({
         id: `p-${input.id}-${property.id}`,
-        label: `${input.label} · ${property.label}`,
+        label: `${label} · ${property.label}`,
         category: "operand",
         color: "property",
+        meta: {
+          groupId: input.id,
+          groupLabel: label,
+          title: property.label,
+          hint: label,
+        },
         dragData: {
           kind: "operand",
           operand: {
@@ -65,6 +88,7 @@ export function buildPaletteBlocks(
       label: calculation.label,
       category: "operand",
       color: "calculation",
+      meta: { title: calculation.label },
       dragData: {
         kind: "operand",
         operand: { kind: "calculation", calculationId: calculation.id },
@@ -132,5 +156,7 @@ export const BLOCK_COLORS = {
   constant: "bg-violet-500/15 text-violet-800 border-violet-400/50 dark:text-violet-200",
   group: "bg-violet-500/10 text-violet-800 border-violet-400/40 dark:text-violet-200",
   number: "bg-muted text-foreground border-border",
+  snippet:
+    "bg-teal-500/15 text-teal-900 border-teal-400/50 dark:text-teal-100",
   empty: "border-dashed border-border bg-card/50 text-muted-foreground",
 };

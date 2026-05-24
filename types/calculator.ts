@@ -9,6 +9,7 @@ export const inputPropertySchema = z.object({
   id: idSchema,
   label: z.string().min(1).max(80),
   value: z.number(),
+  autoTotal: z.boolean().optional(),
 });
 
 export const inputFieldSchema = z.object({

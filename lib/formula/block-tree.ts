@@ -106,6 +106,15 @@ export function applyAfterExpression(
     };
   }
 
+  if (item.source === "palette" && item.kind === "expression") {
+    return {
+      type: "operation",
+      operator: "+",
+      left: root,
+      right: item.expression,
+    };
+  }
+
   return root;
 }
 
@@ -196,7 +205,8 @@ export type PaletteDragData =
   | { source: "palette"; kind: "operand"; operand: BlockOperand }
   | { source: "palette"; kind: "operator"; operator: FormulaOperator }
   | { source: "palette"; kind: "number"; value: number }
-  | { source: "palette"; kind: "group" };
+  | { source: "palette"; kind: "group" }
+  | { source: "palette"; kind: "expression"; expression: BlockExpression };
 
 export function isExpressionFilled(expression: BlockExpression): boolean {
   if (expression.type === "group") {
@@ -337,6 +347,10 @@ export function applyPaletteToSlot(
       type: "operand",
       operand: { kind: "number", value: item.value },
     });
+  }
+
+  if (item.source === "palette" && item.kind === "expression") {
+    return setSlotExpression(root, path, item.expression);
   }
 
   return root;

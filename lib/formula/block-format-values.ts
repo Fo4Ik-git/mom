@@ -21,16 +21,21 @@ export function formatBlockExpressionWithValues(
   }
 
   if (expression.type === "operand") {
-    const value = evaluateBlockExpression(
-      { type: "operand", operand: expression.operand },
-      {
-        quantities,
-        inputs: config.inputs,
-        constants: config.constants ?? [],
-        calculations,
-        outputs: outputValues,
-      },
-    );
+    let value = 0;
+    try {
+      value = evaluateBlockExpression(
+        { type: "operand", operand: expression.operand },
+        {
+          quantities,
+          inputs: config.inputs,
+          constants: config.constants ?? [],
+          calculations,
+          outputs: outputValues,
+        },
+      );
+    } catch {
+      return "?";
+    }
     return formatNumber(value);
   }
 

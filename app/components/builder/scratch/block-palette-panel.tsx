@@ -1,16 +1,19 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import type { CalculatorConfig } from "@/types/calculator";
 import type { PaletteBlock } from "@/lib/formula/block-palette";
 import { BlockPaletteContent } from "@/app/components/builder/scratch/block-palette-content";
 
 interface BlockPalettePanelProps {
+  config: CalculatorConfig;
   blocks: PaletteBlock[];
   onBlockTap: (block: PaletteBlock) => void;
   className?: string;
 }
 
 export function BlockPalettePanel({
+  config,
   blocks,
   onBlockTap,
   className = "",
@@ -25,7 +28,12 @@ export function BlockPalettePanel({
         {t("blocksPalette")}
       </p>
       <p className="text-xs text-muted-foreground">{t("blocksPaletteHint")}</p>
-      <BlockPaletteContent blocks={blocks} onBlockTap={onBlockTap} dragEnabled />
+      <BlockPaletteContent
+        config={config}
+        blocks={blocks}
+        onBlockTap={onBlockTap}
+        dragEnabled
+      />
     </div>
   );
 }

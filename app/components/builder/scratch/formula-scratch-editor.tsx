@@ -18,6 +18,11 @@ import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
 import { emptyBlockExpression } from "@/types/calculator";
 import { formatBlockExpression } from "@/lib/formula/block-format";
 import { buildPaletteBlocks, type PaletteBlock } from "@/lib/formula/block-palette";
+import {
+  buildFormulaSnippets,
+  resolveSnippetPick,
+  type FormulaSnippetPick,
+} from "@/lib/formula/formula-snippets";
 import type { FormulaTarget } from "@/lib/formula/formula-target";
 import {
   flattenExpression,
@@ -65,11 +70,26 @@ export function FormulaScratchEditor({
   const [activeDragLabel, setActiveDragLabel] = useState<string | null>(null);
   const [activeSlot, setActiveSlot] = useState<SlotPath[] | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [snippetPick, setSnippetPick] = useState<FormulaSnippetPick | null>(null);
   const touchUi = useTouchBuilderUi();
 
   const paletteBlocks = useMemo(
     () => buildPaletteBlocks(config, formulaTarget, quantityLabel),
     [config, formulaTarget, quantityLabel],
+  );
+
+  const snippetBlocks = useMemo(
+    () =>
+      buildFormulaSnippets(config, quantityLabel, {
+        qtyTimes: t("snippetQtyTimes"),
+        margin: t("snippetMargin"),
+        withConstant: t("snippetWithConstant"),
+        pickProperty: t("snippetPickChoose"),
+        pickPrice: t("snippetPickPrice"),
+        pickCost: t("snippetPickCost"),
+        pickConstant: t("snippetPickConstant"),
+      }),
+    [config, quantityLabel, t],
   );
 
   const flatTokens = useMemo(
@@ -240,15 +260,44 @@ export function FormulaScratchEditor({
     }
   }
 
-  function handleBlockTap(block: PaletteBlock) {
+  function insertPaletteItem(data: PaletteDragData) {
     const path = activeSlot ?? [];
-    const dragData = {
-      source: "palette" as const,
-      ...block.dragData,
-    };
-    applyToSlot(path, dragData);
+    applyToSlot(path, data);
     setActiveSlot(null);
     setPaletteOpen(false);
+    setSnippetPick(null);
+  }
+
+  function handleBlockTap(block: PaletteBlock) {
+    if (block.pick) {
+      setSnippetPick(block.pick);
+      return;
+    }
+
+    insertPaletteItem({
+      source: "palette",
+      ...block.dragData,
+    });
+  }
+
+  function handleSnippetPickConfirm(selection: {
+    propertyId?: string;
+    leftPropertyId?: string;
+    rightPropertyId?: string;
+    constantId?: string;
+  }) {
+    if (!snippetPick) {
+      return;
+    }
+    const expression = resolveSnippetPick(snippetPick, selection);
+    if (!expression) {
+      return;
+    }
+    insertPaletteItem({
+      source: "palette",
+      kind: "expression",
+      expression,
+    });
   }
 
   function handleSlotTap(path: SlotPath[]) {
@@ -259,6 +308,7 @@ export function FormulaScratchEditor({
   function closePalette() {
     setPaletteOpen(false);
     setActiveSlot(null);
+    setSnippetPick(null);
   }
 
   const preview = formatBlockExpression(
@@ -344,8 +394,13 @@ export function FormulaScratchEditor({
 
         <BlockPaletteSheet
           open={paletteOpen}
+          config={config}
           blocks={paletteBlocks}
+          snippetBlocks={snippetBlocks}
+          snippetPick={snippetPick}
           onBlockTap={handleBlockTap}
+          onSnippetPickCancel={() => setSnippetPick(null)}
+          onSnippetPickConfirm={handleSnippetPickConfirm}
           onClose={closePalette}
         />
       </div>

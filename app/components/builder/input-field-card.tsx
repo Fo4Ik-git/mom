@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import type { InputField, InputProperty } from "@/types/calculator";
 import { slugifyId } from "@/types/calculator";
+import { BuilderCollapsible } from "@/app/components/builder/builder-collapsible";
 import { NumericInput } from "@/app/components/builder/numeric-input";
 
 interface InputFieldCardProps {
@@ -10,10 +11,38 @@ interface InputFieldCardProps {
   onChange: (field: InputField) => void;
   onRemove: () => void;
   canRemove: boolean;
+  defaultOpen?: boolean;
 }
 
 function randomPropId() {
   return `var_${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function parsePresets(raw: string): number[] | undefined {
+  const values = raw
+    .split(/[,;\s]+/)
+    .map((part) => Number(part.trim()))
+    .filter((value) => Number.isFinite(value));
+  return values.length > 0 ? values : undefined;
+}
+
+function formatPresets(presets?: number[]) {
+  return presets?.join(", ") ?? "";
+}
+
+function fieldSummary(
+  field: InputField,
+  t: (key: string, values?: { count: number }) => string,
+) {
+  const parts: string[] = [t("fieldSummaryVars", { count: field.properties.length })];
+  const autoCount = field.properties.filter((p) => p.autoTotal).length;
+  if (autoCount > 0) {
+    parts.push(t("fieldSummaryAuto", { count: autoCount }));
+  }
+  if (field.presets?.length) {
+    parts.push(t("fieldSummaryPresets", { count: field.presets.length }));
+  }
+  return parts.join(" · ");
 }
 
 export function InputFieldCard({
@@ -21,6 +50,7 @@ export function InputFieldCard({
   onChange,
   onRemove,
   canRemove,
+  defaultOpen = false,
 }: InputFieldCardProps) {
   const t = useTranslations("builder");
   const tc = useTranslations("common");
@@ -49,30 +79,35 @@ export function InputFieldCard({
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border bg-muted/20 p-4">
-      <div className="flex items-start justify-between gap-2">
-        <label className="block flex-1 space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">
-            {t("inputFieldName")}
-          </span>
-          <input
-            value={field.label}
-            onChange={(e) => onChange({ ...field, label: e.target.value })}
-            onBlur={(e) => syncFieldIdFromLabel(e.target.value)}
-            placeholder={t("inputFieldNamePlaceholder")}
-            className="h-11 w-full rounded-xl border border-border bg-input px-3.5 text-sm font-medium"
-          />
-        </label>
-        {canRemove && (
+    <BuilderCollapsible
+      title={field.label.trim() || t("unnamedField")}
+      subtitle={fieldSummary(field, t)}
+      defaultOpen={defaultOpen || !field.label.trim()}
+      className="bg-muted/20"
+      headerActions={
+        canRemove ? (
           <button
             type="button"
             onClick={onRemove}
-            className="mt-6 shrink-0 text-xs text-destructive underline"
+            className="rounded-lg px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
           >
             {tc("delete")}
           </button>
-        )}
-      </div>
+        ) : undefined
+      }
+    >
+      <label className="block space-y-1.5">
+        <span className="text-xs font-medium text-muted-foreground">
+          {t("inputFieldName")}
+        </span>
+        <input
+          value={field.label}
+          onChange={(e) => onChange({ ...field, label: e.target.value })}
+          onBlur={(e) => syncFieldIdFromLabel(e.target.value)}
+          placeholder={t("inputFieldNamePlaceholder")}
+          className="h-11 w-full rounded-xl border border-border bg-input px-3.5 text-sm font-medium"
+        />
+      </label>
 
       <p className="text-xs text-muted-foreground">{t("inputVariablesHint")}</p>
 
@@ -80,34 +115,53 @@ export function InputFieldCard({
         {field.properties.map((property, index) => (
           <div
             key={property.id}
-            className="grid gap-2 rounded-xl border border-border/70 bg-card p-3 sm:grid-cols-[1fr_100px_auto]"
+            className="space-y-2 rounded-xl border border-border/70 bg-card p-3"
           >
-            <input
-              value={property.label}
-              onChange={(e) => updateProperty(index, { label: e.target.value })}
-              onBlur={(e) => syncPropertyIdFromLabel(index, e.target.value)}
-              placeholder={t("variableNamePlaceholder")}
-              className="h-10 rounded-lg border border-border bg-input px-3 text-sm"
-            />
-            <NumericInput
-              value={property.value}
-              onChange={(value) => updateProperty(index, { value })}
-              className="h-10 rounded-lg border border-border bg-input px-3 text-sm"
-            />
-            {field.properties.length > 1 && (
-              <button
-                type="button"
-                onClick={() =>
-                  onChange({
-                    ...field,
-                    properties: field.properties.filter((_, i) => i !== index),
-                  })
+            <div className="grid gap-2 sm:grid-cols-[1fr_100px_auto]">
+              <input
+                value={property.label}
+                onChange={(e) => updateProperty(index, { label: e.target.value })}
+                onBlur={(e) => syncPropertyIdFromLabel(index, e.target.value)}
+                placeholder={t("variableNamePlaceholder")}
+                className="h-10 rounded-lg border border-border bg-input px-3 text-sm"
+              />
+              <NumericInput
+                value={property.value}
+                onChange={(value) => updateProperty(index, { value })}
+                className="h-10 rounded-lg border border-border bg-input px-3 text-sm"
+              />
+              {field.properties.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange({
+                      ...field,
+                      properties: field.properties
+                        .filter((_, i) => i !== index)
+                        .map((prop) =>
+                          prop.id === property.id
+                            ? { ...prop, autoTotal: false }
+                            : prop,
+                        ),
+                    })
+                  }
+                  className="h-10 text-xs text-destructive sm:px-2"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            <label className="flex items-start gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={Boolean(property.autoTotal)}
+                onChange={(e) =>
+                  updateProperty(index, { autoTotal: e.target.checked })
                 }
-                className="h-10 text-xs text-destructive sm:px-2"
-              >
-                ×
-              </button>
-            )}
+                className="mt-0.5 size-3.5 accent-accent"
+              />
+              <span>{t("autoTotalHint")}</span>
+            </label>
           </div>
         ))}
       </div>
@@ -127,6 +181,32 @@ export function InputFieldCard({
       >
         {t("addVariable")}
       </button>
-    </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-muted-foreground">
+            {t("defaultQuantity")}
+          </span>
+          <NumericInput
+            value={field.defaultQuantity ?? 0}
+            onChange={(value) => onChange({ ...field, defaultQuantity: value })}
+            className="h-10 w-full rounded-lg border border-border bg-input px-3 text-sm"
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-muted-foreground">
+            {t("quantityPresets")}
+          </span>
+          <input
+            value={formatPresets(field.presets)}
+            onChange={(e) =>
+              onChange({ ...field, presets: parsePresets(e.target.value) })
+            }
+            placeholder={t("quantityPresetsPlaceholder")}
+            className="h-10 w-full rounded-lg border border-border bg-input px-3 text-sm"
+          />
+        </label>
+      </div>
+    </BuilderCollapsible>
   );
 }
