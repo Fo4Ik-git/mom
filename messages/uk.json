@@ -26,7 +26,6 @@
     "language": "Мова"
   },
   "nav": {
-    "templateMom": "Шаблон Mom",
     "builder": "Конструктор",
     "admin": "Адмін",
     "signIn": "Увійти",
@@ -37,17 +36,13 @@
   },
   "home": {
     "heroTitle": "Створюй калькулятори під свій бізнес",
-    "heroSubtitle": "Додавай поля, налаштовуй формули та рахуй прибуток так, як потрібно саме тобі. Шаблон Mom вже чекає як стартова точка.",
+    "heroSubtitle": "Додавай поля, налаштовуй формули та рахуй прибуток так, як потрібно саме тобі.",
     "ctaStart": "Увійти",
-    "ctaDemo": "Демо: Mom",
     "myCalculators": "Мої калькулятори",
     "signInPrompt": "Увійдіть",
     "signInSuffix": ", щоб створювати та зберігати калькулятори.",
     "createNew": "Створити калькулятор",
-    "cloneMom": "З копії Mom",
-    "cloning": "Клонування…",
-    "openMomTemplate": "Відкрити шаблон Mom",
-    "emptyList": "У вас ще немає калькуляторів. Створіть новий або скопіюйте шаблон."
+    "emptyList": "У вас ще немає калькуляторів. Створіть новий."
   },
   "auth": {
     "signInTitle": "Вхід",
@@ -253,6 +248,18 @@
     "extend1Month": "+1 місяць",
     "extend1Year": "+1 рік",
     "adminNotes": "Нотатки адміна",
+    "changePasswordTitle": "Пароль",
+    "changePasswordHint": "Новий пароль (мін. 8 символів). Користувач зможе увійти з ним одразу.",
+    "changePasswordPlaceholder": "Новий пароль",
+    "changePassword": "Змінити пароль",
+    "changingPassword": "Зміна…",
+    "passwordChanged": "Пароль оновлено",
+    "changeEmailTitle": "Email",
+    "changeEmailHint": "Новий email для входу в акаунт.",
+    "changeEmailPlaceholder": "Новий email",
+    "changeEmail": "Змінити email",
+    "changingEmail": "Зміна…",
+    "emailChanged": "Email оновлено",
     "unlimited": "∞",
     "kpiUsers": "Користувачі",
     "kpiActive": "Активні",

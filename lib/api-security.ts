@@ -1,4 +1,3 @@
-import type { NextRequest } from "next/server";
 
 type RequestLike = Pick<Request, "headers">;
 

@@ -47,6 +47,8 @@ type UserEdit = {
   accessExpiresAt: string;
   adminNotes: string;
   useDefaultLimit: boolean;
+  newPassword: string;
+  newEmail: string;
 };
 
 function addMonths(base: Date, months: number): string {
@@ -124,6 +126,13 @@ function UserManagePanel({
   onEditChange,
   onExtendAccess,
   onSave,
+  onSetPassword,
+  onSetEmail,
+  passwordSaving,
+  passwordSuccess,
+  emailSaving,
+  emailSuccess,
+  emailError,
 }: {
   user: UserRow;
   edit: UserEdit;
@@ -141,6 +150,13 @@ function UserManagePanel({
   onEditChange: (patch: Partial<UserEdit>) => void;
   onExtendAccess: (months: number) => void;
   onSave: () => void;
+  onSetPassword: () => void;
+  onSetEmail: () => void;
+  passwordSaving: boolean;
+  passwordSuccess: boolean;
+  emailSaving: boolean;
+  emailSuccess: boolean;
+  emailError: string | null;
 }) {
   return (
     <div className="border-t border-border/60 bg-muted/25 px-4 py-5">
@@ -295,6 +311,68 @@ function UserManagePanel({
             className="block w-full rounded-xl border border-border bg-input px-3 py-2 text-base sm:text-sm"
           />
         </label>
+        <div className="grid gap-4 lg:col-span-2 lg:grid-cols-2">
+          <div className="space-y-3">
+          <p className="text-sm font-semibold">{t("changePasswordTitle")}</p>
+          <p className="text-xs text-muted-foreground">{t("changePasswordHint")}</p>
+          <PasswordInput
+            id={`admin-user-password-${user.id}`}
+            minLength={8}
+            autoComplete="new-password"
+            value={edit.newPassword}
+            onChange={(e) => onEditChange({ newPassword: e.target.value })}
+            inputClassName="block h-11 w-full rounded-xl border border-border bg-input py-0 pl-3 pr-12 text-base sm:text-sm"
+            placeholder={t("changePasswordPlaceholder")}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full text-sm sm:w-auto"
+            disabled={passwordSaving || edit.newPassword.length < 8}
+            onClick={onSetPassword}
+          >
+            {passwordSaving ? t("changingPassword") : t("changePassword")}
+          </Button>
+            {passwordSuccess && (
+              <p className="text-sm text-green-700 dark:text-green-400">
+                {t("passwordChanged")}
+              </p>
+            )}
+          </div>
+          <div className="space-y-3">
+            <p className="text-sm font-semibold">{t("changeEmailTitle")}</p>
+            <p className="text-xs text-muted-foreground">{t("changeEmailHint")}</p>
+            <input
+              type="email"
+              autoComplete="off"
+              value={edit.newEmail}
+              onChange={(e) => onEditChange({ newEmail: e.target.value })}
+              className="block h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:text-sm"
+              placeholder={t("changeEmailPlaceholder")}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full text-sm sm:w-auto"
+              disabled={
+                emailSaving ||
+                edit.newEmail.trim().toLowerCase() === user.email.toLowerCase() ||
+                !edit.newEmail.includes("@")
+              }
+              onClick={onSetEmail}
+            >
+              {emailSaving ? t("changingEmail") : t("changeEmail")}
+            </Button>
+            {emailSuccess && (
+              <p className="text-sm text-green-700 dark:text-green-400">
+                {t("emailChanged")}
+              </p>
+            )}
+            {emailError && (
+              <p className="text-sm text-destructive">{emailError}</p>
+            )}
+          </div>
+        </div>
         <div className="lg:col-span-2">
           <Button
             type="button"
@@ -343,6 +421,11 @@ export function AdminUsers() {
   });
 
   const [edits, setEdits] = useState<Record<string, UserEdit>>({});
+  const [passwordSavingId, setPasswordSavingId] = useState<string | null>(null);
+  const [passwordSuccessId, setPasswordSuccessId] = useState<string | null>(null);
+  const [emailSavingId, setEmailSavingId] = useState<string | null>(null);
+  const [emailSuccessId, setEmailSuccessId] = useState<string | null>(null);
+  const [emailErrors, setEmailErrors] = useState<Record<string, string | null>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -387,6 +470,8 @@ export function AdminUsers() {
           accessExpiresAt: formatDateInputLocal(user.accessExpiresAt),
           adminNotes: user.adminNotes ?? "",
           useDefaultLimit: user.usesDefaultLimit,
+          newPassword: "",
+          newEmail: user.email,
         };
       }
       return next;
@@ -422,6 +507,76 @@ export function AdminUsers() {
       setLoadError(adminApiErrorMessage(data, t));
       return;
     }
+    await load();
+  }
+
+  async function saveUserPassword(user: UserRow) {
+    const edit = edits[user.id];
+    if (!edit || edit.newPassword.length < 8) {
+      return;
+    }
+
+    setPasswordSavingId(user.id);
+    setPasswordSuccessId(null);
+    setLoadError(null);
+
+    const response = await appFetch(`/api/admin/users/${user.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ password: edit.newPassword }),
+    });
+
+    setPasswordSavingId(null);
+
+    if (!response.ok) {
+      const data = await response.json();
+      setLoadError(adminApiErrorMessage(data, t));
+      return;
+    }
+
+    setEdit(user.id, { newPassword: "" });
+    setPasswordSuccessId(user.id);
+    window.setTimeout(() => {
+      setPasswordSuccessId((current) => (current === user.id ? null : current));
+    }, 3000);
+  }
+
+  async function saveUserEmail(user: UserRow) {
+    const edit = edits[user.id];
+    if (!edit) {
+      return;
+    }
+
+    const email = edit.newEmail.trim().toLowerCase();
+    if (!email || email === user.email.toLowerCase()) {
+      return;
+    }
+
+    setEmailSavingId(user.id);
+    setEmailSuccessId(null);
+    setEmailErrors((current) => ({ ...current, [user.id]: null }));
+    setLoadError(null);
+
+    const response = await appFetch(`/api/admin/users/${user.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ email }),
+    });
+
+    setEmailSavingId(null);
+
+    if (!response.ok) {
+      const data = await response.json();
+      const message =
+        data.error === "email_exists"
+          ? t("emailExists")
+          : adminApiErrorMessage(data, t);
+      setEmailErrors((current) => ({ ...current, [user.id]: message }));
+      return;
+    }
+
+    setEmailSuccessId(user.id);
+    window.setTimeout(() => {
+      setEmailSuccessId((current) => (current === user.id ? null : current));
+    }, 3000);
     await load();
   }
 
@@ -554,6 +709,13 @@ export function AdminUsers() {
         onEditChange={(patch) => setEdit(user.id, patch)}
         onExtendAccess={(months) => extendAccess(user.id, months)}
         onSave={() => saveUserLimits(user)}
+        onSetPassword={() => saveUserPassword(user)}
+        onSetEmail={() => saveUserEmail(user)}
+        passwordSaving={passwordSavingId === user.id}
+        passwordSuccess={passwordSuccessId === user.id}
+        emailSaving={emailSavingId === user.id}
+        emailSuccess={emailSuccessId === user.id}
+        emailError={emailErrors[user.id] ?? null}
       />
     );
   }

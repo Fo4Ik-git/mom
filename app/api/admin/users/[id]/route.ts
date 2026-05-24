@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { handleAdminApiError } from "@/lib/admin-api-response";
 import { requireAdmin } from "@/lib/auth-session";
+import { hashPassword } from "@/lib/password";
 import {
   countUserCalculators,
   getEffectiveMaxCalculators,
@@ -18,6 +19,8 @@ const updateSchema = z.object({
   maxCalculators: z.number().int().min(0).max(1000).nullable().optional(),
   accessExpiresAt: z.string().datetime().nullable().optional(),
   adminNotes: z.string().max(500).nullable().optional(),
+  password: z.string().min(8).max(128).optional(),
+  email: z.string().email().optional(),
 });
 
 export async function PATCH(
@@ -49,6 +52,8 @@ export async function PATCH(
       maxCalculators?: number | null;
       accessExpiresAt?: Date | null;
       adminNotes?: string | null;
+      passwordHash?: string;
+      email?: string;
     } = {};
 
     if (body.role !== undefined) {
@@ -77,6 +82,20 @@ export async function PATCH(
     }
     if (body.adminNotes !== undefined) {
       data.adminNotes = body.adminNotes;
+    }
+    if (body.password !== undefined) {
+      data.passwordHash = await hashPassword(body.password);
+    }
+    if (body.email !== undefined) {
+      const email = body.email.toLowerCase();
+      const existing = await db.user.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+      if (existing && existing.id !== id) {
+        return NextResponse.json({ error: "email_exists" }, { status: 409 });
+      }
+      data.email = email;
     }
 
     if (body.accessExpiresAt !== undefined) {

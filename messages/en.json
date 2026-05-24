@@ -26,7 +26,6 @@
     "language": "Language"
   },
   "nav": {
-    "templateMom": "Mom template",
     "builder": "Builder",
     "admin": "Admin",
     "signIn": "Sign in",
@@ -37,17 +36,13 @@
   },
   "home": {
     "heroTitle": "Build calculators for your business",
-    "heroSubtitle": "Add fields, set formulas, and calculate profit your way. The Mom template is ready as a starting point.",
+    "heroSubtitle": "Add fields, set formulas, and calculate profit your way.",
     "ctaStart": "Sign in",
-    "ctaDemo": "Demo: Mom",
     "myCalculators": "My calculators",
     "signInPrompt": "Sign in",
     "signInSuffix": " to create and save calculators.",
     "createNew": "Create calculator",
-    "cloneMom": "From Mom template",
-    "cloning": "Cloning…",
-    "openMomTemplate": "Open Mom template",
-    "emptyList": "You have no calculators yet. Create one or clone the template."
+    "emptyList": "You have no calculators yet. Create one."
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -253,6 +248,18 @@
     "extend1Month": "+1 month",
     "extend1Year": "+1 year",
     "adminNotes": "Admin notes",
+    "changePasswordTitle": "Password",
+    "changePasswordHint": "New password (min. 8 characters). The user can sign in with it immediately.",
+    "changePasswordPlaceholder": "New password",
+    "changePassword": "Change password",
+    "changingPassword": "Changing…",
+    "passwordChanged": "Password updated",
+    "changeEmailTitle": "Email",
+    "changeEmailHint": "New email for signing in to the account.",
+    "changeEmailPlaceholder": "New email",
+    "changeEmail": "Change email",
+    "changingEmail": "Changing…",
+    "emailChanged": "Email updated",
     "unlimited": "∞",
     "kpiUsers": "Users",
     "kpiActive": "Active",

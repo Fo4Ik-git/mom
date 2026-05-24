@@ -11,14 +11,12 @@ type HeaderNavProps = {
   signedIn: boolean;
   banned: boolean;
   isAdmin: boolean;
-  templateHref: string | null;
 };
 
 export function HeaderNav({
   signedIn,
   banned,
   isAdmin,
-  templateHref,
 }: HeaderNavProps) {
   const t = useTranslations("nav");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -70,11 +68,6 @@ export function HeaderNav({
             : "hidden md:flex md:flex-row md:items-center md:gap-1.5"
         }`}
       >
-        {templateHref && (
-          <Link href={templateHref} className={mutedLinkClass} onClick={closeMenu}>
-            {t("templateMom")}
-          </Link>
-        )}
         {signedIn ? (
           <>
             {!banned && (

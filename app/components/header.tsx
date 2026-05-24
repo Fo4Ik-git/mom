@@ -3,14 +3,9 @@ import { auth } from "@/auth";
 import { HeaderNav } from "@/app/components/header-nav";
 import { contentContainerClass } from "@/app/components/layout/page-shell";
 import { Link } from "@/i18n/navigation";
-import {
-  calculatorPublicPath,
-  getMomTemplateCalculator,
-} from "@/lib/calculator-route";
 
 export async function Header() {
   const session = await auth();
-  const momTemplate = await getMomTemplateCalculator();
   const tc = await getTranslations("common");
 
   return (
@@ -34,9 +29,6 @@ export async function Header() {
           signedIn={Boolean(session?.user)}
           banned={Boolean(session?.user?.banned)}
           isAdmin={session?.user?.role === "ADMIN"}
-          templateHref={
-            momTemplate ? calculatorPublicPath(momTemplate.id) : null
-          }
         />
       </div>
     </header>

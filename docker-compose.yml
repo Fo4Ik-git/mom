@@ -1,0 +1,28 @@
+services:
+  calculator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3004}
+        NEXT_PUBLIC_APP_REQUEST_SECRET: ${NEXT_PUBLIC_APP_REQUEST_SECRET:-}
+    image: calculator:latest
+    container_name: calculator-1
+    ports:
+      # HOST_PORT (снаружи, Docker) : CONTAINER_PORT (Next.js внутри)
+      - "${HOST_PORT:-3004}:${CONTAINER_PORT:-3000}"
+    env_file:
+      - .env.docker
+    environment:
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      DATABASE_URL: file:./prisma/dev.db
+      AUTH_TRUST_HOST: "true"
+      NODE_ENV: production
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    volumes:
+      # Deploy root on SSD: /mnt/ssd/calculator (see deploy.sh)
+      - /mnt/ssd/calculator/db/dev.db:/app/prisma/dev.db
+      - /mnt/ssd/calculator/logs:/app/logs
+    restart: unless-stopped

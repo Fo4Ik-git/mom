@@ -1,8 +1,6 @@
 import { db } from "@/lib/db";
 import type { Calculator } from "@prisma/client";
 
-export const MOM_TEMPLATE_SLUG = "mom";
-
 export function calculatorPublicPath(id: string): string {
   return `/c/${id}`;
 }
@@ -17,10 +15,4 @@ export async function findCalculatorByRouteParam(
   }
 
   return db.calculator.findUnique({ where: { slug: param } });
-}
-
-export async function getMomTemplateCalculator(): Promise<Calculator | null> {
-  return db.calculator.findFirst({
-    where: { slug: MOM_TEMPLATE_SLUG, isTemplate: true },
-  });
 }

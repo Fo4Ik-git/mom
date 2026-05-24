@@ -4,7 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Card } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { appFetch } from "@/lib/api-client";
 import { formatAccessDate, getDaysUntilExpiry } from "@/lib/access-display";
 import { calculatorPublicPath } from "@/lib/calculator-route";
@@ -26,21 +26,14 @@ interface Quota {
   role: "USER" | "ADMIN";
 }
 
-interface DashboardProps {
-  momTemplateId?: string | null;
-}
-
-export function Dashboard({ momTemplateId }: DashboardProps) {
+export function Dashboard() {
   const t = useTranslations("home");
   const tc = useTranslations("common");
   const tl = useTranslations("limits");
   const locale = useLocale();
-  const router = useRouter();
   const [calculators, setCalculators] = useState<CalculatorSummary[]>([]);
   const [quota, setQuota] = useState<Quota | null>(null);
   const [loading, setLoading] = useState(true);
-  const [cloning, setCloning] = useState(false);
-  const [limitError, setLimitError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -55,26 +48,6 @@ export function Dashboard({ momTemplateId }: DashboardProps) {
       })
       .finally(() => setLoading(false));
   }, []);
-
-  async function cloneMomTemplate() {
-    setCloning(true);
-    setLimitError(null);
-    const response = await appFetch("/api/calculators/clone-template", {
-      method: "POST",
-      body: JSON.stringify({ templateSlug: "mom" }),
-    });
-    const data = await response.json();
-    setCloning(false);
-    if (response.ok && data.calculator) {
-      router.push(`/builder/${data.calculator.id}`);
-      return;
-    }
-    if (data.error === "calculator_limit") {
-      setLimitError(tl("limitReached", { max: quota?.max ?? "?" }));
-    } else if (data.error === "access_expired") {
-      setLimitError(tl("accessExpired"));
-    }
-  }
 
   if (loading) {
     return <p className="text-muted-foreground">{tc("loading")}</p>;
@@ -145,29 +118,12 @@ export function Dashboard({ momTemplateId }: DashboardProps) {
           </Card>
         </div>
       )}
-      {limitError && (
-        <p className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {limitError}
-        </p>
-      )}
       <div className="flex flex-wrap gap-3">
         <Link href={quota?.accessActive !== false ? "/builder" : "#"}>
           <Button disabled={quota?.accessActive === false || quota?.canCreate === false}>
             {t("createNew")}
           </Button>
         </Link>
-        <Button
-          variant="outline"
-          onClick={cloneMomTemplate}
-          disabled={cloning || quota?.canCreate === false || quota?.accessActive === false}
-        >
-          {cloning ? t("cloning") : t("cloneMom")}
-        </Button>
-        {momTemplateId && (
-          <Link href={calculatorPublicPath(momTemplateId)}>
-            <Button variant="ghost">{t("openMomTemplate")}</Button>
-          </Link>
-        )}
       </div>
 
       {calculators.length === 0 ? (

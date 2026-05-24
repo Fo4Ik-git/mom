@@ -1,8 +1,6 @@
 import { Role } from "@prisma/client";
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../lib/password";
-import { momTemplateConfig } from "../lib/templates/mom";
-import { serializeCalculatorConfig } from "../types/calculator";
 
 const prisma = new PrismaClient();
 
@@ -43,29 +41,7 @@ async function main() {
     },
   });
 
-  await prisma.calculator.upsert({
-    where: { slug: "mom" },
-    update: {
-      name: "Mom (салон)",
-      description: "Шаблон калькулятора салона красоты",
-      config: serializeCalculatorConfig(momTemplateConfig),
-      isTemplate: true,
-      isPublic: true,
-      userId: admin.id,
-    },
-    create: {
-      userId: admin.id,
-      name: "Mom (салон)",
-      description: "Шаблон калькулятора салона красоты",
-      slug: "mom",
-      config: serializeCalculatorConfig(momTemplateConfig),
-      isTemplate: true,
-      isPublic: true,
-    },
-  });
-
   console.log(`Seeded admin: ${adminEmail}`);
-  console.log("Seeded template: mom");
 }
 
 main()
