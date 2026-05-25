@@ -42,7 +42,9 @@
     "signInPrompt": "Sign in",
     "signInSuffix": " to create and save calculators.",
     "createNew": "Create calculator",
-    "emptyList": "You have no calculators yet. Create one."
+    "emptyList": "You have no calculators yet. Create one.",
+    "deleteConfirm": "Delete calculator \"{name}\"? This cannot be undone.",
+    "deleteFailed": "Could not delete calculator"
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -89,6 +91,9 @@
     "newTitle": "New calculator",
     "editTitle": "Editor",
     "openCalculator": "Open calculator",
+    "deleteCalculator": "Delete calculator",
+    "deleteConfirm": "Delete calculator \"{name}\"? This cannot be undone.",
+    "deleteFailed": "Could not delete calculator",
     "settings": "Settings",
     "title": "Title",
     "description": "Description",

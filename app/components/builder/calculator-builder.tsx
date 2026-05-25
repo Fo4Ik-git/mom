@@ -127,6 +127,7 @@ export function CalculatorBuilder({
   const [error, setError] = useState<string | null>(null);
   const [errorIssues, setErrorIssues] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const autoTotalSuffix = t("autoTotalSuffix");
 
   function applyPattern(patternId: InputPatternId) {
@@ -162,6 +163,34 @@ export function CalculatorBuilder({
     }
 
     router.push(`/builder/${data.calculator.id}`);
+    router.refresh();
+  }
+
+  async function handleDelete() {
+    if (!calculatorId) {
+      return;
+    }
+    if (!confirm(t("deleteConfirm", { name: name.trim() || t("newTitle") }))) {
+      return;
+    }
+
+    setDeleting(true);
+    setError(null);
+    setErrorIssues([]);
+
+    const response = await appFetch(`/api/calculators/${calculatorId}`, {
+      method: "DELETE",
+    });
+
+    setDeleting(false);
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setError(data.error ?? t("deleteFailed"));
+      return;
+    }
+
+    router.push("/");
     router.refresh();
   }
 
@@ -206,6 +235,18 @@ export function CalculatorBuilder({
                 />
                 {t("publicToggle")}
               </label>
+              {calculatorId && (
+                <div className="border-t border-border/70 pt-3">
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={saving || deleting}
+                    className="text-sm font-medium text-destructive hover:underline disabled:opacity-50"
+                  >
+                    {deleting ? tc("loading") : t("deleteCalculator")}
+                  </button>
+                </div>
+              )}
             </div>
           </BuilderSection>
 

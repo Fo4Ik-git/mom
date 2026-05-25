@@ -7,7 +7,7 @@ import { formatAccessDate, getDaysUntilExpiry } from "@/lib/access-display";
 import { appFetch } from "@/lib/api-client";
 import { calculatorPublicPath } from "@/lib/calculator-route";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface CalculatorSummary {
   id: string;
@@ -34,6 +34,16 @@ export function Dashboard() {
   const [calculators, setCalculators] = useState<CalculatorSummary[]>([]);
   const [quota, setQuota] = useState<Quota | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const refreshQuota = useCallback(async () => {
+    const quotaRes = await appFetch("/api/user/quota");
+    const quotaData = await quotaRes.json();
+    if (typeof quotaData.current === "number") {
+      setQuota(quotaData);
+    }
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -48,6 +58,29 @@ export function Dashboard() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  async function removeCalculator(id: string, name: string) {
+    if (!confirm(t("deleteConfirm", { name }))) {
+      return;
+    }
+
+    setDeleteError(null);
+    setDeletingId(id);
+
+    const response = await appFetch(`/api/calculators/${id}`, {
+      method: "DELETE",
+    });
+
+    setDeletingId(null);
+
+    if (!response.ok) {
+      setDeleteError(t("deleteFailed"));
+      return;
+    }
+
+    setCalculators((current) => current.filter((item) => item.id !== id));
+    await refreshQuota();
+  }
 
   if (loading) {
     return <p className="text-muted-foreground">{tc("loading")}</p>;
@@ -68,6 +101,12 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {deleteError && (
+        <p className="rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {deleteError}
+        </p>
+      )}
+
       {quota && (
         <div className="grid gap-3 sm:grid-cols-2">
           <Card
@@ -137,7 +176,7 @@ export function Dashboard() {
                 <p className="mt-1 text-xs text-muted-foreground">
                   {calculator.isPublic ? tc("public") : tc("private")}
                 </p>
-                <div className="mt-4 flex gap-3 text-sm">
+                <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
                   <Link
                     href={calculatorPublicPath(calculator.id)}
                     className="font-medium text-accent underline"
@@ -150,6 +189,14 @@ export function Dashboard() {
                   >
                     {tc("edit")}
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => removeCalculator(calculator.id, calculator.name)}
+                    disabled={deletingId === calculator.id}
+                    className="text-destructive hover:underline disabled:opacity-50"
+                  >
+                    {deletingId === calculator.id ? tc("loading") : tc("delete")}
+                  </button>
                 </div>
               </Card>
             </li>
