@@ -3,11 +3,7 @@
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
-  TouchSensor,
   closestCenter,
-  useSensor,
-  useSensors,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -44,7 +40,7 @@ import {
 import { BlockPaletteSheet } from "@/app/components/builder/scratch/block-palette-sheet";
 import { DraggableBlock } from "@/app/components/builder/scratch/draggable-block";
 import { FormulaLinearWorkspace } from "@/app/components/builder/scratch/formula-linear-workspace";
-import { useTouchBuilderUi } from "@/lib/hooks/use-media-query";
+import { useFormulaDndSensors } from "@/lib/hooks/use-formula-dnd-sensors";
 
 interface FormulaScratchEditorProps {
   config: CalculatorConfig;
@@ -71,7 +67,6 @@ export function FormulaScratchEditor({
   const [activeSlot, setActiveSlot] = useState<SlotPath[] | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [snippetPick, setSnippetPick] = useState<FormulaSnippetPick | null>(null);
-  const touchUi = useTouchBuilderUi();
 
   const paletteBlocks = useMemo(
     () => buildPaletteBlocks(config, formulaTarget, quantityLabel),
@@ -101,12 +96,7 @@ export function FormulaScratchEditor({
     setMounted(true);
   }, []);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, {
-      activationConstraint: { delay: 150, tolerance: 6 },
-    }),
-  );
+  const sensors = useFormulaDndSensors();
 
   function applyToSlot(path: SlotPath[], data: PaletteDragData) {
     onChange(applyPaletteToSlot(expression, path, data));
@@ -114,31 +104,8 @@ export function FormulaScratchEditor({
 
   function handleDragStart(event: DragStartEvent) {
     const id = String(event.active.id);
-    const block = paletteBlocks.find((b) => `palette-${b.id}` === id);
-    if (block) {
-      setActiveBlock(block);
-      setActiveDragLabel(block.label);
-      return;
-    }
-
-    const token = flatTokens.find((item) => item.id === id);
-    if (token) {
-      setActiveDragLabel(
-        token.kind === "operand"
-          ? formatBlockExpression(
-              { type: "operand", operand: token.operand },
-              config,
-              formulaTarget,
-              quantityLabel,
-            )
-          : token.kind === "operator"
-            ? (token.operator === "*" ? "×" : token.operator)
-            : "…",
-      );
-      return;
-    }
-
     const workspace = event.active.data.current as WorkspaceDragData | undefined;
+
     if (workspace?.source === "workspace") {
       if (workspace.kind === "operator") {
         setActiveDragLabel(
@@ -166,7 +133,31 @@ export function FormulaScratchEditor({
             `( ${formatBlockExpression(slotExpr.inner, config, formulaTarget, quantityLabel)} )`,
           );
         }
+        return;
       }
+    }
+
+    const block = paletteBlocks.find((b) => `palette-${b.id}` === id);
+    if (block) {
+      setActiveBlock(block);
+      setActiveDragLabel(block.label);
+      return;
+    }
+
+    const token = flatTokens.find((item) => item.id === id);
+    if (token) {
+      setActiveDragLabel(
+        token.kind === "operand"
+          ? formatBlockExpression(
+              { type: "operand", operand: token.operand },
+              config,
+              formulaTarget,
+              quantityLabel,
+            )
+          : token.kind === "operator"
+            ? (token.operator === "*" ? "×" : token.operator)
+            : "…",
+      );
     }
   }
 
@@ -226,16 +217,29 @@ export function FormulaScratchEditor({
       | undefined;
 
     if (workspaceActive?.source === "workspace") {
+      const overData = over.data.current as
+        | { path?: SlotPath[]; target?: string }
+        | WorkspaceDragData
+        | undefined;
+
       const overPath = (
-        workspaceOver && "path" in workspaceOver ? workspaceOver.path : undefined
+        overData && "path" in overData ? overData.path : undefined
       ) as SlotPath[] | undefined;
+
+      const overTarget =
+        overData && "target" in overData ? overData.target : undefined;
 
       if (
         (workspaceActive.kind === "slot" || workspaceActive.kind === "group") &&
         overPath
       ) {
+        const destination =
+          overTarget === "group" && workspaceActive.kind !== "group"
+            ? ([...overPath, "inner"] as SlotPath[])
+            : overPath;
+
         onChange(
-          moveExpressionToSlot(expression, workspaceActive.path, overPath),
+          moveExpressionToSlot(expression, workspaceActive.path, destination),
         );
         setActiveSlot(null);
         return;
@@ -320,9 +324,9 @@ export function FormulaScratchEditor({
 
   if (!mounted) {
     return (
-      <div className="space-y-3 rounded-xl border border-dashed border-accent/40 bg-accent-muted/15 p-3">
+      <div className="space-y-3 rounded-xl border border-dashed border-accent/40 bg-accent-muted/15 p-3 select-none">
         <p className="text-xs font-medium text-accent">{t("formulaTitle")}</p>
-        <div className="min-h-[52px] rounded-2xl border-2 border-dashed border-accent/30 bg-accent-muted/10 p-3">
+        <div className="min-h-[52px] select-none rounded-2xl border-2 border-dashed border-accent/30 bg-accent-muted/10 p-3">
           <p className="text-sm text-muted-foreground">{tc("loading")}</p>
         </div>
         <div className="rounded-lg bg-card px-3 py-2">
@@ -345,9 +349,9 @@ export function FormulaScratchEditor({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="space-y-3 rounded-xl border border-dashed border-accent/40 bg-accent-muted/15 p-3">
+      <div className="space-y-3 rounded-xl border border-dashed border-accent/40 bg-accent-muted/15 p-3 select-none">
         <p className="text-xs font-medium text-accent">{t("formulaTitle")}</p>
-        <p className="text-xs text-muted-foreground">{t("blocksMobileHint")}</p>
+        <p className="text-xs text-muted-foreground">{t("blocksDragHint")}</p>
 
         <div className="space-y-3">
           {activeSlot && (
@@ -372,7 +376,6 @@ export function FormulaScratchEditor({
             config={config}
             formulaTarget={formulaTarget}
             quantityLabel={quantityLabel}
-            touchUi={touchUi}
             activeSlotPath={activeSlot}
             onSlotClear={(path) => onChange(clearSlot(expression, path))}
             onOperationRemove={(path) =>

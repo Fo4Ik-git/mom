@@ -1,38 +1,38 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { useState } from "react";
-import { DynamicCalculator } from "@/app/components/calculator/dynamic-calculator";
 import { AddInputPatternMenu } from "@/app/components/builder/add-input-pattern-menu";
 import {
-  BuilderCollapsible,
-  BuilderSection,
+    BuilderCollapsible,
+    BuilderSection,
 } from "@/app/components/builder/builder-collapsible";
-import { FormulaBuilder } from "@/app/components/builder/formula-builder";
 import { ConstantsCard } from "@/app/components/builder/constants-card";
+import { FormulaBuilder } from "@/app/components/builder/formula-builder";
 import { InputFieldCard } from "@/app/components/builder/input-field-card";
+import { DynamicCalculator } from "@/app/components/calculator/dynamic-calculator";
 import { Button } from "@/app/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
 import { appFetch } from "@/lib/api-client";
-import type {
-  BlockExpression,
-  CalculationField,
-  CalculatorConfig,
-  CalculatorConstant,
-  OutputField,
-} from "@/types/calculator";
-import { emptyBlockExpression, slugifyId } from "@/types/calculator";
-import { formatBlockExpression } from "@/lib/formula/block-format";
 import { isAutoCalculationId } from "@/lib/calculator/auto-calculations";
 import {
-  finalizeConfig,
-  removeInputField,
-  updateInputField,
+    finalizeConfig,
+    removeInputField,
+    updateInputField,
 } from "@/lib/calculator/config-sync";
 import {
-  applyInputPattern,
-  type InputPatternId,
+    applyInputPattern,
+    type InputPatternId,
 } from "@/lib/calculator/input-patterns";
+import { formatBlockExpression } from "@/lib/formula/block-format";
+import type {
+    BlockExpression,
+    CalculationField,
+    CalculatorConfig,
+    CalculatorConstant,
+    OutputField,
+} from "@/types/calculator";
+import { emptyBlockExpression, slugifyId } from "@/types/calculator";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 interface CalculatorBuilderProps {
   calculatorId?: string;

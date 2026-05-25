@@ -2,10 +2,12 @@
 
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import { useTranslations } from "next-intl";
 import type { BlockExpression } from "@/types/calculator";
 import { BLOCK_COLORS } from "@/lib/formula/block-palette";
 import type { SlotPath, WorkspaceDragData } from "@/lib/formula/block-tree";
 import { isExpressionFilled } from "@/lib/formula/block-tree";
+import { DragHandle } from "@/app/components/builder/scratch/drag-handle";
 
 interface BlockSlotProps {
   slotId: string;
@@ -34,7 +36,9 @@ export function BlockSlot({
   onTap,
   isActive = false,
 }: BlockSlotProps) {
+  const t = useTranslations("builder");
   const filled = isExpressionFilled(expression);
+  const workspaceDrag = draggable && filled;
 
   const { isOver, setNodeRef: setDropRef } = useDroppable({
     id: slotId,
@@ -57,14 +61,11 @@ export function BlockSlot({
       kind: dragKind,
       path,
     } satisfies WorkspaceDragData,
-    disabled: !draggable || !filled,
+    disabled: !workspaceDrag,
   });
 
   const setNodeRef = (node: HTMLElement | null) => {
     setDropRef(node);
-    if (draggable && filled) {
-      setDragRef(node);
-    }
   };
 
   return (
@@ -74,12 +75,8 @@ export function BlockSlot({
         transform: CSS.Translate.toString(transform),
         opacity: isDragging ? 0.45 : 1,
       }}
-      className={`relative shrink-0 rounded-xl border-2 transition ${
-        compact
-          ? "min-h-[40px] px-2.5 py-1.5"
-          : "min-h-[52px] min-w-[88px] flex-1 px-3 py-2"
-      } ${
-        draggable && filled ? "cursor-grab touch-manipulation active:cursor-grabbing" : ""
+      className={`relative flex shrink-0 items-stretch gap-0.5 select-none rounded-xl border-2 transition ${
+        compact ? "min-h-[40px]" : "min-h-[52px] min-w-[88px] flex-1"
       } ${
         isOver
           ? "border-accent bg-accent/20 ring-2 ring-accent/30"
@@ -89,8 +86,16 @@ export function BlockSlot({
               ? BLOCK_COLORS[color]
               : BLOCK_COLORS.empty
       }`}
-      {...(draggable && filled ? { ...listeners, ...attributes } : {})}
     >
+      {workspaceDrag && (
+        <DragHandle
+          setNodeRef={setDragRef}
+          listeners={listeners}
+          attributes={attributes}
+          label={t("dragHandle")}
+          compact={compact}
+        />
+      )}
       <button
         type="button"
         onClick={(event) => {
@@ -98,7 +103,9 @@ export function BlockSlot({
           event.stopPropagation();
           onTap?.();
         }}
-        className={`flex h-full min-h-[44px] w-full touch-manipulation items-center text-left ${compact ? "gap-0" : "flex-col items-start justify-center"}`}
+        className={`flex min-h-[44px] flex-1 touch-manipulation items-center text-left ${
+          compact ? "gap-0 px-2 py-1.5" : "flex-col items-start justify-center px-3 py-2"
+        }`}
       >
         {!compact && label && (
           <span className="text-[10px] uppercase tracking-wide opacity-70">
@@ -106,7 +113,7 @@ export function BlockSlot({
           </span>
         )}
         <span
-          className={`font-semibold leading-tight ${compact ? "text-sm whitespace-nowrap" : "text-sm"}`}
+          className={`font-semibold leading-tight select-none ${compact ? "text-sm whitespace-nowrap" : "text-sm"}`}
         >
           {filled ? filledLabel : "＋"}
         </span>
@@ -118,7 +125,7 @@ export function BlockSlot({
             e.stopPropagation();
             onClear();
           }}
-          className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-[10px] text-white shadow-sm"
+          className="absolute -right-1.5 -top-1.5 z-10 flex size-5 min-h-[28px] min-w-[28px] touch-manipulation items-center justify-center rounded-full bg-destructive text-[10px] text-white shadow-sm"
           aria-label="Remove block"
         >
           ×

@@ -6,6 +6,7 @@ import {
   SortableContext,
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { useTranslations } from "next-intl";
 import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
 import { formatBlockOperand } from "@/lib/formula/block-format";
 import type { FormulaTarget } from "@/lib/formula/formula-target";
@@ -22,6 +23,7 @@ import {
   showContinuationAfterLeft,
   showContinuationInsideGroup,
 } from "@/lib/formula/block-tree";
+import { DragHandle } from "@/app/components/builder/scratch/drag-handle";
 import { BlockSlot } from "@/app/components/builder/scratch/block-slot";
 import { GroupBracket } from "@/app/components/builder/scratch/group-bracket";
 import { OperatorChip } from "@/app/components/builder/scratch/operator-chip";
@@ -37,7 +39,6 @@ interface FormulaLinearWorkspaceProps {
   onOperationRemove: (path: SlotPath[]) => void;
   onGroupRemove: (path: SlotPath[]) => void;
   onSlotTap: (path: SlotPath[]) => void;
-  touchUi?: boolean;
   activeSlotPath?: SlotPath[] | null;
 }
 
@@ -82,7 +83,6 @@ interface SortableTokenProps {
   onSlotClear: (path: SlotPath[]) => void;
   onOperationRemove: (path: SlotPath[]) => void;
   onSlotTap: (path: SlotPath[]) => void;
-  touchUi?: boolean;
   activeSlotPath?: SlotPath[] | null;
 }
 
@@ -95,22 +95,21 @@ function SortableToken({
   onSlotClear,
   onOperationRemove,
   onSlotTap,
-  touchUi = false,
   activeSlotPath = null,
 }: SortableTokenProps) {
-  const sortableEnabled = !touchUi;
+  const t = useTranslations("builder");
 
   const {
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
   } = useSortable({
     id: token.id,
     data: { source: "workspace-token", tokenId: token.id },
-    disabled: !sortableEnabled,
   });
 
   const style = {
@@ -122,16 +121,14 @@ function SortableToken({
 
   if (token.kind === "operator") {
     return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        className={
-          sortableEnabled
-            ? "cursor-grab touch-manipulation active:cursor-grabbing"
-            : ""
-        }
-        {...(sortableEnabled ? { ...listeners, ...attributes } : {})}
-      >
+      <div ref={setNodeRef} style={style} className="flex select-none items-center gap-0.5">
+        <DragHandle
+          setNodeRef={setActivatorNodeRef}
+          listeners={listeners}
+          attributes={attributes}
+          label={t("dragHandle")}
+          compact
+        />
         <OperatorChip
           operator={token.operator}
           onRemove={() => onOperationRemove(token.path)}
@@ -152,16 +149,14 @@ function SortableToken({
       : undefined;
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={
-        sortableEnabled
-          ? "cursor-grab touch-manipulation active:cursor-grabbing"
-          : ""
-      }
-      {...(sortableEnabled ? { ...listeners, ...attributes } : {})}
-    >
+    <div ref={setNodeRef} style={style} className="flex items-center gap-0.5">
+      <DragHandle
+        setNodeRef={setActivatorNodeRef}
+        listeners={listeners}
+        attributes={attributes}
+        label={t("dragHandle")}
+        compact
+      />
       <BlockSlot
         slotId={slotId}
         path={token.path}
@@ -173,6 +168,7 @@ function SortableToken({
         filledLabel={filledLabel}
         color={token.kind === "operand" ? operandColor(token) : "empty"}
         compact
+        draggable={token.kind === "operand"}
         isActive={slotPathsEqual(activeSlotPath, token.path)}
         onClear={
           token.kind === "operand"
@@ -224,7 +220,6 @@ function ExpressionNode({
   onOperationRemove,
   onGroupRemove,
   onSlotTap,
-  touchUi = false,
   activeSlotPath = null,
 }: ExpressionNodeProps) {
   if (expression.type === "group") {
@@ -246,7 +241,6 @@ function ExpressionNode({
           onOperationRemove={onOperationRemove}
           onGroupRemove={onGroupRemove}
           onSlotTap={onSlotTap}
-          touchUi={touchUi}
           activeSlotPath={activeSlotPath}
         />
         {showContinuationInsideGroup(expression.inner) && (
@@ -294,7 +288,7 @@ function ExpressionNode({
         filledLabel={filledLabel}
         color={color}
         compact
-        draggable={expression.type === "operand" && !touchUi}
+        draggable={expression.type === "operand"}
         isActive={slotPathsEqual(activeSlotPath, path)}
         onClear={
           expression.type === "operand"
@@ -319,7 +313,6 @@ function ExpressionNode({
         onOperationRemove={onOperationRemove}
         onGroupRemove={onGroupRemove}
         onSlotTap={onSlotTap}
-        touchUi={touchUi}
         activeSlotPath={activeSlotPath}
       />
       {showContinuationAfterLeft(expression) && (
@@ -333,7 +326,7 @@ function ExpressionNode({
       <OperatorChip
         operator={expression.operator}
         path={path}
-        draggable={!touchUi}
+        draggable
         onRemove={() => onOperationRemove(path)}
       />
       <ExpressionNode
@@ -347,7 +340,6 @@ function ExpressionNode({
         onOperationRemove={onOperationRemove}
         onGroupRemove={onGroupRemove}
         onSlotTap={onSlotTap}
-        touchUi={touchUi}
         activeSlotPath={activeSlotPath}
       />
     </>
@@ -362,16 +354,14 @@ export function FormulaLinearWorkspace({
   const { expression, outputKey } = props;
   const tokens = flattenExpression(expression);
   const canSort =
-    isReorderableChain(expression) &&
-    !hasGroups(expression) &&
-    !props.touchUi;
+    isReorderableChain(expression) && !hasGroups(expression);
 
   const inner = canSort ? (
     <SortableContext
       items={tokens.map((t) => t.id)}
       strategy={horizontalListSortingStrategy}
     >
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap select-none items-center gap-2">
         {tokens.map((token) => (
           <SortableToken key={token.id} token={token} {...props} />
         ))}
@@ -386,7 +376,7 @@ export function FormulaLinearWorkspace({
       </div>
     </SortableContext>
   ) : (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap select-none items-center gap-2">
       <ExpressionNode path={[]} {...props} onGroupRemove={onGroupRemove} />
       {showContinuationAfter(expression) && (
         <ContinuationSlot
@@ -404,7 +394,7 @@ export function FormulaLinearWorkspace({
   }
 
   return (
-    <div className="min-h-[52px] rounded-2xl border-2 border-dashed border-accent/30 bg-accent-muted/10 p-3">
+    <div className="min-h-[52px] select-none rounded-2xl border-2 border-dashed border-accent/30 bg-accent-muted/10 p-3">
       {inner}
     </div>
   );

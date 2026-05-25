@@ -2,8 +2,10 @@
 
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import { useTranslations } from "next-intl";
 import type { FormulaOperator } from "@/types/calculator";
 import type { SlotPath, WorkspaceDragData } from "@/lib/formula/block-tree";
+import { DragHandle } from "@/app/components/builder/scratch/drag-handle";
 
 function operatorSymbol(operator: FormulaOperator): string {
   switch (operator) {
@@ -29,6 +31,7 @@ export function OperatorChip({
   draggable = false,
   onRemove,
 }: OperatorChipProps) {
+  const t = useTranslations("builder");
   const opPathKey = path.join("-") || "root";
 
   const {
@@ -61,9 +64,6 @@ export function OperatorChip({
 
   const setNodeRef = (node: HTMLElement | null) => {
     setDropRef(node);
-    if (draggable) {
-      setDragRef(node);
-    }
   };
 
   return (
@@ -73,10 +73,18 @@ export function OperatorChip({
         transform: CSS.Translate.toString(transform),
         opacity: isDragging ? 0.45 : 1,
       }}
-      className={`relative shrink-0 ${draggable ? "cursor-grab touch-manipulation active:cursor-grabbing" : ""} ${isOver ? "ring-2 ring-accent/50 rounded-lg" : ""}`}
-      {...(draggable ? { ...listeners, ...attributes } : {})}
+      className={`relative flex shrink-0 items-center gap-0.5 select-none ${isOver ? "rounded-lg ring-2 ring-accent/50" : ""}`}
     >
-      <span className="inline-flex min-w-[36px] items-center justify-center rounded-lg border border-amber-400/50 bg-amber-500/20 px-2.5 py-1.5 text-base font-bold text-amber-900 dark:text-amber-100">
+      {draggable && (
+        <DragHandle
+          setNodeRef={setDragRef}
+          listeners={listeners}
+          attributes={attributes}
+          label={t("dragHandle")}
+          compact
+        />
+      )}
+      <span className="inline-flex min-w-[36px] select-none items-center justify-center rounded-lg border border-amber-400/50 bg-amber-500/20 px-2.5 py-1.5 text-base font-bold text-amber-900 dark:text-amber-100">
         {operatorSymbol(operator)}
       </span>
       <button

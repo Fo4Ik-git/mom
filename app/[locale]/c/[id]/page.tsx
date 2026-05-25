@@ -1,15 +1,15 @@
-import { getTranslations, setRequestLocale } from "next-intl/server";
-import { notFound } from "next/navigation";
-import { auth } from "@/auth";
 import { DynamicCalculator } from "@/app/components/calculator/dynamic-calculator";
 import { PageShell } from "@/app/components/layout/page-shell";
 import { Button } from "@/app/components/ui/button";
-import {
-  calculatorPublicPath,
-  findCalculatorByRouteParam,
-} from "@/lib/calculator-route";
+import { auth } from "@/auth";
 import { Link, redirect } from "@/i18n/navigation";
+import {
+    calculatorPublicPath,
+    findCalculatorByRouteParam,
+} from "@/lib/calculator-route";
 import { parseCalculatorConfig } from "@/types/calculator";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { notFound } from "next/navigation";
 
 export default async function CalculatorPage({
   params,

@@ -2,7 +2,9 @@
 
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import { useTranslations } from "next-intl";
 import type { SlotPath } from "@/lib/formula/block-tree";
+import { DragHandle } from "@/app/components/builder/scratch/drag-handle";
 
 interface GroupBracketProps {
   outputKey: string;
@@ -17,6 +19,7 @@ export function GroupBracket({
   children,
   onRemove,
 }: GroupBracketProps) {
+  const t = useTranslations("builder");
   const pathKey = path.join("-") || "root";
   const dropId = `${outputKey}-group-drop-${pathKey}`;
   const dragId = `${outputKey}-group-drag-${pathKey}`;
@@ -44,34 +47,34 @@ export function GroupBracket({
   return (
     <div
       ref={setDropRef}
-      className={`relative inline-flex max-w-full items-center gap-1.5 rounded-xl border-2 px-2 py-1.5 transition ${
+      style={{
+        transform: CSS.Translate.toString(transform),
+        opacity: isDragging ? 0.45 : 1,
+      }}
+      className={`relative inline-flex max-w-full select-none items-center gap-1 rounded-xl border-2 px-1.5 py-1.5 transition ${
         isOver
           ? "border-accent bg-accent/15 ring-2 ring-accent/30"
           : "border-violet-400/50 bg-violet-500/10"
       }`}
     >
-      <button
-        type="button"
-        ref={setDragRef}
-        style={{
-          transform: CSS.Translate.toString(transform),
-          opacity: isDragging ? 0.45 : 1,
-        }}
-        className="cursor-grab touch-manipulation rounded px-0.5 text-lg font-bold leading-none text-violet-700 active:cursor-grabbing dark:text-violet-300"
-        aria-label="Drag group"
-        {...listeners}
-        {...attributes}
-      >
+      <DragHandle
+        setNodeRef={setDragRef}
+        listeners={listeners}
+        attributes={attributes}
+        label={t("dragHandleGroup")}
+        compact
+      />
+      <span className="select-none text-lg font-bold leading-none text-violet-700 dark:text-violet-300">
         (
-      </button>
+      </span>
       <div className="flex min-w-[40px] flex-wrap items-center gap-2">{children}</div>
-      <span className="text-lg font-bold leading-none text-violet-700 dark:text-violet-300">
+      <span className="select-none text-lg font-bold leading-none text-violet-700 dark:text-violet-300">
         )
       </span>
       <button
         type="button"
         onClick={onRemove}
-        className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-[10px] text-white shadow-sm"
+        className="absolute -right-1.5 -top-1.5 z-10 flex size-5 min-h-[28px] min-w-[28px] touch-manipulation items-center justify-center rounded-full bg-destructive text-[10px] text-white shadow-sm"
         aria-label="Remove brackets"
       >
         ×

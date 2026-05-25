@@ -1,18 +1,18 @@
-import { NextResponse } from "next/server";
-import { z } from "zod";
-import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-session";
 import {
-  CalculatorValidationError,
-  toCalculatorResponse,
-  validateCalculatorConfig,
-  serializeConfig,
+    CalculatorValidationError,
+    serializeConfig,
+    toCalculatorResponse,
+    validateCalculatorConfig,
 } from "@/lib/calculator-service";
+import { db } from "@/lib/db";
 import {
-  formatZodIssues,
-  validationErrorResponse,
+    formatZodIssues,
+    validationErrorResponse,
 } from "@/lib/validation-errors";
 import { calculatorConfigSchema } from "@/types/calculator";
+import { NextResponse } from "next/server";
+import { z } from "zod";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(120).optional(),
