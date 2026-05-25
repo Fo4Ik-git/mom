@@ -6,6 +6,10 @@ import { slugifyId } from "@/types/calculator";
 import { BuilderCollapsible } from "@/app/components/builder/builder-collapsible";
 import { NumericInput } from "@/app/components/builder/numeric-input";
 import {
+  INPUT_SECTION_IDS,
+  type InputSectionId,
+} from "@/lib/calculator/input-sections";
+import {
   TIME_DURATION_ID,
   TIME_RATE_ID,
   applyTimeUnit,
@@ -20,8 +24,11 @@ interface InputFieldCardProps {
   field: InputField;
   onChange: (field: InputField) => void;
   onRemove: () => void;
+  onDuplicate?: () => void;
   canRemove: boolean;
   defaultOpen?: boolean;
+  section?: InputSectionId;
+  onSectionChange?: (section: InputSectionId) => void;
 }
 
 function randomPropId() {
@@ -76,8 +83,11 @@ export function InputFieldCard({
   field,
   onChange,
   onRemove,
+  onDuplicate,
   canRemove,
   defaultOpen = false,
+  section,
+  onSectionChange,
 }: InputFieldCardProps) {
   const t = useTranslations("builder");
   const tc = useTranslations("common");
@@ -134,15 +144,26 @@ export function InputFieldCard({
       defaultOpen={defaultOpen || !field.label.trim()}
       className="bg-muted/20"
       headerActions={
-        canRemove ? (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="rounded-lg px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
-          >
-            {tc("delete")}
-          </button>
-        ) : undefined
+        <div className="flex items-center gap-1">
+          {onDuplicate && (
+            <button
+              type="button"
+              onClick={onDuplicate}
+              className="rounded-lg px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+            >
+              {t("duplicateField")}
+            </button>
+          )}
+          {canRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="rounded-lg px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
+            >
+              {tc("delete")}
+            </button>
+          )}
+        </div>
       }
     >
       <label className="block space-y-1.5">
@@ -157,6 +178,25 @@ export function InputFieldCard({
           className="h-11 w-full rounded-xl border border-border bg-input px-3.5 text-sm font-medium"
         />
       </label>
+
+      {onSectionChange && section && (
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-muted-foreground">
+            {t("inputSectionLabel")}
+          </span>
+          <select
+            value={section}
+            onChange={(e) => onSectionChange(e.target.value as InputSectionId)}
+            className="h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+          >
+            {INPUT_SECTION_IDS.map((sectionId) => (
+              <option key={sectionId} value={sectionId}>
+                {t(`inputSection_${sectionId}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       {isTimeField(field) ? (
         <TimeServiceFields

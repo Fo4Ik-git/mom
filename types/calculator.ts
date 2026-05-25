@@ -15,6 +15,7 @@ export const inputPropertySchema = z.object({
 export const inputFieldSchema = z.object({
   id: idSchema,
   label: z.string().min(1).max(120),
+  section: z.string().min(1).max(40).optional(),
   properties: z.array(inputPropertySchema).min(1).max(12),
   defaultQuantity: z.number().optional(),
   presets: z.array(z.number()).optional(),

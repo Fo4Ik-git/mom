@@ -1,4 +1,5 @@
 import type { BlockOperand, BlockExpression, CalculatorConfig, FormulaOperator } from "@/types/calculator";
+import { isAutoCalculationId } from "@/lib/calculator/auto-calculations";
 import type { FormulaTarget } from "@/lib/formula/formula-target";
 import type { FormulaSnippetPick } from "@/lib/formula/formula-snippets";
 
@@ -80,6 +81,9 @@ export function buildPaletteBlocks(
   }
 
   for (const calculation of config.calculations ?? []) {
+    if (isAutoCalculationId(calculation.id)) {
+      continue;
+    }
     if (calculation.id === target.fieldId) {
       continue;
     }

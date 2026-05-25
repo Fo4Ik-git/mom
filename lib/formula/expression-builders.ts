@@ -71,3 +71,25 @@ export function propertyDivNumberThenTimes(
 export function calculationOperand(calculationId: string): BlockExpression {
   return operandExpression({ kind: "calculation", calculationId });
 }
+
+export function sumCalculationOperands(calculationIds: string[]): BlockExpression {
+  const unique = [...new Set(calculationIds)];
+  if (unique.length === 0) {
+    return { type: "empty" };
+  }
+  return unique.slice(1).reduce<BlockExpression>(
+    (left, id) => operationExpression("+", left, calculationOperand(id)),
+    calculationOperand(unique[0]),
+  );
+}
+
+export function calculationMinusCalculation(
+  leftCalculationId: string,
+  rightCalculationId: string,
+): BlockExpression {
+  return operationExpression(
+    "-",
+    calculationOperand(leftCalculationId),
+    calculationOperand(rightCalculationId),
+  );
+}

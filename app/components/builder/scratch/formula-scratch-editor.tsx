@@ -83,6 +83,9 @@ export function FormulaScratchEditor({
         pickPrice: t("snippetPickPrice"),
         pickCost: t("snippetPickCost"),
         pickConstant: t("snippetPickConstant"),
+        sumAllCost: t("snippetSumAllCost"),
+        sumAllPrice: t("snippetSumAllPrice"),
+        globalMargin: t("snippetGlobalMargin"),
       }),
     [config, quantityLabel, t],
   );

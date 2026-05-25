@@ -7,17 +7,14 @@ import {
 } from "@/app/components/builder/builder-collapsible";
 import { ConstantsCard } from "@/app/components/builder/constants-card";
 import { FormulaBuilder } from "@/app/components/builder/formula-builder";
-import { InputFieldCard } from "@/app/components/builder/input-field-card";
+import { InputFieldsEditor } from "@/app/components/builder/input-fields-editor";
+import { OutputSnippetMenu } from "@/app/components/builder/output-snippet-menu";
 import { DynamicCalculator } from "@/app/components/calculator/dynamic-calculator";
 import { Button } from "@/app/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
 import { appFetch } from "@/lib/api-client";
 import { isAutoCalculationId } from "@/lib/calculator/auto-calculations";
-import {
-    finalizeConfig,
-    removeInputField,
-    updateInputField,
-} from "@/lib/calculator/config-sync";
+import { finalizeConfig } from "@/lib/calculator/config-sync";
 import {
     applyInputPattern,
     type InputPatternId,
@@ -130,10 +127,10 @@ export function CalculatorBuilder({
   const [deleting, setDeleting] = useState(false);
   const autoTotalSuffix = t("autoTotalSuffix");
 
-  function applyPattern(patternId: InputPatternId) {
+  function applyPattern(patternId: InputPatternId, count = 1) {
     setConfig((current) =>
       finalizeConfig(
-        applyInputPattern(current, patternId, patternLabels(t)),
+        applyInputPattern(current, patternId, patternLabels(t), { count }),
         autoTotalSuffix,
       ),
     );
@@ -255,28 +252,18 @@ export function CalculatorBuilder({
             description={t("inputFieldsDesc")}
             count={config.inputs.length}
             defaultOpen
-            actions={<AddInputPatternMenu onSelect={applyPattern} />}
+            actions={
+              <AddInputPatternMenu
+                onSelect={applyPattern}
+                maxCount={Math.max(1, 50 - config.inputs.length)}
+              />
+            }
           >
-            <div className="space-y-3">
-              {config.inputs.map((field, index) => (
-                <InputFieldCard
-                  key={field.id}
-                  field={field}
-                  canRemove={config.inputs.length > 1}
-                  defaultOpen={
-                    index === config.inputs.length - 1 && !field.label.trim()
-                  }
-                  onChange={(updated) =>
-                    setConfig((current) =>
-                      updateInputField(current, index, updated, autoTotalSuffix),
-                    )
-                  }
-                  onRemove={() =>
-                    setConfig((current) => removeInputField(current, index))
-                  }
-                />
-              ))}
-            </div>
+            <InputFieldsEditor
+              config={config}
+              autoTotalSuffix={autoTotalSuffix}
+              onConfigChange={setConfig}
+            />
           </BuilderSection>
 
           <BuilderSection
@@ -335,7 +322,7 @@ export function CalculatorBuilder({
           <BuilderSection
             title={t("calculationFields")}
             description={t("calculationFieldsDesc")}
-            count={(config.calculations ?? []).length}
+            count={manualCalculations.length}
             defaultOpen={manualCalculations.length > 0}
             actions={
               <button
@@ -490,18 +477,21 @@ export function CalculatorBuilder({
             count={config.outputs.length}
             defaultOpen
             actions={
-              <button
-                type="button"
-                onClick={() =>
-                  setConfig((c) => ({
-                    ...c,
-                    outputs: [...c.outputs, emptyOutput()],
-                  }))
-                }
-                className="shrink-0 rounded-xl bg-accent-muted px-3 py-2 text-sm font-medium text-accent"
-              >
-                {t("addOutput")}
-              </button>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <OutputSnippetMenu config={config} onAdd={setConfig} />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig((c) => ({
+                      ...c,
+                      outputs: [...c.outputs, emptyOutput()],
+                    }))
+                  }
+                  className="shrink-0 rounded-xl bg-accent-muted px-3 py-2 text-sm font-medium text-accent"
+                >
+                  {t("addOutput")}
+                </button>
+              </div>
             }
           >
             <div className="space-y-3">

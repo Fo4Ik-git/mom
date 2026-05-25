@@ -94,13 +94,52 @@ export function applyInputPattern(
   config: CalculatorConfig,
   patternId: InputPatternId,
   labels: InputPatternLabels,
+  options?: { count?: number; section?: string; namePrefix?: string },
 ): CalculatorConfig {
-  const result = createInputFromPattern(patternId, labels);
+  const count = Math.min(Math.max(options?.count ?? 1, 1), 50 - config.inputs.length);
+  const newInputs: InputField[] = [];
+  const newCalculations: CalculationField[] = [];
+
+  const namePrefix = options?.namePrefix ?? defaultPatternNamePrefix(patternId, labels);
+
+  for (let i = 0; i < count; i += 1) {
+    const result = createInputFromPattern(patternId, labels);
+    const numberedLabel =
+      count > 1 && namePrefix
+        ? `${namePrefix} ${i + 1}`
+        : result.input.label;
+
+    newInputs.push({
+      ...result.input,
+      label: numberedLabel,
+      section: options?.section ?? result.input.section,
+    });
+    if (result.calculations?.length) {
+      newCalculations.push(...result.calculations);
+    }
+  }
+
   return {
     ...config,
-    inputs: [...config.inputs, result.input],
-    calculations: [...(config.calculations ?? []), ...(result.calculations ?? [])],
+    inputs: [...config.inputs, ...newInputs],
+    calculations: [...(config.calculations ?? []), ...newCalculations],
   };
+}
+
+function defaultPatternNamePrefix(
+  patternId: InputPatternId,
+  labels: InputPatternLabels,
+): string {
+  switch (patternId) {
+    case "timeService":
+      return labels.service;
+    case "consumables":
+      return labels.consumable;
+    case "costPrice":
+    case "blank":
+    default:
+      return "";
+  }
 }
 
 export const INPUT_PATTERN_IDS: InputPatternId[] = [
