@@ -12,6 +12,7 @@ import {
 } from "@/lib/calculator/time-service";
 import {
   calculationMinusCalculation,
+  marginFromCalculationSums,
   propertyMinusProperty,
   propertyTimesConstant,
   quantityTimesProperty,
@@ -154,17 +155,10 @@ export function buildFormulaSnippets(
   }
 
   if (labels.globalMargin && costCalcIds.length > 0 && priceCalcIds.length > 0) {
-    const costSum = sumCalculationOperands(costCalcIds);
-    const priceSum = sumCalculationOperands(priceCalcIds);
     const marginExpression =
       costCalcIds.length === 1 && priceCalcIds.length === 1
         ? calculationMinusCalculation(priceCalcIds[0], costCalcIds[0])
-        : {
-            type: "operation" as const,
-            operator: "-" as const,
-            left: priceSum,
-            right: costSum,
-          };
+        : marginFromCalculationSums(priceCalcIds, costCalcIds);
 
     snippets.push({
       id: "snip-global-margin",

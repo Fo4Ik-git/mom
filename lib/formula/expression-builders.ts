@@ -1,4 +1,10 @@
-import type { BlockExpression, BlockOperand, FormulaOperator } from "@/types/calculator";
+import type {
+  AggregateFunction,
+  BlockExpression,
+  BlockOperand,
+  FormulaOperator,
+} from "@/types/calculator";
+import { normalizeAggregateArgs } from "@/lib/formula/aggregate-helpers";
 
 export function operandExpression(operand: BlockOperand): BlockExpression {
   return { type: "operand", operand };
@@ -72,14 +78,29 @@ export function calculationOperand(calculationId: string): BlockExpression {
   return operandExpression({ kind: "calculation", calculationId });
 }
 
+export function aggregateExpression(
+  fn: AggregateFunction,
+  operands: BlockExpression[],
+): BlockExpression {
+  const filled = operands.filter((operand) => operand.type !== "empty");
+  if (filled.length === 0) {
+    return { type: "empty" };
+  }
+  return {
+    type: "aggregate",
+    function: fn,
+    args: normalizeAggregateArgs(filled),
+  };
+}
+
 export function sumCalculationOperands(calculationIds: string[]): BlockExpression {
   const unique = [...new Set(calculationIds)];
   if (unique.length === 0) {
     return { type: "empty" };
   }
-  return unique.slice(1).reduce<BlockExpression>(
-    (left, id) => operationExpression("+", left, calculationOperand(id)),
-    calculationOperand(unique[0]),
+  return aggregateExpression(
+    "SUM",
+    unique.map((id) => calculationOperand(id)),
   );
 }
 
@@ -92,4 +113,16 @@ export function calculationMinusCalculation(
     calculationOperand(leftCalculationId),
     calculationOperand(rightCalculationId),
   );
+}
+
+export function marginFromCalculationSums(
+  revenueIds: string[],
+  costIds: string[],
+): BlockExpression {
+  const revenue = sumCalculationOperands(revenueIds);
+  const cost = sumCalculationOperands(costIds);
+  if (revenue.type === "empty" || cost.type === "empty") {
+    return { type: "empty" };
+  }
+  return operationExpression("-", revenue, cost);
 }

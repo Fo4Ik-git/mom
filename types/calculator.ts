@@ -26,6 +26,16 @@ export const inputFieldSchema = z.object({
 
 export type FormulaOperator = "+" | "-" | "*" | "/";
 
+export type AggregateFunction = "SUM" | "COUNT" | "AVG" | "MIN" | "MAX";
+
+export const AGGREGATE_FUNCTIONS: AggregateFunction[] = [
+  "SUM",
+  "COUNT",
+  "AVG",
+  "MIN",
+  "MAX",
+];
+
 export const calculatorConstantSchema = z.object({
   id: idSchema,
   label: z.string().min(1).max(80),
@@ -60,6 +70,11 @@ export const blockExpressionSchema: z.ZodType<BlockExpression> = z.lazy(() =>
       right: blockExpressionSchema,
     }),
     z.object({ type: z.literal("group"), inner: blockExpressionSchema }),
+    z.object({
+      type: z.literal("aggregate"),
+      function: z.enum(["SUM", "COUNT", "AVG", "MIN", "MAX"]),
+      args: z.array(blockExpressionSchema).min(1).max(32),
+    }),
   ]),
 );
 
@@ -72,7 +87,8 @@ export type BlockExpression =
       left: BlockExpression;
       right: BlockExpression;
     }
-  | { type: "group"; inner: BlockExpression };
+  | { type: "group"; inner: BlockExpression }
+  | { type: "aggregate"; function: AggregateFunction; args: BlockExpression[] };
 
 /** @deprecated Old two-dropdown format */
 export type FormulaExpression = {
@@ -172,6 +188,20 @@ export function emptyBlockExpression(): BlockExpression {
   return { type: "empty" };
 }
 
+export function emptyAggregateExpression(
+  fn: AggregateFunction = "SUM",
+): BlockExpression {
+  return {
+    type: "aggregate",
+    function: fn,
+    args: [emptyBlockExpression()],
+  };
+}
+
+export function isArgPathSegment(segment: string): boolean {
+  return /^\d+$/.test(segment);
+}
+
 export function normalizeBlockExpression(data: unknown): BlockExpression {
   if (!data || typeof data !== "object") {
     return emptyBlockExpression();
@@ -183,11 +213,12 @@ export function normalizeBlockExpression(data: unknown): BlockExpression {
     return { type: "empty" };
   }
 
-  if (record.type === "operand" && record.operand) {
-    return blockExpressionSchema.parse(data);
-  }
-
-  if (record.type === "operation" || record.type === "group") {
+  if (
+    record.type === "operand" ||
+    record.type === "operation" ||
+    record.type === "group" ||
+    record.type === "aggregate"
+  ) {
     return blockExpressionSchema.parse(data);
   }
 

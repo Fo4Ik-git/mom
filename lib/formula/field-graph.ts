@@ -59,6 +59,12 @@ export function collectFieldDependencies(
       walk(node.inner);
       return;
     }
+    if (node.type === "aggregate") {
+      for (const arg of node.args) {
+        walk(arg);
+      }
+      return;
+    }
     if (node.type === "operation") {
       walk(node.left);
       walk(node.right);

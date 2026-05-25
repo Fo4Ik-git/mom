@@ -1,4 +1,5 @@
 import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
+import { filledAggregateArgs } from "@/lib/formula/aggregate-helpers";
 import { evaluateBlockExpression } from "@/lib/formula/block-evaluate";
 import { evaluateAllFormulaFields } from "@/lib/formula/field-graph";
 
@@ -47,6 +48,20 @@ export function formatBlockExpressionWithValues(
       calculations,
       outputValues,
     )})`;
+  }
+
+  if (expression.type === "aggregate") {
+    const parts = filledAggregateArgs(expression.args).map((arg) =>
+      formatBlockExpressionWithValues(
+        arg,
+        config,
+        quantities,
+        calculations,
+        outputValues,
+      ),
+    );
+    const inner = parts.length > 0 ? parts.join(", ") : "0";
+    return `${expression.function}(${inner})`;
   }
 
   const left = formatBlockExpressionWithValues(

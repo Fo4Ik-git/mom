@@ -120,6 +120,7 @@ export function BlockPaletteContent({
   const constants = blocks.filter((b) => b.category === "constant");
   const operators = blocks.filter((b) => b.category === "operator");
   const groups = blocks.filter((b) => b.category === "group");
+  const aggregates = blocks.filter((b) => b.category === "aggregate");
 
   const inputGroups = useMemo(
     () => groupOperandBlocksByInput(operands, config.inputs),
@@ -157,8 +158,8 @@ export function BlockPaletteContent({
   );
 
   const filteredActions = useMemo(
-    () => filterPaletteBlocks([...operators, ...groups], query),
-    [operators, groups, query],
+    () => filterPaletteBlocks([...operators, ...groups, ...aggregates], query),
+    [operators, groups, aggregates, query],
   );
 
   const tabCounts = {

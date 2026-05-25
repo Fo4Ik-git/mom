@@ -228,7 +228,10 @@
     "outputSnippets": "Швидкі підсумки",
     "outputSnippetSumCost": "Собівартість разом",
     "outputSnippetSumPrice": "Дохід разом",
-    "outputSnippetMargin": "Маржа"
+    "outputSnippetMargin": "Маржа",
+    "dragHandleAggregate": "Перетягнути агрегат",
+    "removeAggregate": "Прибрати агрегат",
+    "aggregateHint": "Додавайте значення через кому всередині функції"
   },
   "admin": {
     "title": "Адмін-панель",

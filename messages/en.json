@@ -228,7 +228,10 @@
     "outputSnippets": "Quick totals",
     "outputSnippetSumCost": "Total cost",
     "outputSnippetSumPrice": "Total revenue",
-    "outputSnippetMargin": "Margin"
+    "outputSnippetMargin": "Margin",
+    "dragHandleAggregate": "Drag aggregate",
+    "removeAggregate": "Remove aggregate",
+    "aggregateHint": "Add values separated by commas inside the function"
   },
   "admin": {
     "title": "Admin panel",

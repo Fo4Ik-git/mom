@@ -23,10 +23,12 @@ import {
   showContinuationAfterLeft,
   showContinuationInsideGroup,
 } from "@/lib/formula/block-tree";
+import { AggregateBracket } from "@/app/components/builder/scratch/aggregate-bracket";
 import { DragHandle } from "@/app/components/builder/scratch/drag-handle";
 import { BlockSlot } from "@/app/components/builder/scratch/block-slot";
 import { GroupBracket } from "@/app/components/builder/scratch/group-bracket";
 import { OperatorChip } from "@/app/components/builder/scratch/operator-chip";
+import { normalizeAggregateArgs } from "@/lib/formula/aggregate-helpers";
 
 interface FormulaLinearWorkspaceProps {
   outputKey: string;
@@ -38,12 +40,13 @@ interface FormulaLinearWorkspaceProps {
   onSlotClear: (path: SlotPath[]) => void;
   onOperationRemove: (path: SlotPath[]) => void;
   onGroupRemove: (path: SlotPath[]) => void;
+  onAggregateRemove: (path: SlotPath[]) => void;
   onSlotTap: (path: SlotPath[]) => void;
   activeSlotPath?: SlotPath[] | null;
 }
 
 function hasGroups(expression: BlockExpression): boolean {
-  if (expression.type === "group") {
+  if (expression.type === "group" || expression.type === "aggregate") {
     return true;
   }
   if (expression.type === "operation") {
@@ -219,9 +222,51 @@ function ExpressionNode({
   onSlotClear,
   onOperationRemove,
   onGroupRemove,
+  onAggregateRemove,
   onSlotTap,
   activeSlotPath = null,
 }: ExpressionNodeProps) {
+  if (expression.type === "aggregate") {
+    const aggPath = path;
+    const args = normalizeAggregateArgs(expression.args);
+
+    return (
+      <AggregateBracket
+        outputKey={outputKey}
+        path={aggPath}
+        fn={expression.function}
+        onRemove={() => onAggregateRemove(aggPath)}
+      >
+        {args.map((arg, index) => (
+          <span
+            key={`${aggPath.join("-")}-arg-${index}`}
+            className="inline-flex items-center gap-1.5"
+          >
+            {index > 0 && (
+              <span className="select-none text-sm font-medium text-muted-foreground">
+                ,
+              </span>
+            )}
+            <ExpressionNode
+              expression={arg}
+              path={[...aggPath, String(index) as SlotPath]}
+              outputKey={outputKey}
+              config={config}
+              formulaTarget={formulaTarget}
+              quantityLabel={quantityLabel}
+              onSlotClear={onSlotClear}
+              onOperationRemove={onOperationRemove}
+              onGroupRemove={onGroupRemove}
+              onAggregateRemove={onAggregateRemove}
+              onSlotTap={onSlotTap}
+              activeSlotPath={activeSlotPath}
+            />
+          </span>
+        ))}
+      </AggregateBracket>
+    );
+  }
+
   if (expression.type === "group") {
     const groupPath = path;
     return (
@@ -240,6 +285,7 @@ function ExpressionNode({
           onSlotClear={onSlotClear}
           onOperationRemove={onOperationRemove}
           onGroupRemove={onGroupRemove}
+          onAggregateRemove={onAggregateRemove}
           onSlotTap={onSlotTap}
           activeSlotPath={activeSlotPath}
         />
@@ -312,6 +358,7 @@ function ExpressionNode({
         onSlotClear={onSlotClear}
         onOperationRemove={onOperationRemove}
         onGroupRemove={onGroupRemove}
+        onAggregateRemove={onAggregateRemove}
         onSlotTap={onSlotTap}
         activeSlotPath={activeSlotPath}
       />
@@ -339,6 +386,7 @@ function ExpressionNode({
         onSlotClear={onSlotClear}
         onOperationRemove={onOperationRemove}
         onGroupRemove={onGroupRemove}
+        onAggregateRemove={onAggregateRemove}
         onSlotTap={onSlotTap}
         activeSlotPath={activeSlotPath}
       />
@@ -349,6 +397,7 @@ function ExpressionNode({
 export function FormulaLinearWorkspace({
   nested = false,
   onGroupRemove,
+  onAggregateRemove,
   ...props
 }: FormulaLinearWorkspaceProps) {
   const { expression, outputKey } = props;
@@ -377,7 +426,12 @@ export function FormulaLinearWorkspace({
     </SortableContext>
   ) : (
     <div className="flex flex-wrap select-none items-center gap-2">
-      <ExpressionNode path={[]} {...props} onGroupRemove={onGroupRemove} />
+      <ExpressionNode
+        path={[]}
+        {...props}
+        onGroupRemove={onGroupRemove}
+        onAggregateRemove={onAggregateRemove}
+      />
       {showContinuationAfter(expression) && (
         <ContinuationSlot
           outputKey={outputKey}

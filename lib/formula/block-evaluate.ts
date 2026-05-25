@@ -5,6 +5,7 @@ import type {
   CalculatorConstant,
   InputField,
 } from "@/types/calculator";
+import { filledAggregateArgs } from "@/lib/formula/aggregate-helpers";
 import { evaluateAllFormulaFields } from "@/lib/formula/field-graph";
 
 export interface EvalContext {
@@ -76,6 +77,31 @@ export function evaluateBlockExpression(
 
   if (expression.type === "group") {
     return evaluateBlockExpression(expression.inner, context);
+  }
+
+  if (expression.type === "aggregate") {
+    const values = filledAggregateArgs(expression.args).map((arg) =>
+      evaluateBlockExpression(arg, context),
+    );
+
+    if (values.length === 0) {
+      return 0;
+    }
+
+    switch (expression.function) {
+      case "SUM":
+        return values.reduce((sum, value) => sum + value, 0);
+      case "COUNT":
+        return values.length;
+      case "AVG":
+        return values.reduce((sum, value) => sum + value, 0) / values.length;
+      case "MIN":
+        return Math.min(...values);
+      case "MAX":
+        return Math.max(...values);
+      default:
+        throw new Error("Invalid aggregate function");
+    }
   }
 
   const left = evaluateBlockExpression(expression.left, context);

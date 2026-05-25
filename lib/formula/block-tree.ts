@@ -1,11 +1,29 @@
 import type {
+  AggregateFunction,
   BlockExpression,
   BlockOperand,
   FormulaOperator,
 } from "@/types/calculator";
-import { emptyBlockExpression } from "@/types/calculator";
+import {
+  emptyAggregateExpression,
+  emptyBlockExpression,
+  isArgPathSegment,
+} from "@/types/calculator";
+import {
+  AGGREGATE_APPEND_SLOT,
+  normalizeAggregateArgs,
+  setAggregateAppendArg,
+  setAggregateArgAt,
+  unwrapAggregate,
+} from "@/lib/formula/aggregate-helpers";
 
-export type SlotPath = "left" | "right" | "inner" | "continue";
+export type SlotPath =
+  | "left"
+  | "right"
+  | "inner"
+  | "continue"
+  | typeof AGGREGATE_APPEND_SLOT
+  | `${number}`;
 
 export const CONTINUE_PATH: SlotPath[] = ["continue"];
 
@@ -206,11 +224,15 @@ export type PaletteDragData =
   | { source: "palette"; kind: "operator"; operator: FormulaOperator }
   | { source: "palette"; kind: "number"; value: number }
   | { source: "palette"; kind: "group" }
+  | { source: "palette"; kind: "aggregate"; function: AggregateFunction }
   | { source: "palette"; kind: "expression"; expression: BlockExpression };
 
 export function isExpressionFilled(expression: BlockExpression): boolean {
   if (expression.type === "group") {
     return isExpressionFilled(expression.inner);
+  }
+  if (expression.type === "aggregate") {
+    return expression.args.some(isExpressionFilled);
   }
   return expression.type !== "empty";
 }
@@ -227,6 +249,17 @@ export function getSlotExpression(
       }
       current = current.inner;
       continue;
+    }
+    if (current.type === "aggregate") {
+      if (slot === AGGREGATE_APPEND_SLOT) {
+        return emptyBlockExpression();
+      }
+      if (isArgPathSegment(slot)) {
+        const index = Number(slot);
+        current = current.args[index] ?? emptyBlockExpression();
+        continue;
+      }
+      return emptyBlockExpression();
     }
     if (current.type !== "operation") {
       return emptyBlockExpression();
@@ -253,6 +286,28 @@ export function setSlotExpression(
       ...root,
       inner: setSlotExpression(root.inner, path.slice(1), value),
     };
+  }
+
+  if (root.type === "aggregate") {
+    const [slot, ...rest] = path;
+    if (slot === AGGREGATE_APPEND_SLOT && rest.length === 0) {
+      return setAggregateAppendArg(root, value);
+    }
+    if (isArgPathSegment(slot) && rest.length === 0) {
+      return setAggregateArgAt(root, Number(slot), value);
+    }
+    if (isArgPathSegment(slot)) {
+      const index = Number(slot);
+      const arg = root.args[index] ?? emptyBlockExpression();
+      const updatedArg = setSlotExpression(arg, rest, value);
+      return {
+        ...root,
+        args: normalizeAggregateArgs(
+          root.args.map((item, i) => (i === index ? updatedArg : item)),
+        ),
+      };
+    }
+    return root;
   }
 
   if (root.type !== "operation") {
@@ -292,6 +347,10 @@ export function applyPaletteToSlot(
     const inner =
       current.type === "empty" ? emptyBlockExpression() : current;
     return setSlotExpression(root, path, { type: "group", inner });
+  }
+
+  if (item.source === "palette" && item.kind === "aggregate") {
+    return setSlotExpression(root, path, emptyAggregateExpression(item.function));
   }
 
   if (item.source === "palette" && item.kind === "operator") {
@@ -381,6 +440,28 @@ export function removeGroupAt(
   }
 
   return setSlotExpression(root, groupPath, replacement);
+}
+
+export function removeAggregateAt(
+  root: BlockExpression,
+  aggregatePath: SlotPath[],
+): BlockExpression {
+  const node =
+    aggregatePath.length === 0
+      ? root
+      : getSlotExpression(root, aggregatePath);
+
+  if (node.type !== "aggregate") {
+    return root;
+  }
+
+  const replacement = unwrapAggregate(node);
+
+  if (aggregatePath.length === 0) {
+    return replacement;
+  }
+
+  return setSlotExpression(root, aggregatePath, replacement);
 }
 
 /** Remove an operation node; keeps a filled child if any, otherwise empty. */
@@ -487,6 +568,7 @@ export function swapOperators(
 export type WorkspaceDragData =
   | { source: "workspace"; kind: "slot"; path: SlotPath[] }
   | { source: "workspace"; kind: "group"; path: SlotPath[] }
+  | { source: "workspace"; kind: "aggregate"; path: SlotPath[] }
   | {
       source: "workspace";
       kind: "operator";

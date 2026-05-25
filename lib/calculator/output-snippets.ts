@@ -5,6 +5,7 @@ import {
 } from "@/lib/calculator/time-service";
 import {
   calculationMinusCalculation,
+  marginFromCalculationSums,
   sumCalculationOperands,
 } from "@/lib/formula/expression-builders";
 import type {
@@ -95,16 +96,10 @@ export function buildOutputFromSnippet(
       if (costIds.length === 0 || priceIds.length === 0) {
         return null;
       }
-      if (costIds.length === 1 && priceIds.length === 1) {
-        expression = calculationMinusCalculation(priceIds[0], costIds[0]);
-      } else {
-        expression = {
-          type: "operation",
-          operator: "-",
-          left: sumCalculationOperands(priceIds),
-          right: sumCalculationOperands(costIds),
-        };
-      }
+      expression =
+        costIds.length === 1 && priceIds.length === 1
+          ? calculationMinusCalculation(priceIds[0], costIds[0])
+          : marginFromCalculationSums(priceIds, costIds);
       label = labels.margin;
       break;
     default:

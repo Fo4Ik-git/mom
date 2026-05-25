@@ -1,4 +1,11 @@
-import type { BlockOperand, BlockExpression, CalculatorConfig, FormulaOperator } from "@/types/calculator";
+import type {
+  AggregateFunction,
+  BlockOperand,
+  BlockExpression,
+  CalculatorConfig,
+  FormulaOperator,
+} from "@/types/calculator";
+import { AGGREGATE_FUNCTIONS } from "@/types/calculator";
 import { isAutoCalculationId } from "@/lib/calculator/auto-calculations";
 import type { FormulaTarget } from "@/lib/formula/formula-target";
 import type { FormulaSnippetPick } from "@/lib/formula/formula-snippets";
@@ -6,7 +13,7 @@ import type { FormulaSnippetPick } from "@/lib/formula/formula-snippets";
 export type PaletteBlock = {
   id: string;
   label: string;
-  category: "operand" | "operator" | "constant" | "group" | "snippet";
+  category: "operand" | "operator" | "constant" | "group" | "snippet" | "aggregate";
   color:
     | "quantity"
     | "property"
@@ -15,11 +22,13 @@ export type PaletteBlock = {
     | "operator"
     | "constant"
     | "group"
-    | "snippet";
+    | "snippet"
+    | "aggregate";
   dragData:
     | { kind: "operand"; operand: BlockOperand }
     | { kind: "operator"; operator: FormulaOperator }
     | { kind: "group" }
+    | { kind: "aggregate"; function: AggregateFunction }
     | { kind: "expression"; expression: BlockExpression };
   pick?: FormulaSnippetPick;
   meta?: {
@@ -147,6 +156,20 @@ export function buildPaletteBlocks(
     dragData: { kind: "group" },
   });
 
+  for (const fn of AGGREGATE_FUNCTIONS) {
+    blocks.push({
+      id: `agg-${fn}`,
+      label: fn,
+      category: "aggregate",
+      color: "aggregate",
+      meta: {
+        title: fn,
+        hint: `${fn}( … )`,
+      },
+      dragData: { kind: "aggregate", function: fn },
+    });
+  }
+
   return blocks;
 }
 
@@ -162,5 +185,7 @@ export const BLOCK_COLORS = {
   number: "bg-muted text-foreground border-border",
   snippet:
     "bg-teal-500/15 text-teal-900 border-teal-400/50 dark:text-teal-100",
+  aggregate:
+    "bg-fuchsia-500/15 text-fuchsia-900 border-fuchsia-400/50 dark:text-fuchsia-100",
   empty: "border-dashed border-border bg-card/50 text-muted-foreground",
 };

@@ -30,6 +30,7 @@ import {
   clearSlot,
   getSlotExpression,
   moveExpressionToSlot,
+  removeAggregateAt,
   removeGroupAt,
   removeOperationAt,
   swapOperators,
@@ -125,6 +126,15 @@ export function FormulaScratchEditor({
         );
         return;
       }
+      if (workspace.kind === "aggregate") {
+        const aggExpr = getSlotExpression(expression, workspace.path);
+        if (aggExpr.type === "aggregate") {
+          setActiveDragLabel(
+            formatBlockExpression(aggExpr, config, formulaTarget, quantityLabel),
+          );
+        }
+        return;
+      }
       if (workspace.kind === "slot") {
         const slotExpr = getSlotExpression(expression, workspace.path);
         if (slotExpr.type === "operand") {
@@ -189,6 +199,23 @@ export function FormulaScratchEditor({
       const path = overData?.path ?? [];
       if (overData?.target === "group" && dragData.kind !== "group") {
         onChange(applyPaletteToSlot(expression, [...path, "inner"], dragData));
+      } else if (
+        overData?.target === "aggregate" &&
+        dragData.kind !== "aggregate"
+      ) {
+        const aggExpr = getSlotExpression(expression, path);
+        const insertPath =
+          aggExpr.type === "aggregate"
+            ? ([
+                ...path,
+                String(
+                  aggExpr.args.findIndex((arg) => arg.type === "empty") >= 0
+                    ? aggExpr.args.findIndex((arg) => arg.type === "empty")
+                    : aggExpr.args.length,
+                ),
+              ] as SlotPath[])
+            : path;
+        onChange(applyPaletteToSlot(expression, insertPath, dragData));
       } else {
         applyToSlot(path, dragData);
       }
@@ -233,7 +260,9 @@ export function FormulaScratchEditor({
         overData && "target" in overData ? overData.target : undefined;
 
       if (
-        (workspaceActive.kind === "slot" || workspaceActive.kind === "group") &&
+        (workspaceActive.kind === "slot" ||
+          workspaceActive.kind === "group" ||
+          workspaceActive.kind === "aggregate") &&
         overPath
       ) {
         const destination =
@@ -386,6 +415,9 @@ export function FormulaScratchEditor({
             }
             onGroupRemove={(path) =>
               onChange(removeGroupAt(expression, path))
+            }
+            onAggregateRemove={(path) =>
+              onChange(removeAggregateAt(expression, path))
             }
             onSlotTap={handleSlotTap}
           />

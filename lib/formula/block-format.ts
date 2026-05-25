@@ -3,6 +3,7 @@ import type {
   BlockOperand,
   CalculatorConfig,
 } from "@/types/calculator";
+import { filledAggregateArgs } from "@/lib/formula/aggregate-helpers";
 import type { FormulaTarget } from "@/lib/formula/formula-target";
 import { getInputById, getPropertyLabel } from "@/lib/formula/operand-labels";
 
@@ -87,6 +88,14 @@ export function formatBlockExpression(
       quantityLabel,
     );
     return `(${inner})`;
+  }
+
+  if (expression.type === "aggregate") {
+    const parts = filledAggregateArgs(expression.args).map((arg) =>
+      formatBlockExpression(arg, config, target, quantityLabel),
+    );
+    const inner = parts.length > 0 ? parts.join(", ") : "…";
+    return `${expression.function}(${inner})`;
   }
 
   const left = formatBlockExpression(
