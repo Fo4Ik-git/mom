@@ -1,12 +1,18 @@
 #!/bin/bash
 # Build on your PC → upload image to /mnt/ssd/calculator → run (no build on server).
 # db/ is never synced; dev.db is backed up on the server before container start.
+#
+# Run from project root:
+#   ./scripts/deploy.sh [user] [host]
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=scripts/deploy-ssd.sh
-source "${SCRIPT_DIR}/scripts/deploy-ssd.sh"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# shellcheck source=deploy-ssd.sh
+source "${SCRIPT_DIR}/deploy-ssd.sh"
+
+cd "${PROJECT_ROOT}"
 
 REMOTE_USER="${1:-}"
 REMOTE_IP="${2:-}"
@@ -19,7 +25,7 @@ if [ -z "$REMOTE_IP" ]; then
 fi
 
 if [ -z "$REMOTE_USER" ] || [ -z "$REMOTE_IP" ]; then
-  echo "Usage: ./deploy.sh [user] [host]"
+  echo "Usage: ./scripts/deploy.sh [user] [host]"
   exit 1
 fi
 
@@ -51,6 +57,8 @@ prepare_ssd_for_deploy "${REMOTE_SERVER}"
 
 echo "=== 3/4 Upload to ${SSD_BASE} ==="
 scp docker-compose.deploy.yml "${IMAGE_ARCHIVE}" .env.docker "${REMOTE_SERVER}:${SSD_BASE}/"
+scp scripts/ssd-db-remote.sh scripts/deploy-ssd.sh "${REMOTE_SERVER}:${SSD_BASE}/scripts/" 2>/dev/null || true
+ssh "${REMOTE_SERVER}" "chmod +x ${SSD_BASE}/scripts/*.sh 2>/dev/null || true"
 
 echo "=== 4/4 Start on server ==="
 prestart_ssd_database "${REMOTE_SERVER}"

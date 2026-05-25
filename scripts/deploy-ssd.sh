@@ -7,16 +7,23 @@ SSD_LOGS_DIR="${SSD_BASE}/logs"
 SSD_DB_FILE="${SSD_DB_DIR}/dev.db"
 SSD_DB_BACKUP_DIR="${SSD_DB_DIR}/backups"
 
-# SQLite in container (directory mount — avoids Docker "file → directory" bug)
-SSD_DATABASE_URL="file:/data/dev.db"
+# SQLite: host /mnt/ssd/calculator/db/dev.db → container /app/db/dev.db
+SSD_DATABASE_URL="file:./db/dev.db"
 
 ensure_ssd_dirs() {
   local remote_server="$1"
   ssh -t "${remote_server}" "sudo mkdir -p ${SSD_BASE} ${SSD_DB_DIR} ${SSD_LOGS_DIR} ${SSD_DB_BACKUP_DIR} && sudo chown -R \$(id -u):\$(id -g) ${SSD_BASE} 2>/dev/null || sudo chmod -R 777 ${SSD_BASE}"
-  ssh "${remote_server}" "mkdir -p ${SSD_DB_DIR} ${SSD_LOGS_DIR} ${SSD_DB_BACKUP_DIR}"
+  ssh "${remote_server}" "mkdir -p ${SSD_DB_DIR} ${SSD_LOGS_DIR} ${SSD_DB_BACKUP_DIR} && chmod 777 ${SSD_DB_DIR} 2>/dev/null || true"
 }
 
 run_ssd_db_action() {
+  local remote_server="$1"
+  local action="$2"
+  ssh "${remote_server}" "bash ${SSD_BASE}/scripts/ssd-db-remote.sh ${action}" 2>/dev/null || \
+    _run_ssd_db_action_inline "${remote_server}" "${action}"
+}
+
+_run_ssd_db_action_inline() {
   local remote_server="$1"
   local action="$2"
   ssh "${remote_server}" \
@@ -27,85 +34,13 @@ SSD_DB_DIR="${SSD_DB_DIR:-${SSD_BASE}/db}"
 SSD_DB_FILE="${SSD_DB_FILE:-${SSD_DB_DIR}/dev.db}"
 SSD_DB_BACKUP_DIR="${SSD_DB_BACKUP_DIR:-${SSD_DB_DIR}/backups}"
 MAX_DB_BACKUPS="${MAX_DB_BACKUPS:-14}"
-
+SCRIPT="${SSD_BASE}/scripts/ssd-db-remote.sh"
+if [ -f "${SCRIPT}" ]; then
+  exec bash "${SCRIPT}" "${ACTION}"
+fi
 mkdir -p "${SSD_DB_DIR}" "${SSD_DB_BACKUP_DIR}"
-
-prune_old_backups() {
-  local list
-  list="$(ls -1t "${SSD_DB_BACKUP_DIR}"/dev.db.[0-9]* 2>/dev/null | grep -v journal || true)"
-  if [ -z "${list}" ]; then
-    return 0
-  fi
-  echo "${list}" | tail -n +"$((MAX_DB_BACKUPS + 1))" | while read -r old; do
-    rm -f "${old}" "${old}-journal" "${old}-wal" "${old}-shm" 2>/dev/null || true
-  done
-}
-
-repair_database_file() {
-  if [ ! -d "${SSD_DB_FILE}" ]; then
-    return 0
-  fi
-  echo "WARNING: ${SSD_DB_FILE} is a directory (Docker file-mount bug). Recovering..."
-  local recovered=""
-  if [ -f "${SSD_DB_FILE}/dev.db" ]; then
-    recovered="${SSD_DB_FILE}/dev.db"
-  else
-    recovered="$(find "${SSD_DB_FILE}" -maxdepth 3 -type f \( -name 'dev.db' -o -name '*.db' \) 2>/dev/null | head -1 || true)"
-  fi
-  rm -rf "${SSD_DB_FILE}"
-  if [ -n "${recovered}" ] && [ -f "${recovered}" ]; then
-    mv "${recovered}" "${SSD_DB_FILE}"
-    echo "Recovered database from nested file."
-    return 0
-  fi
-  local latest
-  latest="$(ls -1t "${SSD_DB_BACKUP_DIR}"/dev.db.[0-9]* 2>/dev/null | grep -v journal | head -1 || true)"
-  if [ -n "${latest}" ] && [ -f "${latest}" ]; then
-    cp -a "${latest}" "${SSD_DB_FILE}"
-    echo "Restored database from backup: ${latest}"
-    return 0
-  fi
-  echo "No recovery source found. A new database will be created on container start."
-}
-
-backup_database() {
-  repair_database_file
-  if [ ! -f "${SSD_DB_FILE}" ]; then
-    echo "Database backup skipped (no file yet)."
-    return 0
-  fi
-  local stamp backup
-  stamp="$(date +%Y%m%d-%H%M%S)"
-  backup="${SSD_DB_BACKUP_DIR}/dev.db.${stamp}"
-  cp -a "${SSD_DB_FILE}" "${backup}"
-  for suffix in -journal -wal -shm; do
-    if [ -f "${SSD_DB_FILE}${suffix}" ]; then
-      cp -a "${SSD_DB_FILE}${suffix}" "${backup}${suffix}"
-    fi
-  done
-  prune_old_backups
-  echo "Database backup: ${backup}"
-}
-
-status_database() {
-  repair_database_file
-  if [ -f "${SSD_DB_FILE}" ]; then
-    echo "Database: ${SSD_DB_FILE} (unchanged by deploy)."
-    local count
-    count="$(ls -1 "${SSD_DB_BACKUP_DIR}"/dev.db.[0-9]* 2>/dev/null | grep -v journal | wc -l | tr -d ' ')"
-    echo "Backups in ${SSD_DB_BACKUP_DIR}: ${count} file(s)."
-  else
-    echo "Database: ${SSD_DB_FILE} not found yet."
-    echo "  It will be created on first container start (migrations + optional admin seed)."
-  fi
-}
-
-case "${ACTION}" in
-  backup) backup_database ;;
-  repair) repair_database_file ;;
-  status) status_database ;;
-  *) echo "Unknown action: ${ACTION}"; exit 1 ;;
-esac
+echo "ssd-db-remote.sh not on server yet; upload scripts/ folder first."
+exit 1
 REMOTE
 }
 

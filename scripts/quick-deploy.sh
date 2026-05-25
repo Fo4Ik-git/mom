@@ -1,7 +1,15 @@
 #!/bin/bash
 # Quick deploy wizard for Mom (calculator platform).
+#
+# Run from project root:
+#   ./scripts/quick-deploy.sh
 
 set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+cd "${PROJECT_ROOT}"
 
 echo "Calculator — деплой у Docker (дані на SSD: /mnt/ssd/calculator)"
 echo "========================================================"
@@ -41,9 +49,9 @@ deploy_method=${deploy_method:-1}
 
 export APP_PORT
 if [ "$deploy_method" = "2" ]; then
-  ./deploy-remote-build.sh "$USERNAME" "$SERVER_IP"
+  "${SCRIPT_DIR}/deploy-remote-build.sh" "$USERNAME" "$SERVER_IP"
 else
-  ./deploy.sh "$USERNAME" "$SERVER_IP"
+  "${SCRIPT_DIR}/deploy.sh" "$USERNAME" "$SERVER_IP"
 fi
 
 echo ""

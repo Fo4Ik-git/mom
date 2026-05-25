@@ -1,12 +1,18 @@
 #!/bin/bash
 # Sync sources to /mnt/ssd/calculator and build on server.
 # db/ is excluded from rsync --delete; dev.db is backed up before container start.
+#
+# Run from project root:
+#   ./scripts/deploy-remote-build.sh [user] [host]
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=scripts/deploy-ssd.sh
-source "${SCRIPT_DIR}/scripts/deploy-ssd.sh"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# shellcheck source=deploy-ssd.sh
+source "${SCRIPT_DIR}/deploy-ssd.sh"
+
+cd "${PROJECT_ROOT}"
 
 REMOTE_USER="${1:-}"
 REMOTE_IP="${2:-}"
@@ -19,7 +25,7 @@ if [ -z "$REMOTE_IP" ]; then
 fi
 
 if [ -z "$REMOTE_USER" ] || [ -z "$REMOTE_IP" ]; then
-  echo "Usage: ./deploy-remote-build.sh [user] [host]"
+  echo "Usage: ./scripts/deploy-remote-build.sh [user] [host]"
   exit 1
 fi
 
@@ -50,6 +56,8 @@ rsync -avz --delete \
   ./ "${REMOTE_SERVER}:${SSD_BASE}/"
 
 scp .env.docker "${REMOTE_SERVER}:${SSD_BASE}/.env.docker"
+
+ssh "${REMOTE_SERVER}" "chmod +x ${SSD_BASE}/scripts/*.sh 2>/dev/null || true"
 
 prestart_ssd_database "${REMOTE_SERVER}"
 
