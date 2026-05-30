@@ -69,7 +69,9 @@ export function resolveAuditAction(method: string, pathname: string): string {
       if (m === "POST") return "admin.access_key.create";
       return "admin.access_key.list";
     }
-    if (rest[0] === "access-expiry-check") return "admin.access_expiry.run";
+    if (rest[0] === "access-expiry-check") {
+      return m === "GET" ? "admin.access_expiry.status" : "admin.access_expiry.run";
+    }
     if (rest[0] === "users") {
       if (rest[2] === "dismiss-issue") return "admin.user.dismiss_issue";
       if (rest[1] && m === "PATCH") return "admin.user.update";

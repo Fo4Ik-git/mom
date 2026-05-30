@@ -16,6 +16,15 @@ describe("http-log-policy", () => {
     expect(shouldAuditHttpRequest("PATCH", "/api/admin/users/abc")).toBe(true);
   });
 
+  it("uses GET for expiry status read", () => {
+    expect(resolveAuditAction("GET", "/api/admin/access-expiry-check")).toBe(
+      "admin.access_expiry.status",
+    );
+    expect(resolveAuditAction("POST", "/api/admin/access-expiry-check")).toBe(
+      "admin.access_expiry.run",
+    );
+  });
+
   it("resolves human-readable actions", () => {
     expect(resolveAuditAction("POST", "/api/calculators")).toBe(
       "calculator.create",

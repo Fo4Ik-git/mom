@@ -35,6 +35,18 @@ export function AdminPlatformSettings() {
   const [checkError, setCheckError] = useState<string | null>(null);
 
   async function runScheduledCheckIfDue() {
+    const statusRes = await appFetch("/api/admin/access-expiry-check");
+    const status = await statusRes.json();
+    if (!statusRes.ok) {
+      return;
+    }
+    if (status.ranAt) {
+      setAccessExpiryLastRunAt(status.ranAt);
+    }
+    if (!status.due) {
+      return;
+    }
+
     const response = await appFetch("/api/admin/access-expiry-check", {
       method: "POST",
       body: JSON.stringify({ scheduled: true }),
@@ -111,7 +123,6 @@ export function AdminPlatformSettings() {
     setCheckError(null);
     const response = await appFetch("/api/admin/access-expiry-check", {
       method: "POST",
-      body: JSON.stringify({ scheduled: false }),
     });
     const data = await response.json();
     setCheckRunning(false);

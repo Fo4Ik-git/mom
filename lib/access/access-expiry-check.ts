@@ -48,6 +48,25 @@ export async function runAccessExpiryCheck(): Promise<{
   return { bannedCount, ranAt };
 }
 
+/** Read-only status for admin UI (does not ban users). */
+export async function getAccessExpiryCheckStatus(): Promise<{
+  due: boolean;
+  interval: AccessExpiryCheckInterval;
+  ranAt: string | null;
+}> {
+  const settings = await getPlatformSettings();
+  const due = isAccessExpiryCheckDue(
+    settings.accessExpiryCheckInterval,
+    settings.accessExpiryCheckLastRunAt,
+  );
+
+  return {
+    due,
+    interval: settings.accessExpiryCheckInterval,
+    ranAt: settings.accessExpiryCheckLastRunAt?.toISOString() ?? null,
+  };
+}
+
 export async function runScheduledAccessExpiryCheckIfDue(): Promise<{
   ran: boolean;
   bannedCount: number;
