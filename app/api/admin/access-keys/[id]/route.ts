@@ -9,6 +9,7 @@ import { withApiRoute } from "@/lib/api/with-api-route";
 const patchSchema = z.object({
   label: z.string().max(120).nullable().optional(),
   maxUses: z.number().int().min(1).max(100_000).nullable().optional(),
+  usedCount: z.number().int().min(0).max(100_000).optional(),
   expiresAt: z.string().datetime().nullable().optional(),
   accessDays: z.number().int().min(0).max(3650).nullable().optional(),
   active: z.boolean().optional(),
@@ -24,9 +25,15 @@ export const PATCH = withApiRoute(async function PATCH(
     const { id } = await params;
     const body = patchSchema.parse(await request.json());
 
+    const existing = await db.accessKey.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+
     const data: {
       label?: string | null;
       maxUses?: number | null;
+      usedCount?: number;
       expiresAt?: Date | null;
       accessDays?: number | null;
       active?: boolean;
@@ -38,6 +45,17 @@ export const PATCH = withApiRoute(async function PATCH(
     }
     if (body.maxUses !== undefined) {
       data.maxUses = body.maxUses;
+      const usedCount = body.usedCount ?? existing.usedCount;
+      if (body.maxUses != null && usedCount > body.maxUses) {
+        return NextResponse.json({ error: "used_count_exceeds_max" }, { status: 400 });
+      }
+    }
+    if (body.usedCount !== undefined) {
+      const maxUses = body.maxUses ?? existing.maxUses;
+      if (maxUses != null && body.usedCount > maxUses) {
+        return NextResponse.json({ error: "used_count_exceeds_max" }, { status: 400 });
+      }
+      data.usedCount = body.usedCount;
     }
     if (body.expiresAt !== undefined) {
       data.expiresAt = body.expiresAt ? new Date(body.expiresAt) : null;

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
@@ -69,6 +69,31 @@ function ChartTooltip({
   );
 }
 
+/** Avoids Recharts 3 false warning when parent size is not measured yet on first paint. */
+function SizedChart({
+  height,
+  children,
+}: {
+  height: number;
+  children: ReactElement;
+}) {
+  return (
+    <div
+      className="w-full min-h-0 min-w-0"
+      style={{ height, width: "100%" }}
+    >
+      <ResponsiveContainer
+        width="100%"
+        height={height}
+        initialDimension={{ width: 400, height }}
+        debounce={50}
+      >
+        {children}
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 function Panel({
   title,
   height = 240,
@@ -77,7 +102,7 @@ function Panel({
 }: {
   title: string;
   height?: number;
-  children: ReactNode;
+  children: ReactElement;
   className?: string;
 }) {
   return (
@@ -87,7 +112,7 @@ function Panel({
       <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
         {title}
       </h3>
-      <div style={{ height, width: "100%" }}>{children}</div>
+      <SizedChart height={height}>{children}</SizedChart>
     </section>
   );
 }
@@ -353,7 +378,7 @@ function IssuesDetailsModal({
   );
 }
 
-function DonutChart({
+function DonutChartContent({
   data,
   center,
 }: {
@@ -364,50 +389,48 @@ function DonutChart({
   const chartData = total > 0 ? data : [{ name: "—", value: 1 }];
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={chartData}
-          dataKey="value"
-          nameKey="name"
-          cx="50%"
-          cy="50%"
-          innerRadius="58%"
-          outerRadius="82%"
-          paddingAngle={total > 0 ? 3 : 0}
-          stroke="none"
-        >
-          {chartData.map((_, i) => (
-            <Cell
-              key={i}
-              fill={total > 0 ? PIE_COLORS[i % PIE_COLORS.length] : COLORS.slate}
-            />
-          ))}
-          <Label
-            content={({ viewBox }) => {
-              if (!viewBox || !("cx" in viewBox)) {
-                return null;
-              }
-              const { cx, cy } = viewBox as { cx: number; cy: number };
-              return (
-                <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
-                  <tspan
-                    x={cx}
-                    y={cy - 4}
-                    fill="currentColor"
-                    fontSize={24}
-                    fontWeight={700}
-                  >
-                    {center}
-                  </tspan>
-                </text>
-              );
-            }}
+    <PieChart>
+      <Pie
+        data={chartData}
+        dataKey="value"
+        nameKey="name"
+        cx="50%"
+        cy="50%"
+        innerRadius="58%"
+        outerRadius="82%"
+        paddingAngle={total > 0 ? 3 : 0}
+        stroke="none"
+      >
+        {chartData.map((_, i) => (
+          <Cell
+            key={i}
+            fill={total > 0 ? PIE_COLORS[i % PIE_COLORS.length] : COLORS.slate}
           />
-        </Pie>
-        <Tooltip content={<ChartTooltip />} />
-      </PieChart>
-    </ResponsiveContainer>
+        ))}
+        <Label
+          content={({ viewBox }) => {
+            if (!viewBox || !("cx" in viewBox)) {
+              return null;
+            }
+            const { cx, cy } = viewBox as { cx: number; cy: number };
+            return (
+              <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
+                <tspan
+                  x={cx}
+                  y={cy - 4}
+                  fill="currentColor"
+                  fontSize={24}
+                  fontWeight={700}
+                >
+                  {center}
+                </tspan>
+              </text>
+            );
+          }}
+        />
+      </Pie>
+      <Tooltip content={<ChartTooltip />} />
+    </PieChart>
   );
 }
 
@@ -613,8 +636,7 @@ export function AdminAnalyticsDashboard() {
       </div>
 
       <Panel title={t("chartActivity")} height={300} className="col-span-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={activityData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+        <AreaChart data={activityData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
             <defs>
               <linearGradient id={`${uid}-u`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={COLORS.accent} stopOpacity={0.35} />
@@ -656,25 +678,24 @@ export function AdminAnalyticsDashboard() {
               fill={`url(#${uid}-c)`}
               strokeWidth={2}
             />
-          </AreaChart>
-        </ResponsiveContainer>
+        </AreaChart>
       </Panel>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Panel title={t("chartUserStatus")} height={220}>
-          <DonutChart
+          <DonutChartContent
             data={toPie(data.distribution.userStatus)}
             center={String(summary.users)}
           />
         </Panel>
         <Panel title={t("chartCalculatorTypes")} height={220}>
-          <DonutChart
+          <DonutChartContent
             data={toPie(data.distribution.calculatorTypes)}
             center={String(summary.calculators + summary.templates)}
           />
         </Panel>
         <Panel title={t("chartRoles")} height={220}>
-          <DonutChart
+          <DonutChartContent
             data={toPie(data.distribution.userRoles)}
             center={String(summary.admins)}
           />
@@ -683,8 +704,7 @@ export function AdminAnalyticsDashboard() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title={t("chartQuota")} height={220}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={quotaChart} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+          <BarChart data={quotaChart} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
               <CartesianGrid stroke="var(--border)" strokeDasharray="4 4" vertical={false} />
               <XAxis
                 dataKey="name"
@@ -707,13 +727,11 @@ export function AdminAnalyticsDashboard() {
                 radius={[6, 6, 0, 0]}
                 maxBarSize={48}
               />
-            </BarChart>
-          </ResponsiveContainer>
+          </BarChart>
         </Panel>
 
         <Panel title={t("chartTopUsers")} height={220}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
+          <BarChart
               data={topUsersChart}
               layout="vertical"
               margin={{ top: 0, right: 12, left: 4, bottom: 0 }}
@@ -736,8 +754,7 @@ export function AdminAnalyticsDashboard() {
                 radius={[0, 6, 6, 0]}
                 barSize={14}
               />
-            </BarChart>
-          </ResponsiveContainer>
+          </BarChart>
         </Panel>
       </div>
 
