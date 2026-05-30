@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run on the server (or via ssh from deploy-ssd.sh).
+# Run on the server (deploy-server.sh calls repair/backup; or run manually).
 # Protects SQLite at /mnt/ssd/calculator/db/dev.db — backup, repair, never delete on deploy.
 
 set -euo pipefail

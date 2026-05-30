@@ -1,65 +1,63 @@
-# Docker deploy (Calculator)
+# Docker deploy
 
-Усе на SSD: **`/mnt/ssd/calculator`**
+Дані на SSD: **`/mnt/ssd/calculator`**
 
 | Шлях | Призначення |
 |------|-------------|
-| `/mnt/ssd/calculator/db/dev.db` | SQLite (деплой **не чіпає**) |
-| `/mnt/ssd/calculator/db/backups/` | Автокопії перед кожним деплоєм |
-| `/mnt/ssd/calculator/.env.docker` | Секрети |
-| `/mnt/ssd/calculator/scripts/` | Shell-скрипти (repair, backup, deploy) |
+| `/mnt/ssd/calculator/db/dev.db` | SQLite **на диску сервера** (не в контейнері) |
+| `db/backups/` | Копії перед деплоєм |
+| `.env.docker` | Секрети |
 
-## База даних
-
-**Деплой ніколи не перезаписує `dev.db`.**
-
-- Код і образ оновлюються через `scripts/deploy.sh` / `scripts/deploy-remote-build.sh`
-- **Перед деплоєм** — автоматична копія: `db/backups/dev.db.YYYYMMDD-HHMMSS` (зберігаються останні 14)
-- **Міграції** — `prisma migrate deploy` при **старті контейнера**
-
-Контейнер монтує `/mnt/ssd/calculator/db` → `/app/db`.  
-Файл бази на сервере: **`/mnt/ssd/calculator/db/dev.db`** (Prisma: `file:./db/dev.db`).
-
-Локально (без Docker): **`db/dev.db`** в корне проекта.
+## Деплой
 
 ```bash
-./scripts/deploy-remote-build.sh fo4ik 192.168.1.68
-# або
-./scripts/deploy.sh fo4ik 192.168.1.68
-# або майстер:
-./scripts/quick-deploy.sh
+# Збірка на сервері (рекомендовано)
+./scripts/deploy-remote-build.sh user 192.168.1.68
+
+# Збірка на ПК → образ на сервер
+./scripts/deploy.sh user 192.168.1.68
 ```
 
-### Тільки скрипти на сервер (без повного деплою)
-
-```bash
-rsync -avz scripts/ user@host:/mnt/ssd/calculator/scripts/
-ssh user@host "chmod +x /mnt/ssd/calculator/scripts/*.sh"
-```
-
-### Repair / backup на сервері
-
-```bash
-cd /mnt/ssd/calculator
-docker compose --env-file .env.docker down
-bash scripts/ssd-db-remote.sh repair
-bash scripts/ssd-db-remote.sh status
-docker compose --env-file .env.docker up -d
-```
-
-### Відновлення з бекапу
-
-```bash
-ls -lt /mnt/ssd/calculator/db/backups/
-cp -a /mnt/ssd/calculator/db/backups/dev.db.YYYYMMDD-HHMMSS /mnt/ssd/calculator/db/dev.db
-docker compose --env-file .env.docker restart
-```
+Один SSH у кінці: `deploy-server.sh` — repair/backup → build → migrate → up.
 
 ## Перший раз на сервері
 
 ```bash
-sudo mkdir -p /mnt/ssd/calculator/db/backups /mnt/ssd/calculator/logs
+sudo mkdir -p /mnt/ssd/calculator
 sudo chown -R $USER:$USER /mnt/ssd/calculator
+chmod u+rwX /mnt/ssd/calculator
+```
+
+Якщо rsync скаржиться на `failed to set times` — перевірте власника каталогу (`ls -la /mnt/ssd`).
+
+## Доступ к БД на сервере (без Docker)
+
+Контейнер монтує папку хоста → всё, что пишет приложение, лежит здесь:
+
+**`/mnt/ssd/calculator/db/dev.db`**
+
+```bash
+# на сервере
+ls -la /mnt/ssd/calculator/db/
+sqlite3 /mnt/ssd/calculator/db/dev.db
+
+# DBeaver / DB Browser for SQLite / TablePlus
+# Open file → /mnt/ssd/calculator/db/dev.db
+```
+
+В контейнере тот же файл виден как `/app/db/dev.db` (`DATABASE_URL=file:/app/db/dev.db`).
+
+После исправления пути деплой создаёт файл именно на SSD. Если файла нет — ещё раз:
+
+```bash
+./scripts/deploy-remote-build.sh user host
+```
+
+## Ручне обслуговування БД
+
+```bash
+cd /mnt/ssd/calculator
+bash scripts/ssd-db-remote.sh status   # repair | backup | restore | scan
 ```
 
 ## Логи

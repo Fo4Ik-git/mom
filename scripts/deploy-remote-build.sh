@@ -1,16 +1,14 @@
 #!/bin/bash
-# Sync sources to /mnt/ssd/calculator and build on server.
-# db/ is excluded from rsync --delete; dev.db is backed up before container start.
+# Sync code to server, build image there, migrate DB, start app.
+# One SSH session at the end (no password loop).
 #
-# Run from project root:
-#   ./scripts/deploy-remote-build.sh [user] [host]
+# Usage: ./scripts/deploy-remote-build.sh [user] [host]
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-# shellcheck source=deploy-ssd.sh
-source "${SCRIPT_DIR}/deploy-ssd.sh"
+SSD_BASE="/mnt/ssd/calculator"
 
 cd "${PROJECT_ROOT}"
 
@@ -18,10 +16,10 @@ REMOTE_USER="${1:-}"
 REMOTE_IP="${2:-}"
 
 if [ -z "$REMOTE_USER" ]; then
-  read -p "Enter remote username: " REMOTE_USER
+  read -r -p "SSH user: " REMOTE_USER
 fi
 if [ -z "$REMOTE_IP" ]; then
-  read -p "Enter remote IP address: " REMOTE_IP
+  read -r -p "Server IP: " REMOTE_IP
 fi
 
 if [ -z "$REMOTE_USER" ] || [ -z "$REMOTE_IP" ]; then
@@ -29,17 +27,17 @@ if [ -z "$REMOTE_USER" ] || [ -z "$REMOTE_IP" ]; then
   exit 1
 fi
 
-REMOTE_SERVER="${REMOTE_USER}@${REMOTE_IP}"
+REMOTE="${REMOTE_USER}@${REMOTE_IP}"
 
 if [ ! -f .env.docker ]; then
-  echo "Missing .env.docker — copy from .env.docker.example and fill in values."
+  echo "Missing .env.docker"
   exit 1
 fi
 
-prepare_ssd_for_deploy "${REMOTE_SERVER}"
-
-echo "Syncing project to ${SSD_BASE} ..."
-rsync -avz --delete \
+echo "=== Sync to ${SSD_BASE} ==="
+# Do not use -a on SSD: root dir often rejects chown/utime/chmod (rsync exit 23).
+rsync -rlvz --delete \
+  --omit-dir-times --no-times --no-perms --no-owner --no-group \
   --exclude 'node_modules' \
   --exclude '.next' \
   --exclude 'build' \
@@ -53,22 +51,14 @@ rsync -avz --delete \
   --exclude '*.tar' \
   --exclude '.env' \
   --exclude '.env.local' \
-  ./ "${REMOTE_SERVER}:${SSD_BASE}/"
+  ./ "${REMOTE}:${SSD_BASE}/"
 
-scp .env.docker "${REMOTE_SERVER}:${SSD_BASE}/.env.docker"
+scp .env.docker "${REMOTE}:${SSD_BASE}/.env.docker"
 
-ssh "${REMOTE_SERVER}" "chmod +x ${SSD_BASE}/scripts/*.sh 2>/dev/null || true"
+echo "=== Deploy on server (single SSH) ==="
+ssh "${REMOTE}" "chmod +x ${SSD_BASE}/scripts/*.sh && SKIP_BUILD=0 bash ${SSD_BASE}/scripts/deploy-server.sh"
 
-prestart_ssd_database "${REMOTE_SERVER}"
-
-echo "Building and starting on server..."
-ssh "${REMOTE_SERVER}" <<EOF
-set -e
-cd ${SSD_BASE}
-docker compose --env-file .env.docker build
-docker compose --env-file .env.docker up -d --remove-orphans
-docker image prune -f
-echo "Deployment successful."
-EOF
-
-echo "Done. App: ${SSD_BASE}"
+echo ""
+echo "Database on server: ${SSD_BASE}/db/dev.db"
+echo "  ssh ${REMOTE} \"ls -la ${SSD_BASE}/db/dev.db\""
+echo "  sqlite3 ${SSD_BASE}/db/dev.db   # on the server"

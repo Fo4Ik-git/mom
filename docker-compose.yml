@@ -16,13 +16,14 @@ services:
     environment:
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
-      DATABASE_URL: file:./db/dev.db
+      # Absolute path: Prisma resolves relative URLs from prisma/schema.prisma, not /app/db.
+      DATABASE_URL: file:/app/db/dev.db
       AUTH_TRUST_HOST: "true"
       NODE_ENV: production
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
-      # Host: /mnt/ssd/calculator/db/dev.db  →  container: /app/db/dev.db
+      # БД на диске сервера: /mnt/ssd/calculator/db/dev.db (не внутри образа)
       - /mnt/ssd/calculator/db:/app/db
       - /mnt/ssd/calculator/logs:/app/logs
     restart: unless-stopped

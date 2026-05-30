@@ -19,7 +19,7 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_APP_REQUEST_SECRET=$NEXT_PUBLIC_APP_REQUEST_SECRET
 
 RUN npx prisma generate
-RUN npm run build:docker
+RUN npm run build
 
 # 3. Prisma CLI + deps (for migrate deploy in production)
 FROM node:20-alpine AS migrate
@@ -51,11 +51,11 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
 COPY --from=migrate --chown=nextjs:nodejs /migrate/node_modules ./migrate/node_modules
-COPY scripts/docker-entrypoint.sh scripts/docker-seed-admin.mjs /app/scripts/
+COPY scripts/docker-entrypoint.sh scripts/docker-db-init.sh scripts/docker-seed-admin.mjs /app/scripts/
 
-RUN chmod +x /app/scripts/docker-entrypoint.sh \
-  && mkdir -p /app/prisma /app/scripts \
-  && chown -R nextjs:nodejs /app/prisma /app/migrate /app/scripts
+RUN chmod +x /app/scripts/docker-entrypoint.sh /app/scripts/docker-db-init.sh \
+  && mkdir -p /app/prisma /app/db /app/scripts \
+  && chown -R nextjs:nodejs /app/prisma /app/migrate /app/db /app/scripts
 
 USER nextjs
 

@@ -1,16 +1,14 @@
 #!/bin/bash
-# Build on your PC → upload image to /mnt/ssd/calculator → run (no build on server).
-# db/ is never synced; dev.db is backed up on the server before container start.
+# Build image on PC, upload to server, start (no build on server).
 #
-# Run from project root:
-#   ./scripts/deploy.sh [user] [host]
+# Usage: ./scripts/deploy.sh [user] [host]
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-# shellcheck source=deploy-ssd.sh
-source "${SCRIPT_DIR}/deploy-ssd.sh"
+SSD_BASE="/mnt/ssd/calculator"
+IMAGE_ARCHIVE="calculator-image.tar"
 
 cd "${PROJECT_ROOT}"
 
@@ -18,10 +16,10 @@ REMOTE_USER="${1:-}"
 REMOTE_IP="${2:-}"
 
 if [ -z "$REMOTE_USER" ]; then
-  read -p "SSH user: " REMOTE_USER
+  read -r -p "SSH user: " REMOTE_USER
 fi
 if [ -z "$REMOTE_IP" ]; then
-  read -p "Server IP: " REMOTE_IP
+  read -r -p "Server IP: " REMOTE_IP
 fi
 
 if [ -z "$REMOTE_USER" ] || [ -z "$REMOTE_IP" ]; then
@@ -29,53 +27,34 @@ if [ -z "$REMOTE_USER" ] || [ -z "$REMOTE_IP" ]; then
   exit 1
 fi
 
-REMOTE_SERVER="${REMOTE_USER}@${REMOTE_IP}"
-IMAGE_ARCHIVE="calculator-image.tar"
-CONTAINER_NAME="calculator-1"
+REMOTE="${REMOTE_USER}@${REMOTE_IP}"
 
 if [ ! -f .env.docker ]; then
-  echo "Create .env.docker from .env.docker.example first."
+  echo "Missing .env.docker"
   exit 1
 fi
 
-echo "=== 1/4 Build image on this PC ==="
-if docker image inspect "calculator:latest" &>/dev/null; then
-  read -p "Image calculator:latest exists. Rebuild? (y/N) " -n 1 -r
-  echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
-    docker compose --env-file .env.docker build --no-cache
-  fi
-else
-  docker compose --env-file .env.docker build
-fi
+echo "=== Build image on PC ==="
+docker compose --env-file .env.docker build
 
-echo "=== 2/4 Save image ==="
-docker save -o "${IMAGE_ARCHIVE}" "calculator:latest"
-echo "Archive size: $(du -h "${IMAGE_ARCHIVE}" | cut -f1)"
+echo "=== Save image ==="
+docker save -o "${IMAGE_ARCHIVE}" calculator:latest
 
-prepare_ssd_for_deploy "${REMOTE_SERVER}"
+echo "=== Upload ==="
+ssh "${REMOTE}" "mkdir -p ${SSD_BASE}/scripts ${SSD_BASE}/db/backups ${SSD_BASE}/logs"
+rsync -rlvz --omit-dir-times --no-times --no-perms --no-owner --no-group \
+  scripts/deploy-server.sh scripts/ssd-db-remote.sh "${REMOTE}:${SSD_BASE}/scripts/"
+scp docker-compose.yml .env.docker "${IMAGE_ARCHIVE}" "${REMOTE}:${SSD_BASE}/"
 
-echo "=== 3/4 Upload to ${SSD_BASE} ==="
-scp docker-compose.deploy.yml "${IMAGE_ARCHIVE}" .env.docker "${REMOTE_SERVER}:${SSD_BASE}/"
-scp scripts/ssd-db-remote.sh scripts/deploy-ssd.sh "${REMOTE_SERVER}:${SSD_BASE}/scripts/" 2>/dev/null || true
-ssh "${REMOTE_SERVER}" "chmod +x ${SSD_BASE}/scripts/*.sh 2>/dev/null || true"
-
-echo "=== 4/4 Start on server ==="
-prestart_ssd_database "${REMOTE_SERVER}"
-
-ssh "${REMOTE_SERVER}" <<EOF
-set -e
+echo "=== Deploy on server (single SSH) ==="
+ssh "${REMOTE}" <<EOF
+set -euo pipefail
 cd ${SSD_BASE}
-docker stop ${CONTAINER_NAME} 2>/dev/null || true
-docker rm ${CONTAINER_NAME} 2>/dev/null || true
 docker load -i ${IMAGE_ARCHIVE}
-docker compose -f docker-compose.deploy.yml --env-file .env.docker up -d --no-build --remove-orphans
 rm -f ${IMAGE_ARCHIVE}
-docker image prune -f
-docker compose -f docker-compose.deploy.yml --env-file .env.docker ps
+chmod +x scripts/*.sh
+SKIP_BUILD=1 bash scripts/deploy-server.sh
 EOF
 
 rm -f "${IMAGE_ARCHIVE}"
-echo ""
-echo "Done. ${SSD_BASE}"
-echo "Open: http://${REMOTE_IP}:$(grep -E '^HOST_PORT=|^APP_PORT=' .env.docker | head -1 | cut -d= -f2 || echo 3004)"
+echo "Done. http://${REMOTE_IP}:$(grep -E '^HOST_PORT=' .env.docker 2>/dev/null | cut -d= -f2 || echo 3004)"
