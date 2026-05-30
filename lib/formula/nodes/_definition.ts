@@ -83,6 +83,10 @@ export interface FormulaPrimitiveDefinition {
     target: FormulaTarget,
   ) => FormulaCompletionItem[];
   dependencies?: (node: BlockExpression, config: CalculatorConfig) => string[];
+  /** User-facing docs — текст у messages/docs.primitives.{id}.* */
+  doc?: {
+    example?: string;
+  };
 }
 
 export interface FormulaNodeDefinition<

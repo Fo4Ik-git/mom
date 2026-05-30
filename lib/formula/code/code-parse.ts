@@ -77,19 +77,19 @@ function tokenize(source: string): Token[] {
       continue;
     }
 
-    if (/[a-z]/.test(char)) {
+    if (/[a-zA-Z]/.test(char)) {
       let end = i + 1;
-      while (end < source.length && /[a-z0-9_]/.test(source[end] ?? "")) {
+      while (end < source.length && /[a-zA-Z0-9_]/.test(source[end] ?? "")) {
         end += 1;
       }
       while (source[end] === ".") {
         const segmentStart = end + 1;
         const segmentChar = source[segmentStart];
-        if (!segmentChar || !/[a-z]/.test(segmentChar)) {
+        if (!segmentChar || !/[a-zA-Z]/.test(segmentChar)) {
           break;
         }
         end = segmentStart + 1;
-        while (end < source.length && /[a-z0-9_]/.test(source[end] ?? "")) {
+        while (end < source.length && /[a-zA-Z0-9_]/.test(source[end] ?? "")) {
           end += 1;
         }
       }
@@ -249,7 +249,13 @@ class Parser {
       },
     };
 
-    const fromRegistry = parseCodeCallViaRegistry(identToken.value, parseCtx);
+    const fromRegistry =
+      parseCodeCallViaRegistry(
+        this.current().type === "lparen"
+          ? identToken.value.toUpperCase()
+          : identToken.value,
+        parseCtx,
+      ) ?? parseCodeCallViaRegistry(identToken.value, parseCtx);
     if (fromRegistry) {
       return fromRegistry;
     }

@@ -8,7 +8,14 @@
     "build:docker": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "test:script": "tsx scripts/test-script-roundtrip.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:formula": "vitest run tests/formula tests/docs",
+    "test:script": "vitest run tests/script",
+    "test:builder": "vitest run tests/calculator tests/builder",
+    "test:admin": "vitest run tests/admin",
+    "test:access": "vitest run tests/access tests/auth",
+    "test:api": "vitest run tests/api tests/platform",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
@@ -37,7 +44,9 @@
     "next-themes": "^0.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.8.1",
+    "remark-gfm": "^4.0.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -51,6 +60,7 @@
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "tsx": "^4.22.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.7"
   }
 }

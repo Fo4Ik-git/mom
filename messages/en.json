@@ -31,6 +31,7 @@
     "signIn": "Sign in",
     "signOut": "Sign out",
     "home": "Home",
+    "docs": "Help",
     "menuOpen": "Open menu",
     "menuClose": "Close menu"
   },
@@ -463,6 +464,142 @@
     "accessUntil": "Until {date}",
     "accessDaysLeft": "{days} days left",
     "calculatorsStatus": "Calculators"
+  },
+  "docs": {
+    "pageTitle": "Formula & code reference",
+    "pageDescription": "How blocks and code work in the calculator builder. This page is generated automatically from the formula registry.",
+    "intro": "Use **blocks** in the visual editor or **code** in the script sheet — both use the same language. Search below or browse by category.\n\nNew operators and functions appear here automatically when added to the platform.",
+    "tabFormulas": "Formulas & blocks",
+    "tabScript": "Calculator script",
+    "searchPlaceholder": "Search SUM, field, input…",
+    "syntaxLabel": "Syntax",
+    "exampleLabel": "Example",
+    "blockUsageLabel": "In block editor",
+    "paletteCategoryLabel": "Palette category",
+    "categories": {
+      "operators": "Operators",
+      "aggregates": "Aggregates",
+      "rowAggregates": "Line item totals",
+      "operands": "References (fields, constants)",
+      "script": "Script declarations"
+    },
+    "primitives": {
+      "plus": {
+        "title": "Addition (+)",
+        "description": "Adds two values.",
+        "blockUsage": "Drag the **+** operator between two blocks in the formula workspace."
+      },
+      "minus": {
+        "title": "Subtraction (−)",
+        "description": "Subtracts the right value from the left.",
+        "blockUsage": "Drag **−** between blocks, e.g. revenue minus cost."
+      },
+      "multiply": {
+        "title": "Multiplication (×)",
+        "description": "Multiplies two values.",
+        "blockUsage": "Drag **×** — typical for quantity × price."
+      },
+      "divide": {
+        "title": "Division (÷)",
+        "description": "Divides the left value by the right. Division by zero shows a warning and returns 0.",
+        "blockUsage": "Drag **÷** between blocks."
+      },
+      "sum": {
+        "title": "SUM",
+        "description": "Sum of all arguments.",
+        "blockUsage": "Drag **SUM** from the palette and fill the inner slots with values to add."
+      },
+      "count": {
+        "title": "COUNT",
+        "description": "Number of arguments (not empty slots).",
+        "blockUsage": "Drag **COUNT** and add values inside the brackets."
+      },
+      "avg": {
+        "title": "AVG",
+        "description": "Average (arithmetic mean) of all arguments.",
+        "blockUsage": "Drag **AVG** from aggregates in the palette."
+      },
+      "min": {
+        "title": "MIN",
+        "description": "Smallest value among arguments.",
+        "blockUsage": "Drag **MIN** from the palette."
+      },
+      "max": {
+        "title": "MAX",
+        "description": "Largest value among arguments.",
+        "blockUsage": "Drag **MAX** from the palette."
+      },
+      "sum-rows": {
+        "title": "SUM_ROWS",
+        "description": "Sum of an expression evaluated for each row in a line-items table.",
+        "blockUsage": "Under a line-items field, drag **SUM rows** and build the per-row formula inside."
+      },
+      "count-rows": {
+        "title": "COUNT_ROWS",
+        "description": "Number of rows in a line-items table (same expression evaluated per row for consistency).",
+        "blockUsage": "Use **COUNT rows** from the line-items group in the palette."
+      },
+      "avg-rows": {
+        "title": "AVG_ROWS",
+        "description": "Average of an expression over all rows in a line-items table.",
+        "blockUsage": "Drag **AVG rows** for a table field."
+      },
+      "min-rows": {
+        "title": "MIN_ROWS",
+        "description": "Minimum of an expression across table rows.",
+        "blockUsage": "Drag **MIN rows** from the palette."
+      },
+      "max-rows": {
+        "title": "MAX_ROWS",
+        "description": "Maximum of an expression across table rows.",
+        "blockUsage": "Drag **MAX rows** from the palette."
+      }
+    },
+    "operands": {
+      "quantity": {
+        "title": "Quantity (.qty)",
+        "description": "User-entered quantity for an input field.",
+        "blockUsage": "Drag the field's quantity chip from the palette."
+      },
+      "property": {
+        "title": "Property (.var_*)",
+        "description": "A numeric property on an input (cost, price, etc.).",
+        "blockUsage": "Drag a property block under its field group."
+      },
+      "constant": {
+        "title": "Constant",
+        "description": "Fixed value defined in calculator constants.",
+        "blockUsage": "Drag a constant from the palette into the formula."
+      },
+      "calculation": {
+        "title": "Calculation",
+        "description": "Result of another intermediate formula.",
+        "blockUsage": "Drag a calculation reference when building outputs or other calcs."
+      },
+      "row-property": {
+        "title": "Row property (row.*)",
+        "description": "Property of the current row inside SUM_ROWS / line-items formulas.",
+        "blockUsage": "Inside a row aggregate bracket, use row property blocks."
+      }
+    },
+    "script": {
+      "input": {
+        "title": "input",
+        "description": "Declares an input field with properties and optional quantity."
+      },
+      "constant": {
+        "title": "constant",
+        "description": "Fixed numeric constant used in formulas."
+      },
+      "calc": {
+        "title": "calc",
+        "description": "Intermediate calculation with a formula block."
+      },
+      "output": {
+        "title": "output",
+        "description": "Final result shown to the user."
+      }
+    }
   },
   "theme": {
     "light": "Light theme",

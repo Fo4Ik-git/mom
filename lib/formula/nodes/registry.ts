@@ -44,6 +44,8 @@ export function getAllFormulaPrimitives() {
   return ALL_PRIMITIVES;
 }
 
+export { ALL_PRIMITIVES };
+
 export function getInfixPrecedence(symbol: string): number | null {
   const primitive = ALL_PRIMITIVES.find((item) => item.infix?.symbol === symbol);
   return primitive?.infix?.precedence ?? null;

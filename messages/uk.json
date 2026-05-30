@@ -31,6 +31,7 @@
     "signIn": "Увійти",
     "signOut": "Вийти",
     "home": "Головна",
+    "docs": "Довідка",
     "menuOpen": "Відкрити меню",
     "menuClose": "Закрити меню"
   },
@@ -463,6 +464,142 @@
     "accessUntil": "До {date}",
     "accessDaysLeft": "Залишилось {days} дн.",
     "calculatorsStatus": "Калькулятори"
+  },
+  "docs": {
+    "pageTitle": "Довідник формул і коду",
+    "pageDescription": "Як працюють блоки та код у конструкторі калькулятора. Сторінка генерується автоматично з registry формул.",
+    "intro": "У візуальному редакторі — **блоки**, у вкладці «Код» — **текст**; це одна мова. Шукайте нижче або переглядайте за категоріями.\n\nНові оператори та функції з’являються тут автоматично після додавання в платформу.",
+    "tabFormulas": "Формули та блоки",
+    "tabScript": "Скрипт калькулятора",
+    "searchPlaceholder": "Пошук SUM, field, input…",
+    "syntaxLabel": "Синтаксис",
+    "exampleLabel": "Приклад",
+    "blockUsageLabel": "У блочному редакторі",
+    "paletteCategoryLabel": "Категорія палитри",
+    "categories": {
+      "operators": "Оператори",
+      "aggregates": "Агрегати",
+      "rowAggregates": "Підсумки по рядках",
+      "operands": "Посилання (поля, константи)",
+      "script": "Декларації скрипта"
+    },
+    "primitives": {
+      "plus": {
+        "title": "Додавання (+)",
+        "description": "Додає два значення.",
+        "blockUsage": "Перетягніть **+** між двома блоками у формулі."
+      },
+      "minus": {
+        "title": "Віднімання (−)",
+        "description": "Віднімає праве значення від лівого.",
+        "blockUsage": "Перетягніть **−** між блоками, напр. виручка мінус собівартість."
+      },
+      "multiply": {
+        "title": "Множення (×)",
+        "description": "Множить два значення.",
+        "blockUsage": "Перетягніть **×** — типово кількість × ціна."
+      },
+      "divide": {
+        "title": "Ділення (÷)",
+        "description": "Ділить ліве на праве. Ділення на 0 — попередження і результат 0.",
+        "blockUsage": "Перетягніть **÷** між блоками."
+      },
+      "sum": {
+        "title": "SUM",
+        "description": "Сума всіх аргументів.",
+        "blockUsage": "Перетягніть **SUM** з палитри і заповніть слоти всередині дужок."
+      },
+      "count": {
+        "title": "COUNT",
+        "description": "Кількість аргументів.",
+        "blockUsage": "Перетягніть **COUNT** і додайте значення в дужки."
+      },
+      "avg": {
+        "title": "AVG",
+        "description": "Середнє арифметичне аргументів.",
+        "blockUsage": "Перетягніть **AVG** з агрегатів у палитрі."
+      },
+      "min": {
+        "title": "MIN",
+        "description": "Найменше значення серед аргументів.",
+        "blockUsage": "Перетягніть **MIN** з палитри."
+      },
+      "max": {
+        "title": "MAX",
+        "description": "Найбільше значення серед аргументів.",
+        "blockUsage": "Перетягніть **MAX** з палитри."
+      },
+      "sum-rows": {
+        "title": "SUM_ROWS",
+        "description": "Сума виразу для кожного рядка таблиці позиций.",
+        "blockUsage": "Для поля line items перетягніть **SUM rows** і зберіть формулу рядка всередині."
+      },
+      "count-rows": {
+        "title": "COUNT_ROWS",
+        "description": "Кількість рядків у таблиці позиций.",
+        "blockUsage": "Використайте **COUNT rows** у групі line items."
+      },
+      "avg-rows": {
+        "title": "AVG_ROWS",
+        "description": "Середнє виразу по всіх рядках таблиці.",
+        "blockUsage": "Перетягніть **AVG rows** для табличного поля."
+      },
+      "min-rows": {
+        "title": "MIN_ROWS",
+        "description": "Мінімум виразу по рядках таблиці.",
+        "blockUsage": "Перетягніть **MIN rows** з палитри."
+      },
+      "max-rows": {
+        "title": "MAX_ROWS",
+        "description": "Максимум виразу по рядках таблиці.",
+        "blockUsage": "Перетягніть **MAX rows** з палитри."
+      }
+    },
+    "operands": {
+      "quantity": {
+        "title": "Кількість (.qty)",
+        "description": "Кількість поля вводу, яку вводить користувач.",
+        "blockUsage": "Перетягніть блок qty поля з палитри."
+      },
+      "property": {
+        "title": "Властивість (.var_*)",
+        "description": "Числова властивість поля (cost, price тощо).",
+        "blockUsage": "Перетягніть властивість з групи поля."
+      },
+      "constant": {
+        "title": "Константа",
+        "description": "Фіксоване значення з розділу констант.",
+        "blockUsage": "Перетягніть константу з палитри у формулу."
+      },
+      "calculation": {
+        "title": "Розрахунок",
+        "description": "Результат іншої проміжної формули.",
+        "blockUsage": "Перетягніть посилання на calc при збиранні outputs."
+      },
+      "row-property": {
+        "title": "Властивість рядка (row.*)",
+        "description": "Властивість поточного рядка всередині SUM_ROWS.",
+        "blockUsage": "Усередині дужки row aggregate використовуйте row.*."
+      }
+    },
+    "script": {
+      "input": {
+        "title": "input",
+        "description": "Поле вводу з властивостями та опційною кількістю."
+      },
+      "constant": {
+        "title": "constant",
+        "description": "Фіксована числова константа для формул."
+      },
+      "calc": {
+        "title": "calc",
+        "description": "Проміжний розрахунок з блоком formula."
+      },
+      "output": {
+        "title": "output",
+        "description": "Підсумковий результат для користувача."
+      }
+    }
   },
   "theme": {
     "light": "Світла тема",

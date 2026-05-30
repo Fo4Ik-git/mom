@@ -212,6 +212,7 @@
     - **7.10. i18n и docs**
       - [ ] Labels палитры: `builder.node.{id}.*` или `labelKey` в definition
       - [ ] Hover в code mode: `docKey` / `detail` из definition
+      - [x] **Пользовательская документация** — `/docs`, автогенерация из registry → см. **§9**
 
     - **Рекомендуемый порядок**
       1. Завершить MVP §6 (код ↔ AST стабилен)
@@ -354,4 +355,38 @@
         registry.ts
       lib/calculator/script/       # format, parse, format-project, parse-project
       ```
+
+  - **9. Документация для пользователей (справочник формул и кода)**
+    - **Цель:** отдельная страница «как работает каждый блок / каждая конструкция кода»; контент **генерируется из registry**, не дублируется вручную в 10 местах.
+    - **Статус (2025):** MVP — `/docs`, `collectFormulaDocs()` из `ALL_PRIMITIVES` + script entities; UI: `react-markdown` + remark-gfm; i18n UK/EN.
+
+    - **9.1. Источник правды**
+      - [x] `lib/formula/docs/collect-formula-docs.ts` — syntax/example из primitives + `getAllConfigEntities()`
+      - [x] Описания — `messages/*/docs.primitives.{id}.*` (i18n)
+      - [ ] Опционально: поле `doc` в primitive + `doc.example` override
+      - [ ] CI: проверка, что у каждого id в `ALL_PRIMITIVES` есть ключи в en + uk
+
+    - **9.2. Страница `/docs`**
+      - [x] Вкладки: **Формулы и блоки** | **Скрипт калькулятора**
+      - [x] Категории: операторы, агрегаты, row aggregates, операнды, script keywords
+      - [x] Поиск по названию / синтаксису / примеру
+      - [x] Ссылка «Довідка» / «Help» в шапке
+      - [ ] Ссылка из билдера (иконка ? рядом с «Код»)
+      - [ ] Deep link ` /docs#sum` — прокрутка к блоку
+
+    - **9.3. Библиотеки (не писать с нуля)**
+      - [x] **react-markdown** + **remark-gfm** — intro и будущие guide-страницы
+      - [ ] Опционально v2: **Fumadocs** / **Nextra** если нужен полноценный docs-сайт с sidebar
+      - [ ] Подсветка кода: **shiki** или **react-syntax-highlighter** в карточках примеров
+
+    - **9.4. Расширение**
+      - [ ] Hover «?» в палитре блоков → tooltip из того же `collectFormulaDocs`
+      - [ ] Экспорт статики `npm run docs:build` → JSON/Markdown для offline
+      - [ ] Гайды (не autogen): «Перший калькулятор», «Line items», «Code mode» — MDX-страницы
+
+    - **Порядок §9**
+      1. [x] collect + `/docs` MVP
+      2. [ ] CI i18n completeness + link from builder
+      3. [ ] Tooltips из registry + syntax highlight
+      4. [ ] MDX guides (ручные туториалы)
 

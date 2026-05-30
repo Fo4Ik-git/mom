@@ -70,6 +70,9 @@ export function HeaderNav({
       >
         {signedIn ? (
           <>
+            <Link href="/docs" className={mutedLinkClass} onClick={closeMenu}>
+              {t("docs")}
+            </Link>
             {!banned && (
               <Link href="/builder" className={navLinkClass} onClick={closeMenu}>
                 {t("builder")}
@@ -96,13 +99,18 @@ export function HeaderNav({
             </button>
           </>
         ) : (
-          <Link
-            href="/auth/signin"
-            className={`${navLinkClass} bg-accent text-accent-foreground hover:brightness-110 md:px-3.5`}
-            onClick={closeMenu}
-          >
-            {t("signIn")}
-          </Link>
+          <>
+            <Link href="/docs" className={mutedLinkClass} onClick={closeMenu}>
+              {t("docs")}
+            </Link>
+            <Link
+              href="/auth/signin"
+              className={`${navLinkClass} bg-accent text-accent-foreground hover:brightness-110 md:px-3.5`}
+              onClick={closeMenu}
+            >
+              {t("signIn")}
+            </Link>
+          </>
         )}
         <div className="flex items-center gap-1 border-t border-border/60 pt-2 md:border-0 md:pt-0">
           <LanguageSwitcher />

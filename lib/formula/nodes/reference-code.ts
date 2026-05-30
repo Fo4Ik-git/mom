@@ -38,7 +38,7 @@ export function parseCodeReference(
   rowFieldId: string | undefined,
   offset: number,
 ): BlockOperand {
-  if (raw === "row" || raw.startsWith("row.")) {
+  if ((raw === "row" || raw.startsWith("row.")) && !rowFieldId) {
     throw new FormulaParseError(
       `"row.*" is only valid inside *_ROWS(...)`,
       offset,
