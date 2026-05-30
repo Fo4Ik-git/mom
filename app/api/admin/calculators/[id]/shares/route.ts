@@ -5,13 +5,14 @@ import { listCalculatorShares, ShareError, upsertCalculatorShare } from "@/lib/c
 import { db } from "@/lib/platform/db";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
+import { withApiRoute } from "@/lib/api/with-api-route";
 
 const createSchema = z.object({
   email: z.string().email(),
   role: z.enum(["VIEW", "EDIT"]).default("EDIT"),
 });
 
-export async function GET(
+export const GET = withApiRoute(async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -28,8 +29,9 @@ export async function GET(
     return handleAdminApiError(error, "admin/calculators/[id]/shares");
   }
 }
+);
 
-export async function POST(
+export const POST = withApiRoute(async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -59,3 +61,4 @@ export async function POST(
     return handleAdminApiError(error, "admin/calculators/[id]/shares");
   }
 }
+);

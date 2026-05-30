@@ -4,6 +4,7 @@ import { db } from "@/lib/platform/db";
 import { AccessKeyError, registerUserWithAccessKey } from "@/lib/access/access-keys";
 import { hashPassword } from "@/lib/auth/password";
 import { isAllowedFrontendRequest } from "@/lib/api/api-security";
+import { withApiRoute } from "@/lib/api/with-api-route";
 
 const signupSchema = z.object({
   name: z.string().min(1).max(80).optional(),
@@ -22,7 +23,7 @@ function accessKeyErrorResponse(reason: AccessKeyError["reason"]) {
   return NextResponse.json({ error: map[reason] }, { status: 400 });
 }
 
-export async function POST(request: Request) {
+export const POST = withApiRoute(async function POST(request: Request) {
   if (!isAllowedFrontendRequest(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -56,3 +57,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "signup_failed" }, { status: 500 });
   }
 }
+);

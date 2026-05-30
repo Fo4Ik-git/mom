@@ -16,6 +16,8 @@ import {
   validationErrorResponse,
 } from "@/lib/platform/validation-errors";
 import { calculatorConfigSchema } from "@/types/calculator";
+import { withApiRoute } from "@/lib/api/with-api-route";
+import { setAuditDetail } from "@/lib/logger/audit";
 
 const patchSchema = z.object({
   ownerEmail: z.string().email().optional(),
@@ -26,7 +28,7 @@ const patchSchema = z.object({
   isPublic: z.boolean().optional(),
 });
 
-export async function GET(
+export const GET = withApiRoute(async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -63,8 +65,9 @@ export async function GET(
     return handleAdminApiError(error, "admin/calculators/[id]");
   }
 }
+);
 
-export async function PATCH(
+export const PATCH = withApiRoute(async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -100,6 +103,15 @@ export async function PATCH(
           description: body.description,
           isPublic: body.isPublic,
           config: config ? serializeConfig(config) : undefined,
+        },
+      });
+
+      setAuditDetail({
+        calculator: { id, name: updated.name, slug: updated.slug },
+        changes: {
+          ...(body.name !== undefined ? { name: body.name } : {}),
+          ...(body.isPublic !== undefined ? { is_public: body.isPublic } : {}),
+          ...(body.config !== undefined ? { config_updated: true } : {}),
         },
       });
 
@@ -147,6 +159,15 @@ export async function PATCH(
       select: { email: true, name: true },
     });
 
+    setAuditDetail({
+      calculator: { id, name: calculator.name },
+      transfer: {
+        from_user_id: calculator.userId,
+        to_user_id: newOwnerId,
+        to_email: owner?.email ?? body.ownerEmail ?? null,
+      },
+    });
+
     return NextResponse.json({
       ok: true,
       userId: newOwnerId,
@@ -168,8 +189,9 @@ export async function PATCH(
     return handleAdminApiError(error, "admin/calculators/[id]");
   }
 }
+);
 
-export async function DELETE(
+export const DELETE = withApiRoute(async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -192,3 +214,4 @@ export async function DELETE(
     return handleAdminApiError(error, "admin/calculators/[id]");
   }
 }
+);

@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/platform/db";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
+import { withApiRoute } from "@/lib/api/with-api-route";
 
-export async function DELETE(
+export const DELETE = withApiRoute(async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string; userId: string }> },
 ) {
@@ -18,3 +19,4 @@ export async function DELETE(
     return handleAdminApiError(error, "admin/calculators/[id]/shares/[userId]");
   }
 }
+);

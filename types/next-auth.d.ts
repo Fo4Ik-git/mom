@@ -1,5 +1,5 @@
 import type { BanReason, Role } from "@prisma/client";
-import type { DefaultSession } from "next-auth";
+import type { DefaultSession, Session } from "next-auth";
 
 declare module "next-auth" {
   interface Session {
@@ -20,5 +20,12 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string;
     role: Role;
+  }
+}
+
+/** Set by `auth()` middleware wrapper in proxy.ts */
+declare module "next/server" {
+  interface NextRequest {
+    auth: Session | null;
   }
 }

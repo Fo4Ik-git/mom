@@ -5,6 +5,7 @@ import { createAccessKey, normalizeAccessKeyCode } from "@/lib/access/access-key
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { db } from "@/lib/platform/db";
 import { requireAdmin } from "@/lib/auth/auth-session";
+import { withApiRoute } from "@/lib/api/with-api-route";
 
 const createSchema = z.object({
   kind: z.nativeEnum(AccessKeyKind).optional(),
@@ -17,7 +18,7 @@ const createSchema = z.object({
   code: z.string().min(4).max(32).optional(),
 });
 
-export async function GET() {
+export const GET = withApiRoute(async function GET() {
   try {
     await requireAdmin();
 
@@ -50,8 +51,9 @@ export async function GET() {
     return handleAdminApiError(error, "admin/access-keys GET");
   }
 }
+);
 
-export async function POST(request: Request) {
+export const POST = withApiRoute(async function POST(request: Request) {
   try {
     await requireAdmin();
     const body = createSchema.parse(await request.json());
@@ -91,3 +93,4 @@ export async function POST(request: Request) {
     return handleAdminApiError(error, "admin/access-keys POST");
   }
 }
+);

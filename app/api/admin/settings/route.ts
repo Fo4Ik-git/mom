@@ -10,6 +10,8 @@ import {
 } from "@/lib/platform/platform-settings";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
+import { withApiRoute } from "@/lib/api/with-api-route";
+import { setAuditDetail } from "@/lib/logger/audit";
 
 const updateSchema = z.object({
   defaultMaxCalculators: z.number().int().min(0).max(1000),
@@ -32,7 +34,7 @@ function serializeAccessExpirySettings(
   };
 }
 
-export async function GET() {
+export const GET = withApiRoute(async function GET() {
   try {
     await requireAdmin();
     const settings = await getPlatformSettings();
@@ -49,12 +51,28 @@ export async function GET() {
     return handleAdminApiError(error, "admin/settings GET");
   }
 }
+);
 
-export async function PATCH(request: Request) {
+export const PATCH = withApiRoute(async function PATCH(request: Request) {
   try {
     await requireAdmin();
     const body = updateSchema.parse(await request.json());
     const settings = await updatePlatformSettings(body);
+    setAuditDetail({
+      changes: {
+        default_max_calculators: body.defaultMaxCalculators,
+        default_access_days: body.defaultAccessDays,
+        ...(body.supportEmail !== undefined ?
+          { support_email: body.supportEmail }
+        : {}),
+        ...(body.supportTelegram !== undefined ?
+          { support_telegram: body.supportTelegram }
+        : {}),
+        ...(body.accessExpiryCheckInterval !== undefined ?
+          { access_expiry_check_interval: body.accessExpiryCheckInterval }
+        : {}),
+      },
+    });
     return NextResponse.json({
       defaultMaxCalculators: settings.defaultMaxCalculators,
       defaultAccessDays: settings.defaultAccessDays,
@@ -70,3 +88,4 @@ export async function PATCH(request: Request) {
     return handleAdminApiError(error, "admin/settings PATCH");
   }
 }
+);

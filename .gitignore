@@ -20,6 +20,10 @@
 # production
 /build
 
+# application logs (JSONL, rotated daily)
+/logs/
+logs/*.jsonl
+
 # misc
 .DS_Store
 *.pem

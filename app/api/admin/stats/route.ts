@@ -5,6 +5,7 @@ import {
 } from "@/lib/admin/admin-analytics";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
+import { withApiRoute } from "@/lib/api/with-api-route";
 
 const RANGES = new Set<AnalyticsRange>(["24h", "7d", "30d", "90d"]);
 
@@ -15,7 +16,7 @@ function parseRange(value: string | null): AnalyticsRange {
   return "7d";
 }
 
-export async function GET(request: Request) {
+export const GET = withApiRoute(async function GET(request: Request) {
   try {
     await requireAdmin();
     const { searchParams } = new URL(request.url);
@@ -29,3 +30,4 @@ export async function GET(request: Request) {
     return handleAdminApiError(error, "admin/stats");
   }
 }
+);

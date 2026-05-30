@@ -4,13 +4,14 @@ import { db } from "@/lib/platform/db";
 import { banReasonI18nKey } from "@/lib/access/ban-reasons";
 import { isAllowedFrontendRequest } from "@/lib/api/api-security";
 import { verifyPassword } from "@/lib/auth/password";
+import { withApiRoute } from "@/lib/api/with-api-route";
 
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
 });
 
-export async function POST(request: Request) {
+export const POST = withApiRoute(async function POST(request: Request) {
   if (!isAllowedFrontendRequest(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -42,3 +43,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_data" }, { status: 400 });
   }
 }
+);

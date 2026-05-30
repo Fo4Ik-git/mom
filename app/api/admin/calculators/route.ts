@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/platform/db";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
+import { withApiRoute } from "@/lib/api/with-api-route";
 
-export async function GET() {
+export const GET = withApiRoute(async function GET() {
   try {
     await requireAdmin();
 
@@ -42,3 +43,4 @@ export async function GET() {
     return handleAdminApiError(error, "admin/calculators");
   }
 }
+);

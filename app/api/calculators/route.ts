@@ -19,6 +19,8 @@ import {
 import { calculatorConfigSchema } from "@/types/calculator";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { withApiRoute } from "@/lib/api/with-api-route";
+import { setAuditDetail } from "@/lib/logger/audit";
 
 const createSchema = z.object({
   name: z.string().min(1).max(120),
@@ -37,7 +39,7 @@ function withAccess(
   };
 }
 
-export async function GET() {
+export const GET = withApiRoute(async function GET() {
   try {
     const session = await requireActiveUser();
     const userId = session.user.id;
@@ -77,8 +79,9 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
+);
 
-export async function POST(request: Request) {
+export const POST = withApiRoute(async function POST(request: Request) {
   try {
     const session = await requireActiveUser();
     await assertCanCreateCalculator(session.user.id);
@@ -94,6 +97,15 @@ export async function POST(request: Request) {
         slug,
         config: serializeConfig(config),
         isPublic: body.isPublic ?? false,
+      },
+    });
+
+    setAuditDetail({
+      calculator: {
+        id: calculator.id,
+        name: calculator.name,
+        slug: calculator.slug,
+        is_public: calculator.isPublic,
       },
     });
 
@@ -126,3 +138,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ошибка создания" }, { status: 500 });
   }
 }
+);

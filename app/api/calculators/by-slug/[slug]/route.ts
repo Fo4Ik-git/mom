@@ -4,8 +4,9 @@ import { findCalculatorByRouteParam } from "@/lib/calculator/route";
 import { toCalculatorResponse } from "@/lib/calculator/service";
 import { Role } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { withApiRoute } from "@/lib/api/with-api-route";
 
-export async function GET(
+export const GET = withApiRoute(async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> },
 ) {
@@ -45,3 +46,4 @@ export async function GET(
     canEdit: isOwner || canEdit,
   });
 }
+);

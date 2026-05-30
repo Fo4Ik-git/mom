@@ -4,6 +4,7 @@ import { z } from "zod";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { db } from "@/lib/platform/db";
 import { requireAdmin } from "@/lib/auth/auth-session";
+import { withApiRoute } from "@/lib/api/with-api-route";
 
 const patchSchema = z.object({
   label: z.string().max(120).nullable().optional(),
@@ -14,7 +15,7 @@ const patchSchema = z.object({
   kind: z.nativeEnum(AccessKeyKind).optional(),
 });
 
-export async function PATCH(
+export const PATCH = withApiRoute(async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -70,8 +71,9 @@ export async function PATCH(
     return handleAdminApiError(error, "admin/access-keys/[id] PATCH");
   }
 }
+);
 
-export async function DELETE(
+export const DELETE = withApiRoute(async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -84,3 +86,4 @@ export async function DELETE(
     return handleAdminApiError(error, "admin/access-keys/[id] DELETE");
   }
 }
+);

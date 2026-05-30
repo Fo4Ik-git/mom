@@ -11,13 +11,15 @@ import {
   upsertCalculatorShare,
 } from "@/lib/calculator/shares";
 import { requireActiveUser } from "@/lib/auth/auth-session";
+import { withApiRoute } from "@/lib/api/with-api-route";
+import { setAuditDetail } from "@/lib/logger/audit";
 
 const createSchema = z.object({
   email: z.string().email(),
   role: z.enum(["VIEW", "EDIT"]).default("EDIT"),
 });
 
-export async function GET(
+export const GET = withApiRoute(async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -39,8 +41,9 @@ export async function GET(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 }
+);
 
-export async function POST(
+export const POST = withApiRoute(async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -63,6 +66,10 @@ export async function POST(
       body.email,
       body.role as CalculatorShareRole,
     );
+    setAuditDetail({
+      calculator: { id, name: access.calculator.name },
+      share: { email: body.email, role: body.role, user_id: share.userId },
+    });
     return NextResponse.json({ share }, { status: 201 });
   } catch (error) {
     if (error instanceof ShareError) {
@@ -74,3 +81,4 @@ export async function POST(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 }
+);

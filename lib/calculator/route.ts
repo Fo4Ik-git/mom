@@ -1,9 +1,9 @@
+import "server-only";
+
 import { db } from "@/lib/platform/db";
 import type { Calculator } from "@prisma/client";
 
-export function calculatorPublicPath(id: string): string {
-  return `/c/${id}`;
-}
+export { calculatorPublicPath } from "@/lib/calculator/paths";
 
 /** Resolve /c/:param by database id, with legacy slug fallback. */
 export async function findCalculatorByRouteParam(

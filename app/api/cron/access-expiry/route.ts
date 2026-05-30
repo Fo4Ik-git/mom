@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { runScheduledAccessExpiryCheckIfDue } from "@/lib/access/access-expiry-check";
 import { isAuthorizedCronRequest } from "@/lib/api/cron-auth";
+import { withApiRoute } from "@/lib/api/with-api-route";
 
-export async function GET(request: Request) {
+async function handleAccessExpiry(request: Request) {
   if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -11,6 +12,5 @@ export async function GET(request: Request) {
   return NextResponse.json(result);
 }
 
-export async function POST(request: Request) {
-  return GET(request);
-}
+export const GET = withApiRoute(handleAccessExpiry);
+export const POST = withApiRoute(handleAccessExpiry);

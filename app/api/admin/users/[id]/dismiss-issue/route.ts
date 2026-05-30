@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/platform/db";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
+import { withApiRoute } from "@/lib/api/with-api-route";
 import {
   isBanIssueVisible,
   isExpiredAccessIssueVisible,
@@ -12,7 +13,7 @@ const bodySchema = z.object({
   kind: z.enum(["banned", "expired"]),
 });
 
-export async function POST(
+export const POST = withApiRoute(async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -64,3 +65,4 @@ export async function POST(
     return handleAdminApiError(error, "admin/users/[id]/dismiss-issue");
   }
 }
+);

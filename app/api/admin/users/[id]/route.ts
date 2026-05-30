@@ -5,6 +5,8 @@ import { db } from "@/lib/platform/db";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
 import { hashPassword } from "@/lib/auth/password";
+import { withApiRoute } from "@/lib/api/with-api-route";
+import { setAuditDetail } from "@/lib/logger/audit";
 import {
   countUserCalculators,
   getEffectiveMaxCalculators,
@@ -23,7 +25,7 @@ const updateSchema = z.object({
   email: z.string().email().optional(),
 });
 
-export async function PATCH(
+export const PATCH = withApiRoute(async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -144,6 +146,30 @@ export async function PATCH(
     const calculatorsCount = await countUserCalculators(user.id);
     const effectiveMaxCalculators = await getEffectiveMaxCalculators(user);
 
+    setAuditDetail({
+      target_user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+      changes: {
+        ...(body.role !== undefined ? { role: body.role } : {}),
+        ...(body.banned !== undefined ?
+          { banned: body.banned, ban_reason: user.banReason }
+        : {}),
+        ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(body.email !== undefined ? { email: user.email } : {}),
+        ...(body.maxCalculators !== undefined ?
+          { max_calculators: body.maxCalculators }
+        : {}),
+        ...(body.accessExpiresAt !== undefined ?
+          { access_expires_at: body.accessExpiresAt }
+        : {}),
+        ...(body.password !== undefined ? { password_reset: true } : {}),
+      },
+    });
+
     return NextResponse.json({
       user: {
         ...user,
@@ -164,3 +190,4 @@ export async function PATCH(
     return handleAdminApiError(error, "admin/users/[id]");
   }
 }
+);

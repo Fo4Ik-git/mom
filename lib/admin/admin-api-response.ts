@@ -1,5 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { getTraceId } from "@/lib/logger/context";
+import { logger, serializeError } from "@/lib/logger/log";
 
 export function isPrismaClientError(error: unknown): boolean {
   return (
@@ -20,14 +22,16 @@ export function handleAdminApiError(
   }
 
   if (isPrismaClientError(error)) {
-    if (logTag) {
-      console.error(`[${logTag}]`, error);
-    }
+    logger.error("admin.api.database_error", error, {
+      trace_id: getTraceId(),
+      route: logTag,
+    });
     return NextResponse.json({ error: "database_error" }, { status: 503 });
   }
 
-  if (logTag) {
-    console.error(`[${logTag}]`, error);
-  }
+  logger.error("admin.api.server_error", error, {
+    trace_id: getTraceId(),
+    route: logTag,
+  });
   return NextResponse.json({ error: "server_error" }, { status: 500 });
 }

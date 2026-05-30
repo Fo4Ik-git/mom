@@ -12,6 +12,7 @@ import { requireAdmin } from "@/lib/auth/auth-session";
 import { hashPassword } from "@/lib/auth/password";
 import { resolveDefaultAccessExpiresAt } from "@/lib/access/access-keys";
 import { getPlatformSettings } from "@/lib/platform/platform-settings";
+import { withApiRoute } from "@/lib/api/with-api-route";
 import {
   countUserCalculators,
   getEffectiveMaxCalculators,
@@ -75,7 +76,7 @@ async function mapUserRow(
   };
 }
 
-export async function GET(request: Request) {
+export const GET = withApiRoute(async function GET(request: Request) {
   try {
     await requireAdmin();
     const { searchParams } = new URL(request.url);
@@ -115,8 +116,9 @@ export async function GET(request: Request) {
     return handleAdminApiError(error, "admin/users GET");
   }
 }
+);
 
-export async function POST(request: Request) {
+export const POST = withApiRoute(async function POST(request: Request) {
   try {
     await requireAdmin();
     const body = createSchema.parse(await request.json());
@@ -156,3 +158,4 @@ export async function POST(request: Request) {
     return handleAdminApiError(error, "admin/users POST");
   }
 }
+);

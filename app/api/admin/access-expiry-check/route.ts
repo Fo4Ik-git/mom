@@ -6,12 +6,13 @@ import {
 } from "@/lib/access/access-expiry-check";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
+import { withApiRoute } from "@/lib/api/with-api-route";
 
 const bodySchema = z.object({
   scheduled: z.boolean().optional(),
 });
 
-export async function POST(request: Request) {
+export const POST = withApiRoute(async function POST(request: Request) {
   try {
     await requireAdmin();
 
@@ -40,3 +41,4 @@ export async function POST(request: Request) {
     return handleAdminApiError(error, "admin/access-expiry-check");
   }
 }
+);

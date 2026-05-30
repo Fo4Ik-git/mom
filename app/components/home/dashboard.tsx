@@ -5,7 +5,7 @@ import { Card } from "@/app/components/ui/card";
 import { Link } from "@/i18n/navigation";
 import { formatAccessDate, getDaysUntilExpiry } from "@/lib/access/access-display";
 import { appFetch } from "@/lib/api/api-client";
-import { calculatorPublicPath } from "@/lib/calculator/route";
+import { calculatorPublicPath } from "@/lib/calculator/paths";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 

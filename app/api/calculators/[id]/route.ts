@@ -19,6 +19,7 @@ import {
 import { calculatorConfigSchema } from "@/types/calculator";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { withApiRoute } from "@/lib/api/with-api-route";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -27,7 +28,7 @@ const updateSchema = z.object({
   isPublic: z.boolean().optional(),
 });
 
-export async function GET(
+export const GET = withApiRoute(async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -54,8 +55,9 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
+);
 
-export async function PATCH(
+export const PATCH = withApiRoute(async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -112,8 +114,9 @@ export async function PATCH(
     return NextResponse.json({ error: "Ошибка обновления" }, { status: 500 });
   }
 }
+);
 
-export async function DELETE(
+export const DELETE = withApiRoute(async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -136,3 +139,4 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
+);

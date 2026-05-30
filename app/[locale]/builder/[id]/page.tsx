@@ -6,7 +6,7 @@ import {
   canEditCalculator,
   getCalculatorAccess,
 } from "@/lib/calculator/access";
-import { calculatorPublicPath } from "@/lib/calculator/route";
+import { calculatorPublicPath } from "@/lib/calculator/paths";
 import { isAccessActive } from "@/lib/access/user-limits";
 import { db } from "@/lib/platform/db";
 import { Role } from "@prisma/client";
@@ -35,8 +35,8 @@ export default async function EditBuilderPage({
 
   const access = await getCalculatorAccess(
     id,
-    userId,
-    session.user.role ?? Role.USER,
+    userId!,
+    session!.user.role ?? Role.USER,
   );
 
   if (!access) {

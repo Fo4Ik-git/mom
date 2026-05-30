@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/auth-session";
 import { getUserQuota } from "@/lib/access/user-limits";
+import { withApiRoute } from "@/lib/api/with-api-route";
 
-export async function GET() {
+export const GET = withApiRoute(async function GET() {
   try {
     const session = await requireAuth();
     const quota = await getUserQuota(session.user.id);
@@ -11,3 +12,4 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
+);

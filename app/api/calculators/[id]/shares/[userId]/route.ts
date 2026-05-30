@@ -5,8 +5,9 @@ import {
 } from "@/lib/calculator/access";
 import { db } from "@/lib/platform/db";
 import { requireActiveUser } from "@/lib/auth/auth-session";
+import { withApiRoute } from "@/lib/api/with-api-route";
 
-export async function DELETE(
+export const DELETE = withApiRoute(async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string; userId: string }> },
 ) {
@@ -30,3 +31,4 @@ export async function DELETE(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 }
+);
