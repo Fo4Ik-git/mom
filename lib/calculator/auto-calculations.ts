@@ -101,7 +101,12 @@ export function syncAutoCalculations(
   for (const [id, calc] of desired) {
     const index = merged.findIndex((item) => item.id === id);
     if (index >= 0) {
-      merged[index] = calc;
+      const existing = merged[index]!;
+      merged[index] = {
+        ...calc,
+        label: existing.label,
+        expression: existing.expression,
+      };
     } else {
       merged.push(calc);
     }

@@ -6,6 +6,7 @@ import {
     BuilderSection,
 } from "@/app/components/builder/builder-collapsible";
 import { ConstantsCard } from "@/app/components/builder/constants-card";
+import { ConfigCodeSheet } from "@/app/components/builder/config-code-sheet";
 import { FormulaBuilder } from "@/app/components/builder/formula-builder";
 import { InputFieldsEditor } from "@/app/components/builder/input-fields-editor";
 import { OutputSnippetMenu } from "@/app/components/builder/output-snippet-menu";
@@ -127,6 +128,7 @@ export function CalculatorBuilder({
   const [errorIssues, setErrorIssues] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [codeSheetOpen, setCodeSheetOpen] = useState(false);
   const autoTotalSuffix = t("autoTotalSuffix");
 
   function applyPattern(patternId: InputPatternId, count = 1) {
@@ -202,6 +204,12 @@ export function CalculatorBuilder({
 
   return (
     <div className="space-y-6">
+      <ConfigCodeSheet
+        open={codeSheetOpen}
+        config={config}
+        onClose={() => setCodeSheetOpen(false)}
+        onApply={setConfig}
+      />
       <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(280px,380px)] 2xl:grid-cols-[minmax(0,3.5fr)_minmax(300px,400px)]">
         <div className="min-w-0 space-y-5">
           <BuilderSection title={t("settings")} defaultOpen={false}>
@@ -416,6 +424,7 @@ export function CalculatorBuilder({
                         config={config}
                         formulaTarget={{ fieldId: calculation.id }}
                         fieldKey={calculation.id}
+                        fieldLabel={calculation.label}
                         expression={calculation.expression}
                         onChange={(expression) =>
                           setConfig((c) => ({
@@ -461,8 +470,10 @@ export function CalculatorBuilder({
                             config={config}
                             formulaTarget={{ fieldId: calculation.id }}
                             fieldKey={calculation.id}
+                            fieldLabel={calculation.label}
                             expression={calculation.expression}
                             onChange={() => undefined}
+                            codeReadOnly
                           />
                         </BuilderCollapsible>
                       ))}
@@ -584,6 +595,7 @@ export function CalculatorBuilder({
                     config={config}
                     formulaTarget={{ fieldId: output.id }}
                     fieldKey={output.id}
+                    fieldLabel={output.label}
                     expression={output.expression}
                     onChange={(expression) =>
                       setConfig((c) => ({
@@ -612,13 +624,23 @@ export function CalculatorBuilder({
             </div>
           )}
 
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full sm:w-auto"
-          >
-            {saving ? tc("saving") : tc("save")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCodeSheetOpen(true)}
+              className="w-full sm:w-auto"
+            >
+              {t("codeModeOpen")}
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full sm:w-auto"
+            >
+              {saving ? tc("saving") : tc("save")}
+            </Button>
+          </div>
         </div>
 
         <div className="min-w-0 xl:sticky xl:top-24 xl:self-start">

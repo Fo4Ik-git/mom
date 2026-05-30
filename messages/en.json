@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "Mom",
+    "title": "MCB",
     "description": "Build custom calculators for your business"
   },
   "common": {
-    "appName": "Mom",
+    "appName": "MCB",
     "tagline": "Calculators",
     "loading": "Loading…",
     "save": "Save",
@@ -250,7 +250,24 @@
     "lineItemMaxRows": "Max rows",
     "fieldSummaryLineItems": "line items table",
     "fieldSummaryLineColumns": "{count} columns",
-    "paletteResizeHandle": "Resize palette panel"
+    "paletteResizeHandle": "Resize palette panel",
+    "codeModeOpen": "Code",
+    "codeModeOpenFormula": "Code",
+    "codeModeFormulaTitle": "Formula: {name}",
+    "codeModeFormulaHint": "Write logic as text. Apply updates blocks. Ctrl+Space for suggestions.",
+    "codeModeSheetTitle": "Calculator script",
+    "codeModeSheetHint": "All formulas by section [id]",
+    "codeModeScriptHint": "Full calculator in one script: input, constant, calc, output. Like a class with fields inside.",
+    "codeModeProjectHint": "Calculator split into files by section. Apply validates the whole project.",
+    "codeModeTabInputs": "Inputs",
+    "codeModeTabConstants": "Constants",
+    "codeModeTabAutoCalculations": "Auto totals",
+    "codeModeTabCalculations": "Calculations",
+    "codeModeTabOutputs": "Outputs",
+    "codeModeScriptInvalid": "Could not apply script",
+    "codeModeApply": "Apply",
+    "codeModeRevert": "Cancel",
+    "codeModeClose": "Close"
   },
   "admin": {
     "title": "Admin panel",

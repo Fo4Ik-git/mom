@@ -1,5 +1,6 @@
-import type { BlockExpression, BlockOperand, CalculatorConfig } from "@/types/calculator";
+import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
 import type { LineItemRowsState } from "@/types/calculator";
+import { collectExpressionFieldRefs } from "@/lib/formula/nodes/collect-dependencies";
 import { evaluateBlockExpression } from "@/lib/formula/block-evaluate";
 import { buildInitialLineItemRowsState } from "@/lib/calculator/line-items";
 
@@ -34,51 +35,10 @@ export function listFormulaFields(config: CalculatorConfig): FormulaFieldNode[] 
   return [...calculations, ...outputs];
 }
 
-function depsFromOperand(
-  operand: BlockOperand,
-): Array<{ kind: FormulaFieldKind; id: string }> {
-  switch (operand.kind) {
-    case "calculation":
-      return [{ kind: "calculation", id: operand.calculationId }];
-    case "output":
-      return [{ kind: "output", id: operand.outputId }];
-    default:
-      return [];
-  }
-}
-
 export function collectFieldDependencies(
   expression: BlockExpression,
 ): Array<{ kind: FormulaFieldKind; id: string }> {
-  const deps: Array<{ kind: FormulaFieldKind; id: string }> = [];
-
-  function walk(node: BlockExpression) {
-    if (node.type === "operand") {
-      deps.push(...depsFromOperand(node.operand));
-      return;
-    }
-    if (node.type === "group") {
-      walk(node.inner);
-      return;
-    }
-    if (node.type === "aggregate") {
-      for (const arg of node.args) {
-        walk(arg);
-      }
-      return;
-    }
-    if (node.type === "rowAggregate") {
-      walk(node.inner);
-      return;
-    }
-    if (node.type === "operation") {
-      walk(node.left);
-      walk(node.right);
-    }
-  }
-
-  walk(expression);
-  return deps;
+  return collectExpressionFieldRefs(expression);
 }
 
 function fieldLabel(config: CalculatorConfig, kind: FormulaFieldKind, id: string) {

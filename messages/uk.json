@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "Mom",
+    "title": "MCB",
     "description": "Конструктор власних калькуляторів для бізнесу"
   },
   "common": {
-    "appName": "Mom",
+    "appName": "MCB",
     "tagline": "Калькулятори",
     "loading": "Завантаження…",
     "save": "Зберегти",
@@ -250,7 +250,24 @@
     "lineItemMaxRows": "Макс. рядків",
     "fieldSummaryLineItems": "таблиця позицій",
     "fieldSummaryLineColumns": "{count} кол.",
-    "paletteResizeHandle": "Змінити ширину панелі"
+    "paletteResizeHandle": "Змінити ширину панелі",
+    "codeModeOpen": "Код",
+    "codeModeOpenFormula": "Код",
+    "codeModeFormulaTitle": "Формула: {name}",
+    "codeModeFormulaHint": "Логіка текстом. «Застосувати» оновлює блоки. Ctrl+Space — підказки.",
+    "codeModeSheetTitle": "Скрипт калькулятора",
+    "codeModeSheetHint": "Усі формули по секціях [id]",
+    "codeModeScriptHint": "Весь калькулятор в одному скрипті: input, constant, calc, output. Як class з полями всередині.",
+    "codeModeProjectHint": "Калькулятор розбитий на файли за секціями. «Застосувати» перевіряє весь проєкт.",
+    "codeModeTabInputs": "Поля вводу",
+    "codeModeTabConstants": "Константи",
+    "codeModeTabAutoCalculations": "Авто-підсумки",
+    "codeModeTabCalculations": "Розрахунки",
+    "codeModeTabOutputs": "Результати",
+    "codeModeScriptInvalid": "Не вдалося застосувати скрипт",
+    "codeModeApply": "Застосувати",
+    "codeModeRevert": "Скасувати",
+    "codeModeClose": "Закрити"
   },
   "admin": {
     "title": "Адмін-панель",
