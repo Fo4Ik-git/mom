@@ -24,6 +24,7 @@ import {
   showContinuationInsideGroup,
 } from "@/lib/formula/blocks/block-tree";
 import { AggregateBracket } from "@/app/components/builder/scratch/aggregate-bracket";
+import { ConditionalBracket } from "@/app/components/builder/scratch/conditional-bracket";
 import { RowAggregateBracket } from "@/app/components/builder/scratch/row-aggregate-bracket";
 import { DragHandle } from "@/app/components/builder/scratch/drag-handle";
 import { BlockSlot } from "@/app/components/builder/scratch/block-slot";
@@ -43,6 +44,7 @@ interface FormulaLinearWorkspaceProps {
   onGroupRemove: (path: SlotPath[]) => void;
   onAggregateRemove: (path: SlotPath[]) => void;
   onRowAggregateRemove: (path: SlotPath[]) => void;
+  onConditionalRemove: (path: SlotPath[]) => void;
   onSlotTap: (path: SlotPath[]) => void;
   activeSlotPath?: SlotPath[] | null;
 }
@@ -51,7 +53,8 @@ function hasGroups(expression: BlockExpression): boolean {
   if (
     expression.type === "group" ||
     expression.type === "aggregate" ||
-    expression.type === "rowAggregate"
+    expression.type === "rowAggregate" ||
+    expression.type === "conditional"
   ) {
     return true;
   }
@@ -230,9 +233,58 @@ function ExpressionNode({
   onGroupRemove,
   onAggregateRemove,
   onRowAggregateRemove,
+  onConditionalRemove,
   onSlotTap,
   activeSlotPath = null,
 }: ExpressionNodeProps) {
+  if (expression.type === "conditional") {
+    const branches: Array<{ key: "condition" | "whenTrue" | "whenFalse"; label: string }> = [
+      { key: "condition", label: "?" },
+      { key: "whenTrue", label: "✓" },
+      { key: "whenFalse", label: "✗" },
+    ];
+
+    return (
+      <ConditionalBracket
+        outputKey={outputKey}
+        path={path}
+        onRemove={() => onConditionalRemove(path)}
+      >
+        {branches.map((branch, index) => (
+          <span
+            key={`${path.join("-")}-${branch.key}`}
+            className="inline-flex items-center gap-1.5"
+          >
+            {index > 0 && (
+              <span className="select-none text-sm font-medium text-muted-foreground">
+                ,
+              </span>
+            )}
+            <span className="select-none text-[10px] font-semibold uppercase text-rose-700/80 dark:text-rose-300/80">
+              {branch.label}
+            </span>
+            <ExpressionNode
+              expression={expression[branch.key]}
+              path={[...path, branch.key]}
+              outputKey={outputKey}
+              config={config}
+              formulaTarget={formulaTarget}
+              quantityLabel={quantityLabel}
+              onSlotClear={onSlotClear}
+              onOperationRemove={onOperationRemove}
+              onGroupRemove={onGroupRemove}
+              onAggregateRemove={onAggregateRemove}
+              onRowAggregateRemove={onRowAggregateRemove}
+              onConditionalRemove={onConditionalRemove}
+              onSlotTap={onSlotTap}
+              activeSlotPath={activeSlotPath}
+            />
+          </span>
+        ))}
+      </ConditionalBracket>
+    );
+  }
+
   if (expression.type === "rowAggregate") {
     const table = config.inputs.find((input) => input.id === expression.fieldId);
     const tableLabel = table?.label.trim() || "…";
@@ -258,6 +310,7 @@ function ExpressionNode({
           onGroupRemove={onGroupRemove}
           onAggregateRemove={onAggregateRemove}
           onRowAggregateRemove={onRowAggregateRemove}
+          onConditionalRemove={onConditionalRemove}
           onSlotTap={onSlotTap}
           activeSlotPath={activeSlotPath}
         />
@@ -327,6 +380,7 @@ function ExpressionNode({
           onGroupRemove={onGroupRemove}
           onAggregateRemove={onAggregateRemove}
           onRowAggregateRemove={onRowAggregateRemove}
+          onConditionalRemove={onConditionalRemove}
           onSlotTap={onSlotTap}
           activeSlotPath={activeSlotPath}
         />
@@ -403,6 +457,7 @@ function ExpressionNode({
         onGroupRemove={onGroupRemove}
         onAggregateRemove={onAggregateRemove}
         onRowAggregateRemove={onRowAggregateRemove}
+        onConditionalRemove={onConditionalRemove}
         onSlotTap={onSlotTap}
         activeSlotPath={activeSlotPath}
       />
@@ -432,6 +487,7 @@ function ExpressionNode({
         onGroupRemove={onGroupRemove}
         onAggregateRemove={onAggregateRemove}
         onRowAggregateRemove={onRowAggregateRemove}
+        onConditionalRemove={onConditionalRemove}
         onSlotTap={onSlotTap}
         activeSlotPath={activeSlotPath}
       />
@@ -444,6 +500,7 @@ export function FormulaLinearWorkspace({
   onGroupRemove,
   onAggregateRemove,
   onRowAggregateRemove,
+  onConditionalRemove,
   ...props
 }: FormulaLinearWorkspaceProps) {
   const { expression, outputKey } = props;
@@ -478,6 +535,7 @@ export function FormulaLinearWorkspace({
         onGroupRemove={onGroupRemove}
         onAggregateRemove={onAggregateRemove}
         onRowAggregateRemove={onRowAggregateRemove}
+        onConditionalRemove={onConditionalRemove}
       />
       {showContinuationAfter(expression) && (
         <ContinuationSlot

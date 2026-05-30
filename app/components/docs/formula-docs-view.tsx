@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTranslations } from "next-intl";
 import { Card } from "@/app/components/ui/card";
+import { FormulaCodeSnippet } from "@/app/components/docs/formula-code-snippet";
 import type {
   FormulaDocCategory,
   FormulaDocEntry,
@@ -77,7 +78,10 @@ function DocCard({
       : null;
 
   return (
-    <Card className="overflow-hidden border-border/80 p-0">
+    <Card
+      id={entry.id}
+      className="scroll-mt-24 overflow-hidden border-border/80 p-0"
+    >
       <div className="border-b border-border/60 bg-muted/30 px-4 py-3">
         <h3 className="font-semibold text-foreground">{title}</h3>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
@@ -87,17 +91,13 @@ function DocCard({
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {t("syntaxLabel")}
           </p>
-          <code className="block overflow-x-auto rounded-lg bg-muted/50 px-3 py-2 font-mono text-xs">
-            {entry.syntax}
-          </code>
+          <FormulaCodeSnippet code={entry.syntax} />
         </div>
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {t("exampleLabel")}
           </p>
-          <pre className="overflow-x-auto rounded-lg bg-muted/50 px-3 py-2 font-mono text-xs whitespace-pre-wrap">
-            {entry.example}
-          </pre>
+          <FormulaCodeSnippet code={entry.example} />
         </div>
         {blockUsage && (
           <div>
@@ -152,6 +152,22 @@ export function FormulaDocsView({ data }: { data: FormulaDocsData }) {
   const t = useTranslations("docs");
   const [tab, setTab] = useState<DocsTab>("formulas");
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (!hash) {
+      return;
+    }
+    const isScript = data.script.some((entry) => entry.id === hash);
+    if (isScript) {
+      setTab("script");
+    } else {
+      setTab("formulas");
+    }
+    requestAnimationFrame(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [data.script]);
 
   const byCategory = useMemo(() => {
     const map: Record<FormulaDocCategory, FormulaDocEntry[]> = {

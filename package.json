@@ -16,6 +16,7 @@
     "test:admin": "vitest run tests/admin",
     "test:access": "vitest run tests/access tests/auth",
     "test:api": "vitest run tests/api tests/platform",
+    "docs:build": "tsx scripts/build-formula-docs.ts",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",

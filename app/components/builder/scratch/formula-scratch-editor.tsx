@@ -31,6 +31,7 @@ import {
   getSlotExpression,
   moveExpressionToSlot,
   removeAggregateAt,
+  removeConditionalAt,
   removeGroupAt,
   removeRowAggregateAt,
   removeOperationAt,
@@ -137,6 +138,15 @@ export function FormulaScratchEditor({
         }
         return;
       }
+      if (workspace.kind === "conditional") {
+        const condExpr = getSlotExpression(expression, workspace.path);
+        if (condExpr.type === "conditional") {
+          setActiveDragLabel(
+            formatBlockExpression(condExpr, config, formulaTarget, quantityLabel),
+          );
+        }
+        return;
+      }
       if (workspace.kind === "slot") {
         const slotExpr = getSlotExpression(expression, workspace.path);
         if (slotExpr.type === "operand") {
@@ -218,6 +228,24 @@ export function FormulaScratchEditor({
               ] as SlotPath[])
             : path;
         onChange(applyPaletteToSlot(expression, insertPath, dragData));
+      } else if (
+        overData?.target === "conditional" &&
+        dragData.kind !== "conditional"
+      ) {
+        const condExpr = getSlotExpression(expression, path);
+        const branch: SlotPath =
+          condExpr.type === "conditional"
+            ? condExpr.condition.type === "empty"
+              ? "condition"
+              : condExpr.whenTrue.type === "empty"
+                ? "whenTrue"
+                : condExpr.whenFalse.type === "empty"
+                  ? "whenFalse"
+                  : "whenFalse"
+            : "condition";
+        onChange(
+          applyPaletteToSlot(expression, [...path, branch], dragData),
+        );
       } else {
         applyToSlot(path, dragData);
       }
@@ -264,7 +292,8 @@ export function FormulaScratchEditor({
       if (
         (workspaceActive.kind === "slot" ||
           workspaceActive.kind === "group" ||
-          workspaceActive.kind === "aggregate") &&
+          workspaceActive.kind === "aggregate" ||
+          workspaceActive.kind === "conditional") &&
         overPath
       ) {
         const destination =
@@ -423,6 +452,9 @@ export function FormulaScratchEditor({
             }
             onRowAggregateRemove={(path) =>
               onChange(removeRowAggregateAt(expression, path))
+            }
+            onConditionalRemove={(path) =>
+              onChange(removeConditionalAt(expression, path))
             }
             onSlotTap={handleSlotTap}
           />

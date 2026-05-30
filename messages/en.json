@@ -236,6 +236,8 @@
     "outputSnippetMargin": "Margin",
     "dragHandleAggregate": "Drag aggregate",
     "removeAggregate": "Remove aggregate",
+    "dragHandleConditional": "Drag conditional",
+    "removeConditional": "Remove conditional",
     "aggregateHint": "Add values separated by commas inside the function",
     "rowsLabel": "rows",
     "dragHandleRowAggregate": "Drag row aggregate",
@@ -268,7 +270,9 @@
     "codeModeScriptInvalid": "Could not apply script",
     "codeModeApply": "Apply",
     "codeModeRevert": "Cancel",
-    "codeModeClose": "Close"
+    "codeModeClose": "Close",
+    "codeModeDocsHelp": "Formula & code reference",
+    "paletteDocsHelp": "Open documentation for this block"
   },
   "admin": {
     "title": "Admin panel",
@@ -553,6 +557,11 @@
         "title": "MAX_ROWS",
         "description": "Maximum of an expression across table rows.",
         "blockUsage": "Drag **MAX rows** from the palette."
+      },
+      "if": {
+        "title": "IF",
+        "description": "Picks the second value when the condition is non-zero, otherwise the third.",
+        "blockUsage": "Drag **IF** and fill condition, then-branch, and else-branch."
       }
     },
     "operands": {

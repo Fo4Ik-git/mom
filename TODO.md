@@ -290,10 +290,10 @@
       - **Views:** блоки | formula code | full script — всё из JSON, не три копии
 
     - **8.4. Дальше**
-      - [ ] Palette/block-tree через formula registry (п.7 шаг 3) — palette [x], block-tree generic [ ]
-      - [ ] `IF`/`FOR` — новый `nodes/if.node.ts` + синтаксис в script
-      - [ ] `#use "template"` — пресеты калькулятора
-      - [ ] `docs/calculator-script.md`
+      - [x] Palette/block-tree через formula registry (п.7 шаг 3) — palette [x], block-tree generic [x] (`palette-from-registry.ts`)
+      - [x] `IF` — `nodes/if.node.ts` + `IF(cond, then, else)` в formula code і blocks UI; `FOR` — [ ] (planned)
+      - [x] `#use "template"` — пресет `print-shop-basic` (+ alias `platform/templates/print-shop`)
+      - [x] `docs/calculator-script.md`
 
     - **8.5. Multi-file script (несколько файлов вместо одного монолита)**
       - **Идея:** как в проекте с `.ts` / `.py` — логика разбита по файлам по смыслу; при Apply собирается один `CalculatorConfig`. В БД по-прежнему один config (или JSON bundle `{ files: Record<string, string> }` — решить на этапе реализации).
@@ -314,7 +314,7 @@
         - Либо один `main.calc` с `#include "inputs.calc"` (порядок = порядок merge)
       - **Include / import:**
         - [x] `#include "inputs.calc"` — merge declarations из included файлов (каждый файл один раз)
-        - [ ] `#use "platform/templates/print-shop"` — готовый пресет (п.8.4), read-only фрагмент
+        - [x] `#use "platform/templates/print-shop"` — готовый пресет (п.8.4), read-only фрагмент
         - [x] Циклы include запрещены; лимит глубины
       - **Parser / compiler pipeline:**
         - [x] `script/parse-source.ts`, `script/parse-file.ts` — один файл → declarations
@@ -363,30 +363,30 @@
     - **9.1. Источник правды**
       - [x] `lib/formula/docs/collect-formula-docs.ts` — syntax/example из primitives + `getAllConfigEntities()`
       - [x] Описания — `messages/*/docs.primitives.{id}.*` (i18n)
-      - [ ] Опционально: поле `doc` в primitive + `doc.example` override
-      - [ ] CI: проверка, что у каждого id в `ALL_PRIMITIVES` есть ключи в en + uk
+      - [x] Опционально: поле `doc` в primitive + `doc.example` override
+      - [x] CI: проверка i18n en + uk (`tests/docs/i18n-completeness.test.ts`, GitHub Actions)
 
     - **9.2. Страница `/docs`**
       - [x] Вкладки: **Формулы и блоки** | **Скрипт калькулятора**
       - [x] Категории: операторы, агрегаты, row aggregates, операнды, script keywords
       - [x] Поиск по названию / синтаксису / примеру
       - [x] Ссылка «Довідка» / «Help» в шапке
-      - [ ] Ссылка из билдера (иконка ? рядом с «Код»)
-      - [ ] Deep link ` /docs#sum` — прокрутка к блоку
+      - [x] Ссылка из билдера (иконка ? рядом с «Код»)
+      - [x] Deep link `/docs#sum` — прокрутка к блоку
 
     - **9.3. Библиотеки (не писать с нуля)**
       - [x] **react-markdown** + **remark-gfm** — intro и будущие guide-страницы
       - [ ] Опционально v2: **Fumadocs** / **Nextra** если нужен полноценный docs-сайт с sidebar
-      - [ ] Подсветка кода: **shiki** или **react-syntax-highlighter** в карточках примеров
+      - [x] Подсветка кода: `FormulaCodeSnippet` (лёгкий highlighter, MVP)
 
     - **9.4. Расширение**
-      - [ ] Hover «?» в палитре блоков → tooltip из того же `collectFormulaDocs`
-      - [ ] Экспорт статики `npm run docs:build` → JSON/Markdown для offline
+      - [x] «?» в палитре блоков → `/docs#{id}` + tooltip из i18n
+      - [x] Экспорт статики `npm run docs:build` → `docs/generated/`
       - [ ] Гайды (не autogen): «Перший калькулятор», «Line items», «Code mode» — MDX-страницы
 
     - **Порядок §9**
       1. [x] collect + `/docs` MVP
-      2. [ ] CI i18n completeness + link from builder
-      3. [ ] Tooltips из registry + syntax highlight
+      2. [x] CI i18n completeness + link from builder
+      3. [x] Tooltips из registry + syntax highlight
       4. [ ] MDX guides (ручные туториалы)
 

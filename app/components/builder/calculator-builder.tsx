@@ -7,6 +7,7 @@ import {
 } from "@/app/components/builder/builder-collapsible";
 import { ConstantsCard } from "@/app/components/builder/constants-card";
 import { ConfigCodeSheet } from "@/app/components/builder/config-code-sheet";
+import { DocsHelpLink } from "@/app/components/docs/docs-help-link";
 import { FormulaBuilder } from "@/app/components/builder/formula-builder";
 import { InputFieldsEditor } from "@/app/components/builder/input-fields-editor";
 import { OutputSnippetMenu } from "@/app/components/builder/output-snippet-menu";
@@ -624,7 +625,7 @@ export function CalculatorBuilder({
             </div>
           )}
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="outline"
@@ -633,6 +634,7 @@ export function CalculatorBuilder({
             >
               {t("codeModeOpen")}
             </Button>
+            <DocsHelpLink hash="input" />
             <Button
               onClick={handleSave}
               disabled={saving}

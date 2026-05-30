@@ -9,7 +9,7 @@ import type { FormulaSnippetPick } from "@/lib/formula/core/formula-snippets";
 export type PaletteBlock = {
   id: string;
   label: string;
-  category: "operand" | "operator" | "constant" | "group" | "snippet" | "aggregate" | "rowAggregate";
+  category: "operand" | "operator" | "constant" | "group" | "snippet" | "aggregate" | "rowAggregate" | "conditional";
   color:
     | "quantity"
     | "property"
@@ -21,13 +21,15 @@ export type PaletteBlock = {
     | "group"
     | "snippet"
     | "aggregate"
-    | "rowAggregate";
+    | "rowAggregate"
+    | "conditional";
   dragData:
     | { kind: "operand"; operand: BlockOperand }
     | { kind: "operator"; operator: FormulaOperator }
     | { kind: "group" }
     | { kind: "aggregate"; function: AggregateFunction }
     | { kind: "rowAggregate"; fieldId: string; function: AggregateFunction }
+    | { kind: "conditional" }
     | { kind: "expression"; expression: BlockExpression };
   pick?: FormulaSnippetPick;
   meta?: {
@@ -56,5 +58,7 @@ export const BLOCK_COLORS = {
     "bg-cyan-500/15 text-cyan-900 border-cyan-400/50 dark:text-cyan-100",
   rowAggregate:
     "bg-indigo-500/15 text-indigo-900 border-indigo-400/50 dark:text-indigo-100",
+  conditional:
+    "bg-rose-500/15 text-rose-900 border-rose-400/50 dark:text-rose-100",
   empty: "border-dashed border-border bg-card/50 text-muted-foreground",
 };

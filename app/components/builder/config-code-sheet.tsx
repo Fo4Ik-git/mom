@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { FormulaCodeEditor } from "@/app/components/builder/formula-code-editor";
+import { DocsHelpLink } from "@/app/components/docs/docs-help-link";
 import { finalizeConfig } from "@/lib/calculator/config/sync";
 import { formatScriptProject } from "@/lib/calculator/script/format-project";
 import { parseScriptProject } from "@/lib/calculator/script/parse-project";
@@ -136,13 +137,16 @@ export function ConfigCodeSheet({
         className="fixed inset-y-0 right-0 z-50 flex w-full max-w-3xl flex-col border-l border-border bg-card shadow-card-lg"
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-3">
-          <div className="min-w-0">
-            <h3
-              id="config-code-sheet-title"
-              className="text-base font-semibold text-foreground"
-            >
-              {t("codeModeSheetTitle")}
-            </h3>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3
+                id="config-code-sheet-title"
+                className="text-base font-semibold text-foreground"
+              >
+                {t("codeModeSheetTitle")}
+              </h3>
+              <DocsHelpLink hash="input" />
+            </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {t("codeModeProjectHint")}
             </p>

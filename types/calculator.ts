@@ -93,6 +93,12 @@ export const blockExpressionSchema: z.ZodType<BlockExpression> = z.lazy(() =>
       function: z.enum(["SUM", "COUNT", "AVG", "MIN", "MAX"]),
       inner: blockExpressionSchema,
     }),
+    z.object({
+      type: z.literal("conditional"),
+      condition: blockExpressionSchema,
+      whenTrue: blockExpressionSchema,
+      whenFalse: blockExpressionSchema,
+    }),
   ]),
 );
 
@@ -112,6 +118,12 @@ export type BlockExpression =
       fieldId: string;
       function: AggregateFunction;
       inner: BlockExpression;
+    }
+  | {
+      type: "conditional";
+      condition: BlockExpression;
+      whenTrue: BlockExpression;
+      whenFalse: BlockExpression;
     };
 
 export type LineItemRow = Record<string, number>;
@@ -237,6 +249,15 @@ export function emptyRowAggregateExpression(
   };
 }
 
+export function emptyConditionalExpression(): BlockExpression {
+  return {
+    type: "conditional",
+    condition: emptyBlockExpression(),
+    whenTrue: emptyBlockExpression(),
+    whenFalse: emptyBlockExpression(),
+  };
+}
+
 export function isArgPathSegment(segment: string): boolean {
   return /^\d+$/.test(segment);
 }
@@ -257,7 +278,8 @@ export function normalizeBlockExpression(data: unknown): BlockExpression {
     record.type === "operation" ||
     record.type === "group" ||
     record.type === "aggregate" ||
-    record.type === "rowAggregate"
+    record.type === "rowAggregate" ||
+    record.type === "conditional"
   ) {
     return blockExpressionSchema.parse(data);
   }

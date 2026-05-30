@@ -278,3 +278,73 @@ export function rowAggregateCompletion(fn: AggregateFunction): FormulaCompletion
     detail: "Line items aggregate",
   };
 }
+
+const CONDITIONAL_BRANCHES = ["condition", "whenTrue", "whenFalse"] as const;
+
+export function formatConditionalCode(
+  node: BlockExpression,
+  ctx: FormulaCodeFormatContext,
+): string {
+  if (node.type !== "conditional") {
+    return "?";
+  }
+  const parts = CONDITIONAL_BRANCHES.map((branch) =>
+    ctx.formatChild(node[branch], { rowFieldId: ctx.rowFieldId }),
+  );
+  return `IF(${parts.join(", ")})`;
+}
+
+export function formatConditionalLabel(
+  node: BlockExpression,
+  ctx: FormulaDisplayContext,
+): string {
+  if (node.type !== "conditional") {
+    return "?";
+  }
+  const parts = CONDITIONAL_BRANCHES.map((branch) => ctx.formatChild(node[branch]));
+  return `IF(${parts.join(", ")})`;
+}
+
+export function parseConditionalCall(
+  keyword: string,
+  ctx: FormulaCodeParseContext,
+): BlockExpression | null {
+  if (keyword !== "IF") {
+    return null;
+  }
+  if (!ctx.peekIsLParen()) {
+    ctx.fail('Expected "(" after IF', ctx.identEnd);
+  }
+  ctx.expectLParen();
+  const args = ctx.parseArgumentList();
+  ctx.expectRParen();
+  if (args.length !== 3) {
+    ctx.fail("IF requires exactly 3 arguments: condition, then, else", ctx.identEnd);
+  }
+  return {
+    type: "conditional",
+    condition: args[0]!,
+    whenTrue: args[1]!,
+    whenFalse: args[2]!,
+  };
+}
+
+export function conditionalPaletteItem() {
+  return {
+    id: "if",
+    label: "IF",
+    category: "conditional" as const,
+    color: "conditional" as const,
+    meta: { title: "IF", hint: "IF(condition, then, else)" },
+    dragData: { kind: "conditional" as const },
+  };
+}
+
+export function conditionalCompletion(): FormulaCompletionItem {
+  return {
+    label: "IF",
+    type: "keyword",
+    insertText: "IF($0, , )",
+    detail: "Conditional: non-zero condition picks then-branch, else else-branch",
+  };
+}

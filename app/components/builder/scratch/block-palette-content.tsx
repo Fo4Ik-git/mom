@@ -16,6 +16,8 @@ import {
   type PaletteTab,
 } from "@/lib/formula/blocks/palette-organizer";
 import { DraggableBlock } from "@/app/components/builder/scratch/draggable-block";
+import { Link } from "@/i18n/navigation";
+import { paletteBlockDocId } from "@/lib/formula/docs/palette-doc-id";
 
 interface BlockPaletteContentProps {
   config: CalculatorConfig;
@@ -45,19 +47,39 @@ function PaletteItemRow({
   compact?: boolean;
   centered?: boolean;
 }) {
+  const tDocs = useTranslations("docs");
+  const tBuilder = useTranslations("builder");
   const title = block.meta?.title ?? block.label;
   const hint = block.meta?.hint;
+  const docId = paletteBlockDocId(block);
 
   return (
     <button
       type="button"
       onClick={onTap}
-      className={`flex w-full touch-manipulation rounded-xl border px-3 py-2 shadow-sm active:scale-[0.99] ${BLOCK_COLORS[block.color]} ${compact ? "min-h-[40px]" : "min-h-[44px]"} ${
+      className={`relative flex w-full touch-manipulation rounded-xl border px-3 py-2 shadow-sm active:scale-[0.99] ${BLOCK_COLORS[block.color]} ${compact ? "min-h-[40px]" : "min-h-[44px]"} ${
         centered
           ? "flex-col items-center justify-center text-center"
           : "items-start gap-2 text-left"
       }`}
     >
+      {docId && (
+        <Link
+          href={`/docs#${docId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(event) => event.stopPropagation()}
+          className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-md border border-border/80 bg-background/80 text-[10px] font-bold text-muted-foreground hover:text-foreground"
+          title={
+            tDocs.has(`primitives.${docId}.title`)
+              ? tDocs(`primitives.${docId}.title`)
+              : tBuilder("paletteDocsHelp")
+          }
+          aria-label={tBuilder("paletteDocsHelp")}
+        >
+          ?
+        </Link>
+      )}
       <span className={centered ? "min-w-0 w-full" : "min-w-0 flex-1"}>
         <span className="block truncate text-sm font-medium leading-snug">
           {title}
@@ -168,13 +190,14 @@ export function BlockPaletteContent({
   );
 
   const rowAggregates = blocks.filter((b) => b.category === "rowAggregate");
+  const conditionals = blocks.filter((b) => b.category === "conditional");
   const filteredActions = useMemo(
     () =>
       filterPaletteBlocks(
-        [...operators, ...groups, ...aggregates, ...rowAggregates],
+        [...operators, ...groups, ...aggregates, ...rowAggregates, ...conditionals],
         query,
       ),
-    [operators, groups, aggregates, rowAggregates, query],
+    [operators, groups, aggregates, rowAggregates, conditionals, query],
   );
 
   const tabCounts = {

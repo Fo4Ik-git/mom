@@ -26,6 +26,9 @@ export function flattenExpression(
   if (expression.type === "aggregate" || expression.type === "rowAggregate") {
     return [];
   }
+  if (expression.type === "conditional") {
+    return [];
+  }
 
   if (expression.type === "group") {
     return flattenExpression(expression.inner, [...path, "inner"]);
@@ -64,6 +67,9 @@ export function isReorderableChain(expression: BlockExpression): boolean {
     return false;
   }
   if (expression.type === "rowAggregate") {
+    return false;
+  }
+  if (expression.type === "conditional") {
     return false;
   }
   if (expression.type === "empty" || expression.type === "operand") {

@@ -105,4 +105,12 @@ describe("block tree (builder scratch editor)", () => {
       expect(root.operand.value).toBe(5);
     }
   });
+
+  it("applyPaletteToSlot inserts IF via registry dispatch", () => {
+    const root = applyPaletteToSlot(emptyBlockExpression(), [], {
+      source: "palette",
+      kind: "conditional",
+    });
+    expect(root.type).toBe("conditional");
+  });
 });

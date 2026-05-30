@@ -5,9 +5,7 @@ import type {
   FormulaOperator,
 } from "@/types/calculator";
 import {
-  emptyAggregateExpression,
   emptyBlockExpression,
-  emptyRowAggregateExpression,
   isArgPathSegment,
 } from "@/types/calculator";
 import {
@@ -17,12 +15,16 @@ import {
   setAggregateArgAt,
   unwrapAggregate,
 } from "@/lib/formula/core/aggregate-helpers";
+import { createExpressionFromPaletteDrag } from "@/lib/formula/blocks/palette-from-registry";
 
 export type SlotPath =
   | "left"
   | "right"
   | "inner"
   | "continue"
+  | "condition"
+  | "whenTrue"
+  | "whenFalse"
   | typeof AGGREGATE_APPEND_SLOT
   | `${number}`;
 
@@ -232,6 +234,7 @@ export type PaletteDragData =
       fieldId: string;
       function: AggregateFunction;
     }
+  | { source: "palette"; kind: "conditional" }
   | { source: "palette"; kind: "expression"; expression: BlockExpression };
 
 export function isExpressionFilled(expression: BlockExpression): boolean {
@@ -243,6 +246,13 @@ export function isExpressionFilled(expression: BlockExpression): boolean {
   }
   if (expression.type === "rowAggregate") {
     return isExpressionFilled(expression.inner);
+  }
+  if (expression.type === "conditional") {
+    return (
+      isExpressionFilled(expression.condition) ||
+      isExpressionFilled(expression.whenTrue) ||
+      isExpressionFilled(expression.whenFalse)
+    );
   }
   return expression.type !== "empty";
 }
@@ -276,6 +286,17 @@ export function getSlotExpression(
         return emptyBlockExpression();
       }
       current = current.inner;
+      continue;
+    }
+    if (current.type === "conditional") {
+      if (
+        slot !== "condition" &&
+        slot !== "whenTrue" &&
+        slot !== "whenFalse"
+      ) {
+        return emptyBlockExpression();
+      }
+      current = current[slot];
       continue;
     }
     if (current.type !== "operation") {
@@ -337,6 +358,24 @@ export function setSlotExpression(
     };
   }
 
+  if (root.type === "conditional") {
+    const [slot, ...rest] = path;
+    if (
+      slot !== "condition" &&
+      slot !== "whenTrue" &&
+      slot !== "whenFalse"
+    ) {
+      return root;
+    }
+    if (rest.length === 0) {
+      return { ...root, [slot]: value };
+    }
+    return {
+      ...root,
+      [slot]: setSlotExpression(root[slot], rest, value),
+    };
+  }
+
   if (root.type !== "operation") {
     const operation: BlockExpression = {
       type: "operation",
@@ -376,16 +415,11 @@ export function applyPaletteToSlot(
     return setSlotExpression(root, path, { type: "group", inner });
   }
 
-  if (item.source === "palette" && item.kind === "aggregate") {
-    return setSlotExpression(root, path, emptyAggregateExpression(item.function));
-  }
-
-  if (item.source === "palette" && item.kind === "rowAggregate") {
-    return setSlotExpression(
-      root,
-      path,
-      emptyRowAggregateExpression(item.fieldId, item.function),
-    );
+  if (item.source === "palette") {
+    const created = createExpressionFromPaletteDrag(item);
+    if (created) {
+      return setSlotExpression(root, path, created);
+    }
   }
 
   if (item.source === "palette" && item.kind === "operator") {
@@ -521,6 +555,34 @@ export function removeRowAggregateAt(
   return setSlotExpression(root, aggregatePath, replacement);
 }
 
+export function removeConditionalAt(
+  root: BlockExpression,
+  conditionalPath: SlotPath[],
+): BlockExpression {
+  const node =
+    conditionalPath.length === 0
+      ? root
+      : getSlotExpression(root, conditionalPath);
+
+  if (node.type !== "conditional") {
+    return root;
+  }
+
+  const replacement = isExpressionFilled(node.whenTrue)
+    ? node.whenTrue
+    : isExpressionFilled(node.whenFalse)
+      ? node.whenFalse
+      : isExpressionFilled(node.condition)
+        ? node.condition
+        : emptyBlockExpression();
+
+  if (conditionalPath.length === 0) {
+    return replacement;
+  }
+
+  return setSlotExpression(root, conditionalPath, replacement);
+}
+
 /** Remove an operation node; keeps a filled child if any, otherwise empty. */
 export function removeOperationAt(
   root: BlockExpression,
@@ -626,6 +688,7 @@ export type WorkspaceDragData =
   | { source: "workspace"; kind: "slot"; path: SlotPath[] }
   | { source: "workspace"; kind: "group"; path: SlotPath[] }
   | { source: "workspace"; kind: "aggregate"; path: SlotPath[]; function: AggregateFunction }
+  | { source: "workspace"; kind: "conditional"; path: SlotPath[] }
   | {
       source: "workspace";
       kind: "operator";

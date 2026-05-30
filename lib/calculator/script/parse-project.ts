@@ -13,6 +13,7 @@ import {
   parseProjectFileWithIncludes,
   validateIncludeGraph,
 } from "@/lib/calculator/script/resolve-includes";
+import { applyTemplateUses } from "@/lib/calculator/script/resolve-use";
 import {
   FILE_PARSE_ORDER,
   type ScriptProject,
@@ -69,7 +70,12 @@ export function parseScriptProject(
   project: ScriptProject,
   baseConfig?: CalculatorConfig,
 ): ScriptParseResult {
-  const { entries, errors } = parseProjectEntries(project);
+  const { project: resolvedProject, errors: useErrors } = applyTemplateUses(project);
+  if (useErrors.length > 0) {
+    return { config: null, errors: useErrors };
+  }
+
+  const { entries, errors } = parseProjectEntries(resolvedProject);
   let totalDeclarations = 0;
   for (const entry of entries) {
     totalDeclarations += entry.declarations.length;
@@ -98,7 +104,7 @@ export function parseScriptProject(
     const renames = detectScriptIdRenames(baseConfig, config);
     if (hasScriptIdRenames(renames)) {
       config = applyScriptIdRenamesToConfig(config, renames);
-      nextProject = rewriteScriptProjectSources(project, renames);
+      nextProject = rewriteScriptProjectSources(resolvedProject, renames);
     }
   }
 
@@ -129,7 +135,11 @@ export function partialConfigFromProject(
   project: ScriptProject,
   baseConfig: CalculatorConfig,
 ): CalculatorConfig {
-  const { entries, errors } = parseProjectEntries(project);
+  const { project: resolvedProject, errors: useErrors } = applyTemplateUses(project);
+  if (useErrors.length > 0) {
+    return baseConfig;
+  }
+  const { entries, errors } = parseProjectEntries(resolvedProject);
   if (errors.length > 0) {
     return baseConfig;
   }

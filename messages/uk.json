@@ -236,6 +236,8 @@
     "outputSnippetMargin": "Маржа",
     "dragHandleAggregate": "Перетягнути агрегат",
     "removeAggregate": "Прибрати агрегат",
+    "dragHandleConditional": "Перетягнути умову",
+    "removeConditional": "Прибрати IF",
     "aggregateHint": "Додавайте значення через кому всередині функції",
     "rowsLabel": "рядки",
     "dragHandleRowAggregate": "Перетягнути агрегат по рядках",
@@ -268,7 +270,9 @@
     "codeModeScriptInvalid": "Не вдалося застосувати скрипт",
     "codeModeApply": "Застосувати",
     "codeModeRevert": "Скасувати",
-    "codeModeClose": "Закрити"
+    "codeModeClose": "Закрити",
+    "codeModeDocsHelp": "Довідка з формул і коду",
+    "paletteDocsHelp": "Відкрити документацію для цього блоку"
   },
   "admin": {
     "title": "Адмін-панель",
@@ -553,6 +557,11 @@
         "title": "MAX_ROWS",
         "description": "Максимум виразу по рядках таблиці.",
         "blockUsage": "Перетягніть **MAX rows** з палитри."
+      },
+      "if": {
+        "title": "IF",
+        "description": "Повертає другий аргумент, якщо умова не нуль; інакше — третій.",
+        "blockUsage": "Перетягніть **IF** і заповніть умову, гілку «так» та «ні»."
       }
     },
     "operands": {
