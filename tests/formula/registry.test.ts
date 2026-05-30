@@ -10,6 +10,7 @@ import {
   mergePaletteItems,
   parseCodeCallViaRegistry,
 } from "@/lib/formula/nodes/registry";
+import { generateDefaultCompletions } from "@/lib/formula/nodes/generate-completions";
 
 describe("formula registry", () => {
   it("registers all primitives with unique ids", () => {
@@ -27,9 +28,12 @@ describe("formula registry", () => {
 
   it("exposes infix symbols with precedence", () => {
     const symbols = getRegisteredInfixSymbols();
-    expect(symbols.sort()).toEqual(["*", "+", "-", "/"]);
+    expect(symbols).toContain("+");
+    expect(symbols).toContain(">");
+    expect(symbols).toContain("==");
     expect(getInfixPrecedence("+")).toBe(1);
     expect(getInfixPrecedence("*")).toBe(2);
+    expect(getInfixPrecedence(">")).toBe(0);
     expect(getInfixPrecedence("?")).toBeNull();
   });
 
@@ -53,6 +57,21 @@ describe("formula registry", () => {
     expect(labels).toContain("SUM");
     expect(labels).toContain("COUNT");
     expect(labels).toContain("AVG_ROWS");
+    expect(labels).toContain("IF");
+  });
+
+  it("auto-generates completions for primitives without explicit completions", () => {
+    for (const primitive of getAllFormulaPrimitives()) {
+      if (primitive.infix || primitive.completions) {
+        continue;
+      }
+      if (!primitive.call?.keyword) {
+        continue;
+      }
+      const generated = generateDefaultCompletions(primitive);
+      expect(generated.length).toBeGreaterThan(0);
+      expect(generated[0]?.label).toBe(primitive.call.keyword);
+    }
   });
 
   it("parseCodeCallViaRegistry returns null for unknown keyword", () => {

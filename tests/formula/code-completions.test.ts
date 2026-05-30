@@ -12,6 +12,7 @@ describe("formula code completions (builder code editor)", () => {
       fieldId: "output_total",
     });
     expect(items.some((item) => item.label === "SUM")).toBe(true);
+    expect(items.some((item) => item.label === "IF")).toBe(true);
     expect(items.some((item) => item.label.includes("field_item"))).toBe(true);
     expect(items.some((item) => item.label === "const_factor")).toBe(true);
   });

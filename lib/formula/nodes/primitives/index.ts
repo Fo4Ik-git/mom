@@ -10,6 +10,7 @@
 import type { FormulaPrimitiveDefinition } from "@/lib/formula/nodes/_definition";
 import { avgPrimitive } from "@/lib/formula/nodes/primitives/avg.node";
 import { avgRowsPrimitive } from "@/lib/formula/nodes/primitives/avg-rows.node";
+import { COMPARISON_PRIMITIVES } from "@/lib/formula/nodes/primitives/comparisons.node";
 import { countPrimitive } from "@/lib/formula/nodes/primitives/count.node";
 import { countRowsPrimitive } from "@/lib/formula/nodes/primitives/count-rows.node";
 import { dividePrimitive } from "@/lib/formula/nodes/primitives/divide.node";
@@ -40,6 +41,7 @@ export const ALL_PRIMITIVES: FormulaPrimitiveDefinition[] = [
   minRowsPrimitive,
   maxRowsPrimitive,
   ifPrimitive,
+  ...COMPARISON_PRIMITIVES,
 ];
 
 export function getAllPrimitives() {

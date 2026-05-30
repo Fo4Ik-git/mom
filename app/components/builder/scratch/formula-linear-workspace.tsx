@@ -279,6 +279,14 @@ function ExpressionNode({
               onSlotTap={onSlotTap}
               activeSlotPath={activeSlotPath}
             />
+            {showContinuationAfter(expression[branch.key]) && (
+              <ContinuationSlot
+                outputKey={outputKey}
+                path={[...path, branch.key, "continue"]}
+                onSlotTap={onSlotTap}
+                activeSlotPath={activeSlotPath}
+              />
+            )}
           </span>
         ))}
       </ConditionalBracket>

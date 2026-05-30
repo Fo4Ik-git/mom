@@ -1,5 +1,4 @@
 import { filledAggregateArgs } from "@/lib/formula/core/aggregate-helpers";
-import type { FormulaCompletionItem } from "@/lib/formula/code/formula-code-completions";
 import { isLineItemsField, rowAggregateLabel } from "@/lib/calculator/fields/line-items";
 import type { EvalContext } from "@/lib/formula/runtime/block-evaluate";
 import type {
@@ -23,13 +22,30 @@ export const INFIX_PRECEDENCE: Record<FormulaOperator, number> = {
   "-": 1,
   "*": 2,
   "/": 2,
+  ">": 0,
+  "<": 0,
+  ">=": 0,
+  "<=": 0,
+  "==": 0,
+  "!=": 0,
 };
+
+export type ComparisonOperator = Extract<
+  FormulaOperator,
+  ">" | "<" | ">=" | "<=" | "==" | "!="
+>;
 
 const OP_LABELS: Record<FormulaOperator, string> = {
   "+": "+",
   "-": "−",
   "*": "×",
   "/": "÷",
+  ">": ">",
+  "<": "<",
+  ">=": "≥",
+  "<=": "≤",
+  "==": "=",
+  "!=": "≠",
 };
 
 export function formatBinaryCode(
@@ -38,7 +54,7 @@ export function formatBinaryCode(
   operator: FormulaOperator,
 ): string {
   const prec = INFIX_PRECEDENCE[operator];
-  const leftStr = ctx.formatChild(node.left, {
+  let leftStr = ctx.formatChild(node.left, {
     rowFieldId: ctx.rowFieldId,
     parentPrec: prec,
   });
@@ -51,9 +67,20 @@ export function formatBinaryCode(
   if (
     node.right.type === "operation" &&
     (INFIX_PRECEDENCE[node.right.operator] ?? 0) <= prec &&
-    (operator === "-" || operator === "/")
+    (operator === "-" ||
+      operator === "/" ||
+      (INFIX_PRECEDENCE[operator] ?? 0) === 0)
   ) {
     rightStr = `(${rightStr})`;
+  }
+
+  if (
+    node.left.type === "operation" &&
+    (INFIX_PRECEDENCE[node.left.operator] ?? 0) === 0 &&
+    (INFIX_PRECEDENCE[operator] ?? 0) === 0 &&
+    operator !== node.left.operator
+  ) {
+    leftStr = `(${leftStr})`;
   }
 
   return `${leftStr} ${operator} ${rightStr}`;
@@ -82,14 +109,69 @@ export function operatorPaletteItem(
   operator: FormulaOperator,
   label?: string,
 ) {
-  const paletteLabel =
-    label ?? (operator === "*" ? "×" : operator === "/" ? "÷" : operator);
+  const paletteLabel = label ?? OP_LABELS[operator];
   return {
     id: `op-${operator}`,
     label: paletteLabel,
     category: "operator" as const,
     color: "operator" as const,
     dragData: { kind: "operator" as const, operator },
+  };
+}
+
+export function evalComparisonOperands(
+  left: number,
+  operator: ComparisonOperator,
+  right: number,
+): number {
+  switch (operator) {
+    case ">":
+      return left > right ? 1 : 0;
+    case "<":
+      return left < right ? 1 : 0;
+    case ">=":
+      return left >= right ? 1 : 0;
+    case "<=":
+      return left <= right ? 1 : 0;
+    case "==":
+      return left === right ? 1 : 0;
+    case "!=":
+      return left !== right ? 1 : 0;
+  }
+}
+
+export function createComparisonPrimitive(
+  id: string,
+  symbol: ComparisonOperator,
+): import("@/lib/formula/nodes/_definition").FormulaPrimitiveDefinition {
+  return {
+    id,
+    astType: "operation",
+    matchNode: (node) => node.type === "operation" && node.operator === symbol,
+    infix: { symbol, precedence: INFIX_PRECEDENCE[symbol] },
+    evaluate: (node, context, evaluateChild) => {
+      if (node.type !== "operation" || node.operator !== symbol) {
+        return 0;
+      }
+      return evalComparisonOperands(
+        evaluateChild(node.left, context),
+        symbol,
+        evaluateChild(node.right, context),
+      );
+    },
+    formatCode: (node, ctx) => {
+      if (node.type !== "operation" || node.operator !== symbol) {
+        return "?";
+      }
+      return formatBinaryCode(node, ctx, symbol);
+    },
+    formatLabel: (node, ctx) => {
+      if (node.type !== "operation" || node.operator !== symbol) {
+        return "?";
+      }
+      return formatBinaryLabel(node, ctx, symbol);
+    },
+    paletteItems: () => [operatorPaletteItem(symbol)],
   };
 }
 
@@ -160,18 +242,6 @@ export function aggregatePaletteItem(fn: AggregateFunction) {
     color: "aggregate" as const,
     meta: { title: fn, hint: `${fn}( … )` },
     dragData: { kind: "aggregate" as const, function: fn },
-  };
-}
-
-export function aggregateCompletion(
-  fn: AggregateFunction,
-  detail?: string,
-): FormulaCompletionItem {
-  return {
-    label: fn,
-    type: "keyword",
-    insertText: `${fn}($0)`,
-    detail,
   };
 }
 
@@ -269,16 +339,6 @@ export function rowAggregatePaletteItems(
   return blocks;
 }
 
-export function rowAggregateCompletion(fn: AggregateFunction): FormulaCompletionItem {
-  const keyword = `${fn}_ROWS`;
-  return {
-    label: keyword,
-    type: "keyword",
-    insertText: `${keyword}(field_id, row.qty * row.var_cost)`,
-    detail: "Line items aggregate",
-  };
-}
-
 const CONDITIONAL_BRANCHES = ["condition", "whenTrue", "whenFalse"] as const;
 
 export function formatConditionalCode(
@@ -337,14 +397,5 @@ export function conditionalPaletteItem() {
     color: "conditional" as const,
     meta: { title: "IF", hint: "IF(condition, then, else)" },
     dragData: { kind: "conditional" as const },
-  };
-}
-
-export function conditionalCompletion(): FormulaCompletionItem {
-  return {
-    label: "IF",
-    type: "keyword",
-    insertText: "IF($0, , )",
-    detail: "Conditional: non-zero condition picks then-branch, else else-branch",
   };
 }

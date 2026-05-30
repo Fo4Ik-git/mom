@@ -13,6 +13,14 @@ function operatorSymbol(operator: FormulaOperator): string {
       return "×";
     case "/":
       return "÷";
+    case ">=":
+      return "≥";
+    case "<=":
+      return "≤";
+    case "==":
+      return "=";
+    case "!=":
+      return "≠";
     default:
       return operator;
   }

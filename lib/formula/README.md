@@ -40,7 +40,7 @@ primitives/
 | **eval** | `evaluateExpressionViaRegistry` |
 | **код** | parse (`parseCodeCall` / infix), format (`formatCode`) |
 | **блоки** | палитра DnD (`paletteItems`) |
-| **autocomplete** | `completions` у code mode |
+| **autocomplete** | auto з `call` + `astType` (`generateDefaultCompletions`); опційно `completions` override |
 
 ### Додати новий примітив
 

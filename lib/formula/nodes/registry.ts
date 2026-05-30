@@ -11,6 +11,7 @@ import type {
   FormulaPaletteContext,
   FormulaPrimitiveDefinition,
 } from "@/lib/formula/nodes/_definition";
+import { generateDefaultCompletions } from "@/lib/formula/nodes/generate-completions";
 import { formatOperandCode } from "@/lib/formula/nodes/reference-code";
 import { emptyNode } from "@/lib/formula/nodes/empty.node";
 import { groupNode } from "@/lib/formula/nodes/group.node";
@@ -164,7 +165,10 @@ export function mergeNodeCompletions(
   }
 
   for (const primitive of ALL_PRIMITIVES) {
-    for (const item of primitive.completions?.(config, target) ?? []) {
+    const items =
+      primitive.completions?.(config, target) ??
+      generateDefaultCompletions(primitive);
+    for (const item of items) {
       merged.set(item.label, item);
     }
   }

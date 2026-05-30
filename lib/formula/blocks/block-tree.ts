@@ -201,6 +201,16 @@ export function applyContinueAtPath(
     });
   }
 
+  if (
+    parent.type === "conditional" &&
+    (slot === "condition" || slot === "whenTrue" || slot === "whenFalse")
+  ) {
+    return setSlotExpression(root, parentPath, {
+      ...parent,
+      [slot]: applyAfterExpression(anchor, item),
+    });
+  }
+
   return setSlotExpression(
     root,
     anchorPath,

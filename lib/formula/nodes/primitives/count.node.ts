@@ -1,6 +1,5 @@
 import type { FormulaPrimitiveDefinition } from "@/lib/formula/nodes/_definition";
 import {
-  aggregateCompletion,
   aggregatePaletteItem,
   evalAggregateArgValues,
   formatAggregateCode,
@@ -26,5 +25,4 @@ export const countPrimitive: FormulaPrimitiveDefinition = {
   formatLabel: (node, ctx) => formatAggregateLabel(KEYWORD, node, ctx),
   parseCodeCall: (keyword, ctx) => parseAggregateCall(keyword, KEYWORD, ctx),
   paletteItems: () => [aggregatePaletteItem(KEYWORD)],
-  completions: () => [aggregateCompletion(KEYWORD, "Count of values")],
 };

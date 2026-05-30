@@ -1,6 +1,5 @@
 import type { FormulaPrimitiveDefinition } from "@/lib/formula/nodes/_definition";
 import {
-  conditionalCompletion,
   conditionalPaletteItem,
   formatConditionalCode,
   formatConditionalLabel,
@@ -27,8 +26,7 @@ export const ifPrimitive: FormulaPrimitiveDefinition = {
   formatLabel: (node, ctx) => formatConditionalLabel(node, ctx),
   parseCodeCall: (keyword, ctx) => parseConditionalCall(keyword, ctx),
   paletteItems: () => [conditionalPaletteItem()],
-  completions: () => [conditionalCompletion()],
   doc: {
-    example: "IF(field_item.qty, field_item.var_price, 0)",
+    example: "IF(field_item.qty > 10, field_item.var_price, 0)",
   },
 };

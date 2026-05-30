@@ -5,6 +5,12 @@ const OPERATOR_DOC_IDS: Record<string, string> = {
   "-": "minus",
   "*": "multiply",
   "/": "divide",
+  ">": "gt",
+  "<": "lt",
+  ">=": "gte",
+  "<=": "lte",
+  "==": "eq",
+  "!=": "neq",
 };
 
 /** Map palette block → `/docs#{id}` anchor (primitives only). */

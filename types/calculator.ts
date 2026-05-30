@@ -31,7 +31,24 @@ export const inputFieldSchema = z.object({
     .optional(),
 });
 
-export type FormulaOperator = "+" | "-" | "*" | "/";
+export const FORMULA_OPERATORS = [
+  "+",
+  "-",
+  "*",
+  "/",
+  ">",
+  "<",
+  ">=",
+  "<=",
+  "==",
+  "!=",
+] as const;
+
+export type FormulaOperator = (typeof FORMULA_OPERATORS)[number];
+
+export function isFormulaOperator(value: string): value is FormulaOperator {
+  return (FORMULA_OPERATORS as readonly string[]).includes(value);
+}
 
 export type AggregateFunction = "SUM" | "COUNT" | "AVG" | "MIN" | "MAX";
 
@@ -77,7 +94,7 @@ export const blockExpressionSchema: z.ZodType<BlockExpression> = z.lazy(() =>
     z.object({ type: z.literal("operand"), operand: blockOperandSchema }),
     z.object({
       type: z.literal("operation"),
-      operator: z.enum(["+", "-", "*", "/"]),
+      operator: z.enum(FORMULA_OPERATORS),
       left: blockExpressionSchema,
       right: blockExpressionSchema,
     }),

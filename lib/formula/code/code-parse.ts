@@ -2,7 +2,7 @@ import type {
   BlockExpression,
   BlockOperand,
 } from "@/types/calculator";
-import { emptyBlockExpression } from "@/types/calculator";
+import { emptyBlockExpression, isFormulaOperator } from "@/types/calculator";
 import { filledAggregateArgs } from "@/lib/formula/core/aggregate-helpers";
 import { parseCodeReference } from "@/lib/formula/nodes/reference-code";
 import {
@@ -61,6 +61,21 @@ function tokenize(source: string): Token[] {
       tokens.push({ type: "op", value: char, start, end: i + 1 });
       i += 1;
       continue;
+    }
+
+    if (char === ">" || char === "<" || char === "!" || char === "=") {
+      const pair = source.slice(i, i + 2);
+      if (pair === ">=" || pair === "<=" || pair === "!=" || pair === "==") {
+        tokens.push({ type: "op", value: pair, start, end: i + 2 });
+        i += 2;
+        continue;
+      }
+      if (char === ">" || char === "<") {
+        tokens.push({ type: "op", value: char, start, end: i + 1 });
+        i += 1;
+        continue;
+      }
+      throw new FormulaParseError(`Unexpected character "${char}"`, start);
     }
 
     if (char >= "0" && char <= "9") {
@@ -152,11 +167,17 @@ class Parser {
       if (prec < minPrec) {
         break;
       }
+      if (!isFormulaOperator(opToken.value)) {
+        throw new FormulaParseError(
+          `Unknown operator "${opToken.value}"`,
+          opToken.start,
+        );
+      }
       this.advance();
       const right = this.parseExpression(prec + 1);
       left = {
         type: "operation",
-        operator: opToken.value as "+" | "-" | "*" | "/",
+        operator: opToken.value,
         left,
         right,
       };
@@ -384,11 +405,10 @@ export function normalizeParsedExpression(
     return expression;
   }
   if (expression.type === "group") {
-    const inner = normalizeParsedExpression(expression.inner);
-    if (inner.type === "operand" || inner.type === "operation") {
-      return inner;
-    }
-    return { type: "group", inner };
+    return {
+      type: "group",
+      inner: normalizeParsedExpression(expression.inner),
+    };
   }
   if (expression.type === "operation") {
     return {
@@ -406,6 +426,14 @@ export function normalizeParsedExpression(
     return {
       ...expression,
       inner: normalizeParsedExpression(expression.inner),
+    };
+  }
+  if (expression.type === "conditional") {
+    return {
+      type: "conditional",
+      condition: normalizeParsedExpression(expression.condition),
+      whenTrue: normalizeParsedExpression(expression.whenTrue),
+      whenFalse: normalizeParsedExpression(expression.whenFalse),
     };
   }
   return expression;

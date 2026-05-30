@@ -49,6 +49,7 @@ Supported entities: `input`, `constant`, `calc`, `output`. See `/docs` → **Scr
 Expressions support:
 
 - Operators: `+`, `-`, `*`, `/`
+- Comparisons (return **1** for true, **0** for false): `>`, `<`, `>=`, `<=`, `==`, `!=`
 - References: `field_id.qty`, `field_id.var_*`, `const_id`, `calc_id`, `output_id`
 - Functions: `SUM(…)`, `AVG(…)`, `COUNT(…)`, `MIN(…)`, `MAX(…)`
 - Row aggregates (line items): `SUM_ROWS(table_id, row.qty * row.var_cost)`, etc.
@@ -58,7 +59,7 @@ Example:
 
 ```calc
 formula {
-  return IF(field_item.qty, field_item.var_price, 0)
+  return IF(field_item.qty > 10, field_item.var_price * 0.9, field_item.var_price)
 }
 ```
 

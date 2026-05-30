@@ -4,7 +4,6 @@ import {
   formatRowAggregateCode,
   formatRowAggregateLabel,
   parseRowAggregateCall,
-  rowAggregateCompletion,
   rowAggregatePaletteItems,
 } from "@/lib/formula/nodes/_helpers";
 
@@ -27,5 +26,4 @@ export const sumRowsPrimitive: FormulaPrimitiveDefinition = {
   formatLabel: (node, ctx) => formatRowAggregateLabel(FN, node, ctx),
   parseCodeCall: (ident, ctx) => parseRowAggregateCall(ident, FN, ctx),
   paletteItems: (ctx) => rowAggregatePaletteItems(FN, ctx),
-  completions: () => [rowAggregateCompletion(FN)],
 };

@@ -508,6 +508,36 @@
         "description": "Divides the left value by the right. Division by zero shows a warning and returns 0.",
         "blockUsage": "Drag **÷** between blocks."
       },
+      "gt": {
+        "title": "Greater than (>)",
+        "description": "Returns 1 when the left value is greater than the right, otherwise 0.",
+        "blockUsage": "Use in code or drag **>** between blocks, e.g. for IF conditions."
+      },
+      "lt": {
+        "title": "Less than (<)",
+        "description": "Returns 1 when the left value is smaller than the right, otherwise 0.",
+        "blockUsage": "Use in code or drag **<** between blocks."
+      },
+      "gte": {
+        "title": "Greater or equal (≥)",
+        "description": "Returns 1 when the left value is greater than or equal to the right, otherwise 0.",
+        "blockUsage": "Type **>=** in code or drag **≥** from the palette."
+      },
+      "lte": {
+        "title": "Less or equal (≤)",
+        "description": "Returns 1 when the left value is less than or equal to the right, otherwise 0.",
+        "blockUsage": "Type **<=** in code or drag **≤** from the palette."
+      },
+      "eq": {
+        "title": "Equal (==)",
+        "description": "Returns 1 when both values are equal, otherwise 0.",
+        "blockUsage": "Type **==** in code or drag **=** from the palette."
+      },
+      "neq": {
+        "title": "Not equal (≠)",
+        "description": "Returns 1 when values differ, otherwise 0.",
+        "blockUsage": "Type **!=** in code or drag **≠** from the palette."
+      },
       "sum": {
         "title": "SUM",
         "description": "Sum of all arguments.",

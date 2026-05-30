@@ -78,6 +78,7 @@ export interface FormulaPrimitiveDefinition {
     ctx: FormulaCodeParseContext,
   ) => BlockExpression | null;
   paletteItems?: (ctx: FormulaPaletteContext) => PaletteBlock[];
+  /** Optional override; when omitted, registry generates snippets from `call` + `astType`. */
   completions?: (
     config: CalculatorConfig,
     target: FormulaTarget,
@@ -115,6 +116,7 @@ export interface FormulaNodeDefinition<
     ctx: FormulaDisplayContext,
   ) => string;
   paletteItems?: (ctx: FormulaPaletteContext) => PaletteBlock[];
+  /** Optional override; when omitted, registry generates snippets from `call` + `astType`. */
   completions?: (
     config: CalculatorConfig,
     target: FormulaTarget,
