@@ -1,12 +1,33 @@
 "use client";
 
 import { autocompletion } from "@codemirror/autocomplete";
+import { defaultKeymap, history, indentWithTab } from "@codemirror/commands";
+import {
+  bracketMatching,
+  foldGutter,
+  indentOnInput,
+} from "@codemirror/language";
 import { linter, type Diagnostic } from "@codemirror/lint";
-import { EditorView } from "@codemirror/view";
+import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
+import { type Extension } from "@codemirror/state";
+import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
 import { useTheme } from "next-themes";
-import { useMemo } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { CodeEditorToolbar } from "@/app/components/builder/code-editor-toolbar";
+import { useEditorShortcutLabels } from "@/app/components/builder/use-editor-shortcut-labels";
+import {
+  codeEditorCompletionKeymap,
+  codeEditorHistoryKeymap,
+} from "@/lib/calculator/editor/code-editor-keymap";
 import { parseCalculatorScript } from "@/lib/calculator/script/parse";
 import { parseScriptFile } from "@/lib/calculator/script/parse-file";
 import {
@@ -18,12 +39,24 @@ import type {
   ScriptProjectFileId,
 } from "@/lib/calculator/script/project-types";
 import {
+  calculatorScriptHighlight,
+  calculatorScriptLanguage,
+} from "@/lib/calculator/script/calc-script-language";
+import {
   buildFormulaCompletions,
   filterCompletions,
 } from "@/lib/formula/code/formula-code-completions";
 import { tryParseFormulaProgram } from "@/lib/formula/code/formula-program";
 import type { FormulaTarget } from "@/lib/formula/core/formula-target";
 import type { CalculatorConfig } from "@/types/calculator";
+
+export type FormulaCodeEditorHandle = {
+  focus: () => void;
+  openSearch: () => void;
+  goToLine: (line: number) => void;
+  insertAtCursor: (text: string) => void;
+  getDiagnostics: () => Diagnostic[];
+};
 
 function lineOffset(source: string, lineNumber: number): number {
   const lines = source.split("\n");
@@ -34,7 +67,6 @@ function lineOffset(source: string, lineNumber: number): number {
   return offset;
 }
 
-/** Insert completion text; places cursor inside `()` when snippet ends with `$0)`. */
 function buildCompletionApply(insertText: string) {
   const cursorMarker = "$0";
   if (!insertText.includes(cursorMarker)) {
@@ -137,6 +169,8 @@ function createCompletionExtension(
 ) {
   return autocompletion({
     activateOnTyping: true,
+    defaultKeymap: false,
+    icons: true,
     override: [
       (context) => {
         const word =
@@ -195,31 +229,42 @@ interface FormulaCodeEditorProps {
   readOnly?: boolean;
   minHeight?: string;
   className?: string;
+  fileLabel?: string;
+  showToolbar?: boolean;
+  onFormat?: () => void;
+  onApplyShortcut?: () => void;
 }
 
-export function FormulaCodeEditor({
-  value,
-  onChange,
-  config,
-  target,
-  scriptMode = false,
-  scriptProject,
-  scriptFileId,
-  readOnly = false,
-  minHeight = "220px",
-  className = "",
-}: FormulaCodeEditorProps) {
+export const FormulaCodeEditor = forwardRef<
+  FormulaCodeEditorHandle,
+  FormulaCodeEditorProps
+>(function FormulaCodeEditor(
+  {
+    value,
+    onChange,
+    config,
+    target,
+    scriptMode = false,
+    scriptProject,
+    scriptFileId,
+    readOnly = false,
+    minHeight = "220px",
+    className = "",
+    fileLabel,
+    showToolbar = false,
+    onFormat,
+    onApplyShortcut,
+  },
+  ref,
+) {
   const { resolvedTheme } = useTheme();
+  const shortcuts = useEditorShortcutLabels();
+  const viewRef = useRef<EditorView | null>(null);
+  const [cursor, setCursor] = useState({ line: 1, column: 1 });
+  const [errorCount, setErrorCount] = useState(0);
 
-  const extensions = useMemo(
-    () => [
-      createCompletionExtension(
-        config,
-        target,
-        scriptMode,
-        scriptProject,
-        scriptFileId,
-      ),
+  const linterExtension = useMemo(
+    () =>
       createFormulaLinter(
         config,
         target,
@@ -227,26 +272,178 @@ export function FormulaCodeEditor({
         scriptProject,
         scriptFileId,
       ),
-      EditorView.lineWrapping,
-    ],
     [config, target, scriptMode, scriptProject, scriptFileId],
   );
 
+  const extensions = useMemo((): Extension[] => {
+    const applyBinding = onApplyShortcut
+      ? keymap.of([
+          {
+            key: "Mod-Enter",
+            run: () => {
+              onApplyShortcut();
+              return true;
+            },
+          },
+        ])
+      : [];
+
+    return [
+      calculatorScriptLanguage,
+      calculatorScriptHighlight,
+      lineNumbers(),
+      bracketMatching(),
+      indentOnInput(),
+      foldGutter(),
+      highlightSelectionMatches(),
+      history(),
+      EditorView.lineWrapping,
+      EditorView.contentAttributes.of({
+        spellcheck: "false",
+        autocapitalize: "off",
+        autocomplete: "off",
+      }),
+      EditorView.theme({
+        "&": { fontSize: "13px" },
+        ".cm-content": { fontFamily: "ui-monospace, monospace" },
+        ".cm-gutters": { fontFamily: "ui-monospace, monospace" },
+      }),
+      createCompletionExtension(
+        config,
+        target,
+        scriptMode,
+        scriptProject,
+        scriptFileId,
+      ),
+      codeEditorHistoryKeymap,
+      codeEditorCompletionKeymap,
+      linterExtension,
+      applyBinding,
+      keymap.of([...defaultKeymap, ...searchKeymap, indentWithTab]),
+      EditorView.updateListener.of((update) => {
+        if (update.selectionSet || update.docChanged) {
+          const pos = update.state.selection.main.head;
+          const lineInfo = update.state.doc.lineAt(pos);
+          setCursor({
+            line: lineInfo.number,
+            column: pos - lineInfo.from + 1,
+          });
+        }
+        if (update.docChanged || update.selectionSet) {
+          const source = update.state.doc.toString();
+          if (scriptMode && scriptFileId) {
+            setErrorCount(parseScriptFile(source, scriptFileId).errors.length);
+          } else if (!scriptMode) {
+            const parsed = tryParseFormulaProgram(source, target);
+            setErrorCount(parsed.ok ? 0 : 1);
+          }
+        }
+      }),
+    ];
+  }, [
+    config,
+    target,
+    scriptMode,
+    scriptProject,
+    scriptFileId,
+    linterExtension,
+    onApplyShortcut,
+  ]);
+
+  const handleCreateEditor = useCallback((view: EditorView) => {
+    viewRef.current = view;
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => viewRef.current?.focus(),
+    openSearch: () => {
+      const view = viewRef.current;
+      if (!view) {
+        return;
+      }
+      import("@codemirror/search").then(({ openSearchPanel }) => {
+        openSearchPanel(view);
+      });
+    },
+    goToLine: (line: number) => {
+      const view = viewRef.current;
+      if (!view || line < 1) {
+        return;
+      }
+      const doc = view.state.doc;
+      const lineNumber = Math.min(line, doc.lines);
+      const lineInfo = doc.line(lineNumber);
+      view.dispatch({
+        selection: { anchor: lineInfo.from },
+        effects: EditorView.scrollIntoView(lineInfo.from, { y: "center" }),
+      });
+      view.focus();
+    },
+    insertAtCursor: (text: string) => {
+      const view = viewRef.current;
+      if (!view || !text) {
+        return;
+      }
+      const { from, to } = view.state.selection.main;
+      view.dispatch({
+        changes: { from, to, insert: text },
+        selection: { anchor: from + text.length },
+      });
+      onChange(view.state.doc.toString());
+      view.focus();
+    },
+    getDiagnostics: () => {
+      const view = viewRef.current;
+      if (!view) {
+        return [];
+      }
+      const source = view.state.doc.toString();
+      if (scriptMode && scriptProject && scriptFileId) {
+        return parseScriptFile(source, scriptFileId).errors.map((error) => ({
+          from: lineOffset(source, error.line),
+          to: lineOffset(source, error.line) + 1,
+          severity: "error" as const,
+          message: error.message,
+        }));
+      }
+      return [];
+    },
+  }));
+
   return (
-    <CodeMirror
-      value={value}
-      height={minHeight}
-      theme={resolvedTheme === "dark" ? vscodeDark : vscodeLight}
-      readOnly={readOnly}
-      className={`overflow-hidden rounded-xl border border-border text-sm ${className}`}
-      basicSetup={{
-        lineNumbers: true,
-        foldGutter: false,
-        highlightActiveLine: true,
-        autocompletion: false,
-      }}
-      extensions={extensions}
-      onChange={onChange}
-    />
+    <div className={className}>
+      {showToolbar && (
+        <CodeEditorToolbar
+          fileLabel={fileLabel}
+          line={cursor.line}
+          column={cursor.column}
+          errorCount={errorCount}
+          readOnly={readOnly}
+          shortcutLabels={shortcuts}
+          onFormat={onFormat}
+          onFind={() => {
+            import("@codemirror/search").then(({ openSearchPanel }) => {
+              if (viewRef.current) {
+                openSearchPanel(viewRef.current);
+              }
+            });
+          }}
+          onApply={onApplyShortcut}
+        />
+      )}
+      <CodeMirror
+        value={value}
+        height={minHeight}
+        theme={resolvedTheme === "dark" ? vscodeDark : vscodeLight}
+        readOnly={readOnly}
+        className={`overflow-hidden rounded-xl border border-border text-sm ${showToolbar ? "rounded-t-none" : ""}`}
+        basicSetup={false}
+        extensions={extensions}
+        onChange={onChange}
+        onCreateEditor={handleCreateEditor}
+      />
+    </div>
   );
-}
+});
+
+FormulaCodeEditor.displayName = "FormulaCodeEditor";

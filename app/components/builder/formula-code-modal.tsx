@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { FormulaCodeEditor } from "@/app/components/builder/formula-code-editor";
+import { useEditorShortcutLabels } from "@/app/components/builder/use-editor-shortcut-labels";
 import { formatFormulaCodeBlock } from "@/lib/formula/code/code-format";
 import { normalizeParsedExpression } from "@/lib/formula/code/code-parse";
 import { tryParseFormulaProgram } from "@/lib/formula/code/formula-program";
@@ -31,6 +32,7 @@ export function FormulaCodeModal({
   onApply,
 }: FormulaCodeModalProps) {
   const t = useTranslations("builder");
+  const shortcuts = useEditorShortcutLabels();
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -83,9 +85,9 @@ export function FormulaCodeModal({
     onClose();
   }
 
-  function handleRevert() {
-    setDraft(formatFormulaCodeBlock(expression, target, locals));
+  function handleCancel() {
     setError(null);
+    onClose();
   }
 
   return (
@@ -112,7 +114,7 @@ export function FormulaCodeModal({
                 {title}
               </h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {t("codeModeFormulaHint")}
+                {t("codeModeFormulaHint")} · {shortcuts.summary}
               </p>
             </div>
             <button
@@ -135,6 +137,8 @@ export function FormulaCodeModal({
               config={config}
               target={target}
               minHeight="360px"
+              showToolbar
+              onApplyShortcut={handleApply}
             />
             {error && (
               <p className="mt-2 text-sm text-destructive">{error}</p>
@@ -151,7 +155,7 @@ export function FormulaCodeModal({
             </button>
             <button
               type="button"
-              onClick={handleRevert}
+              onClick={handleCancel}
               className="inline-flex flex-1 items-center justify-center rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted sm:flex-none"
             >
               {t("codeModeRevert")}
