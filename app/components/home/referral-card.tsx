@@ -7,6 +7,7 @@ import { Card, CardTitle } from "@/app/components/ui/card";
 import { appFetch } from "@/lib/api/api-client";
 import { formatAccessDateShort } from "@/lib/access/access-dates";
 import { signupAbsoluteUrl } from "@/lib/auth/signup-url";
+import { copyTextToClipboard } from "@/lib/ui/copy-to-clipboard";
 
 type ReferralInfo = {
   code: string;
@@ -45,7 +46,10 @@ export function ReferralCard() {
       : referral.signupPath;
 
   async function copyLink() {
-    await navigator.clipboard.writeText(link);
+    const ok = await copyTextToClipboard(link);
+    if (!ok) {
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -68,7 +72,9 @@ export function ReferralCard() {
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
             {t("referralLinkLabel")}
           </p>
-          <p className="mt-1 break-all font-mono text-xs sm:text-sm">{link}</p>
+          <p className="mt-1 select-all break-all font-mono text-xs sm:text-sm">
+            {link}
+          </p>
         </div>
 
         <dl className="grid gap-2 text-sm sm:grid-cols-2">
