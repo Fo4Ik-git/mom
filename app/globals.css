@@ -105,3 +105,113 @@ input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   opacity: 0.4;
 }
+
+/* 404 page — orbiting calculator symbols */
+@keyframes not-found-orbit {
+  from {
+    transform: rotate(0deg) translateX(var(--orbit-r)) rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg) translateX(var(--orbit-r)) rotate(-360deg);
+  }
+}
+
+@keyframes not-found-float {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+@keyframes not-found-zero-pulse {
+  0%,
+  100% {
+    transform: scale(1) translateY(0);
+    filter: drop-shadow(0 0 12px rgb(135 116 225 / 0.45));
+  }
+  50% {
+    transform: scale(1.08) translateY(-4px);
+    filter: drop-shadow(0 0 28px rgb(135 116 225 / 0.65));
+  }
+}
+
+@keyframes not-found-ring-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes not-found-scan {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(-40px);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(40px);
+  }
+}
+
+@keyframes not-found-glow-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.05);
+  }
+}
+
+.not-found-orbit {
+  width: 0;
+  height: 0;
+  margin-left: 0;
+  margin-top: 0;
+  animation: not-found-orbit var(--orbit-d) linear infinite;
+  animation-delay: var(--orbit-delay);
+}
+
+.not-found-orbit-body {
+  display: block;
+  transform: translate(-50%, -50%);
+  animation: not-found-float 3s ease-in-out infinite;
+  animation-delay: var(--orbit-delay);
+}
+
+.not-found-zero {
+  animation: not-found-zero-pulse 2.8s ease-in-out infinite;
+}
+
+.not-found-ring--slow {
+  animation: not-found-ring-spin 48s linear infinite;
+}
+
+.not-found-scan {
+  animation: not-found-scan 4s ease-in-out infinite;
+}
+
+.not-found-glow {
+  animation: not-found-glow-breathe 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .not-found-orbit,
+  .not-found-orbit-body,
+  .not-found-zero,
+  .not-found-ring--slow,
+  .not-found-scan,
+  .not-found-glow {
+    animation: none;
+  }
+}

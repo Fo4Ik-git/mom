@@ -3,6 +3,14 @@
     "title": "MCB",
     "description": "Build custom calculators for your business"
   },
+  "notFound": {
+    "title": "Page not found",
+    "subtitle": "This formula drifted into an unknown galaxy of numbers",
+    "hint": "The link may be outdated or the page was moved. Try home or the docs.",
+    "equation": "result = ??? ÷ URL",
+    "home": "Back to home",
+    "docs": "Documentation"
+  },
   "common": {
     "appName": "MCB",
     "tagline": "Calculators",
@@ -57,7 +65,9 @@
     "referralCopy": "Copy link",
     "referralCopied": "Copied",
     "referralBonus": "Invite reward",
-    "referralBonusDays": "+{days} days access per successful signup"
+    "referralBonusDays": "+{days} days access per successful signup",
+    "accessDeniedTitle": "No access",
+    "accessDeniedMessage": "You do not have access to this calculator. Contact the owner if you need access."
   },
   "auth": {
     "signInTitle": "Sign in",

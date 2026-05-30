@@ -3,6 +3,7 @@ import { PageShell } from "@/app/components/layout/page-shell";
 import { Button } from "@/app/components/ui/button";
 import { auth } from "@/auth";
 import { Link, redirect } from "@/i18n/navigation";
+import { redirectCalculatorAccessDenied } from "@/lib/calculator/access-denied";
 import {
   canEditCalculator,
   getCalculatorAccess,
@@ -52,7 +53,7 @@ export default async function CalculatorPage({
         locale,
       });
     }
-    notFound();
+    redirectCalculatorAccessDenied(locale);
   }
 
   const showEditLink = access !== null && canEditCalculator(access);

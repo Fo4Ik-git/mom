@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { auth } from "@/auth";
+import { AccessDeniedNotice } from "@/app/components/home/access-denied-notice";
 import { Dashboard } from "@/app/components/home/dashboard";
 import { PageShell } from "@/app/components/layout/page-shell";
 import { Button } from "@/app/components/ui/button";
@@ -19,6 +21,9 @@ export default async function HomePage({
 
   return (
     <PageShell>
+      <Suspense fallback={null}>
+        <AccessDeniedNotice />
+      </Suspense>
       <Card className="relative mb-10 overflow-hidden border-accent/20 bg-gradient-to-br from-card via-card to-accent-muted/30">
         <div className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-accent/10 blur-3xl" />
         <div className="relative">

@@ -3,6 +3,7 @@ import { PageShell } from "@/app/components/layout/page-shell";
 import { NavButton } from "@/app/components/ui/nav-button";
 import { auth } from "@/auth";
 import { redirect } from "@/i18n/navigation";
+import { redirectCalculatorAccessDenied } from "@/lib/calculator/access-denied";
 import {
   canEditCalculator,
   getCalculatorAccess,
@@ -13,7 +14,6 @@ import { db } from "@/lib/platform/db";
 import { Role } from "@prisma/client";
 import { parseCalculatorConfig } from "@/types/calculator";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { notFound } from "next/navigation";
 
 export default async function EditBuilderPage({
   params,
@@ -41,7 +41,8 @@ export default async function EditBuilderPage({
   );
 
   if (!access) {
-    notFound();
+    redirectCalculatorAccessDenied(locale);
+    return null;
   }
 
   const readOnly = !canEditCalculator(access);
