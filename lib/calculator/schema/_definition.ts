@@ -21,11 +21,29 @@ export interface ScriptParseContext {
   fileId?: import("@/lib/calculator/script/project-types").ScriptProjectFileId;
 }
 
+/** One autocomplete entry for script body / declaration syntax. */
+export interface ScriptFieldCompletion {
+  key: string;
+  detail?: string;
+  insertText: string;
+}
+
+export interface ScriptEntityCompletions {
+  /** Insert when completing the entity keyword at file root */
+  declarationSnippet: string;
+  /** Keys valid inside `entity id { … }` */
+  bodyFields: ScriptFieldCompletion[];
+  /** Keys valid inside nested blocks, e.g. `property var_x { … }` */
+  nestedBlocks?: Record<string, ScriptFieldCompletion[]>;
+}
+
 export interface ConfigEntityDefinition {
   /** Keyword in script: `input`, `constant`, `calc`, `output` */
   keyword: string;
   /** Human label for docs */
   label: string;
+  /** Script editor autocomplete — derived from parse/format capabilities */
+  scriptCompletions: ScriptEntityCompletions;
   format: (
     declaration: ScriptDeclaration,
     ctx: ScriptFormatContext,

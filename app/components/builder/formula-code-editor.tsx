@@ -157,7 +157,12 @@ function createCompletionExtension(
             : config;
 
         const items = filterCompletions(
-          buildFormulaCompletions(completionConfig, target, { scriptMode }),
+          buildFormulaCompletions(completionConfig, target, {
+            scriptMode,
+            scriptSource: context.state.doc.toString(),
+            scriptPos: context.pos,
+            scriptFileId,
+          }),
           word.text,
         );
 

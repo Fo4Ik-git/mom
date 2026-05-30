@@ -13,9 +13,64 @@ import type { ConfigEntityDefinition } from "@/lib/calculator/schema/_definition
 import type { InputField, InputProperty } from "@/types/calculator";
 import { parseBlockBody, readQuotedString } from "@/lib/calculator/schema/patterns/block-body";
 
+import { INPUT_SECTION_IDS } from "@/lib/calculator/config/input-sections";
+
 export const inputEntity: ConfigEntityDefinition = {
   keyword: "input",
   label: "Input field",
+  scriptCompletions: {
+    declarationSnippet:
+      'input field_id "Label" {\n  label = "Label"\n  property var_cost {\n    label = "Cost"\n    value = 0\n  }\n}',
+    bodyFields: [
+      { key: "label", detail: "Display name", insertText: 'label = "Label"' },
+      {
+        key: "section",
+        detail: `Group: ${INPUT_SECTION_IDS.join(" | ")}`,
+        insertText: 'section = "materials"',
+      },
+      {
+        key: "mode",
+        detail: "lineItems table",
+        insertText: "mode lineItems",
+      },
+      {
+        key: "mode time",
+        detail: "Time service (duration × rate)",
+        insertText: "mode time",
+      },
+      {
+        key: "time_unit",
+        detail: "With mode time: hour | minute",
+        insertText: "time_unit hour",
+      },
+      {
+        key: "quantity",
+        detail: "Default quantity",
+        insertText: "quantity default 1",
+      },
+      {
+        key: "rows",
+        detail: "Line items default row count",
+        insertText: "rows = 1",
+      },
+      {
+        key: "presets",
+        detail: "Quick-pick quantity values",
+        insertText: "presets = 100, 200, 300",
+      },
+    ],
+    nestedBlocks: {
+      property: [
+        { key: "label", detail: "Property label", insertText: 'label = "Cost"' },
+        { key: "value", detail: "Default numeric value", insertText: "value = 0" },
+        {
+          key: "auto_total",
+          detail: "Auto sum qty × value",
+          insertText: "auto_total = true",
+        },
+      ],
+    },
+  },
   format: (declaration, ctx) => {
     if (declaration.kind !== "input") {
       return [];

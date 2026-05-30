@@ -2,6 +2,11 @@ import { mergeNodeCompletions } from "@/lib/formula/nodes/registry";
 import type { CalculatorConfig } from "@/types/calculator";
 import type { FormulaTarget } from "@/lib/formula/core/formula-target";
 import { isLineItemsField } from "@/lib/calculator/fields/line-items";
+import {
+  collectScriptCompletions,
+  detectScriptCompletionContext,
+} from "@/lib/calculator/schema/script-completions";
+import type { ScriptProjectFileId } from "@/lib/calculator/script/project-types";
 
 export interface FormulaCompletionItem {
   label: string;
@@ -9,16 +14,6 @@ export interface FormulaCompletionItem {
   detail?: string;
   insertText: string;
 }
-
-const SCRIPT_KEYWORDS: FormulaCompletionItem[] = [
-  { label: "input", type: "keyword", insertText: "input field_id \"Label\" {\n  property var_cost \"Cost\" = 0\n}" },
-  { label: "constant", type: "keyword", insertText: "constant const_id \"Label\" = 0" },
-  { label: "calc", type: "keyword", insertText: "calc calc_id \"Label\" = " },
-  { label: "output", type: "keyword", insertText: "output output_id \"Label\" = " },
-  { label: "property", type: "keyword", insertText: "property var_id \"Label\" = 0" },
-  { label: "mode", type: "keyword", insertText: "mode lineItems" },
-  { label: "quantity", type: "keyword", insertText: "quantity default 0" },
-];
 
 function buildDynamicCompletions(
   config: CalculatorConfig,
@@ -95,19 +90,56 @@ function buildDynamicCompletions(
   return items;
 }
 
+export interface BuildFormulaCompletionsOptions {
+  scriptMode?: boolean;
+  scriptSource?: string;
+  scriptPos?: number;
+  scriptFileId?: ScriptProjectFileId;
+}
+
 export function buildFormulaCompletions(
   config: CalculatorConfig,
   target: FormulaTarget,
-  options?: { scriptMode?: boolean },
+  options?: BuildFormulaCompletionsOptions,
 ): FormulaCompletionItem[] {
+  if (options?.scriptMode && options.scriptSource != null && options.scriptPos != null) {
+    const scriptContext = detectScriptCompletionContext(
+      options.scriptSource,
+      options.scriptPos,
+    );
+
+    const formulaTarget: FormulaTarget =
+      scriptContext.entityId != null
+        ? { fieldId: scriptContext.entityId }
+        : target;
+
+    const scriptItems = collectScriptCompletions(
+      scriptContext,
+      options.scriptFileId,
+    );
+
+    if (scriptContext.kind === "formula-expr") {
+      return [
+        ...mergeNodeCompletions(config, formulaTarget),
+        ...buildDynamicCompletions(config, formulaTarget),
+      ];
+    }
+
+    if (scriptContext.kind === "formula-body") {
+      return scriptItems;
+    }
+
+    if (scriptContext.kind === "file-root") {
+      return scriptItems;
+    }
+
+    return scriptItems;
+  }
+
   const items: FormulaCompletionItem[] = [
     ...mergeNodeCompletions(config, target),
     ...buildDynamicCompletions(config, target),
   ];
-
-  if (options?.scriptMode) {
-    items.push(...SCRIPT_KEYWORDS);
-  }
 
   return items;
 }

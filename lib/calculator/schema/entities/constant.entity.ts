@@ -12,6 +12,14 @@ import type { ConfigEntityDefinition } from "@/lib/calculator/schema/_definition
 export const constantEntity: ConfigEntityDefinition = {
   keyword: "constant",
   label: "Constant",
+  scriptCompletions: {
+    declarationSnippet:
+      'constant const_id "Label" {\n  label = "Label"\n  value = 0\n}',
+    bodyFields: [
+      { key: "label", detail: "Display name", insertText: 'label = "Label"' },
+      { key: "value", detail: "Numeric value", insertText: "value = 0" },
+    ],
+  },
   format: (declaration, ctx) => {
     if (declaration.kind !== "constant") {
       return [];

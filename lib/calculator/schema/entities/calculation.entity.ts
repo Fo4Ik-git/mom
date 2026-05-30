@@ -19,6 +19,13 @@ import { formatFormulaCodeBlock } from "@/lib/formula/code/code-format";
 export const calculationEntity: ConfigEntityDefinition = {
   keyword: "calc",
   label: "Calculation",
+  scriptCompletions: {
+    declarationSnippet:
+      'calc calc_id "Label" {\n  label = "Label"\n  formula {\n    return field_item.var_price\n  }\n}',
+    bodyFields: [
+      { key: "label", detail: "Display name", insertText: 'label = "Label"' },
+    ],
+  },
   format: (declaration, ctx) => {
     if (declaration.kind !== "calculation") {
       return [];

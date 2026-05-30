@@ -18,6 +18,18 @@ import { formatFormulaCodeBlock } from "@/lib/formula/code/code-format";
 export const outputEntity: ConfigEntityDefinition = {
   keyword: "output",
   label: "Output",
+  scriptCompletions: {
+    declarationSnippet:
+      'output output_id "Label" {\n  label = "Label"\n  highlight = true\n  formula {\n    return field_item.var_price\n  }\n}',
+    bodyFields: [
+      { key: "label", detail: "Display name", insertText: 'label = "Label"' },
+      {
+        key: "highlight",
+        detail: "Emphasize in results panel",
+        insertText: "highlight = true",
+      },
+    ],
+  },
   format: (declaration, ctx) => {
     if (declaration.kind !== "output") {
       return [];

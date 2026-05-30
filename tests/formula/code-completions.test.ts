@@ -4,9 +4,10 @@ import {
   buildFormulaCompletions,
   filterCompletions,
 } from "@/lib/formula/code/formula-code-completions";
+import { SCRIPT_FILE_OUTPUTS } from "@/lib/calculator/script/project-types";
 
 describe("formula code completions (builder code editor)", () => {
-  it("includes SUM and field references", () => {
+  it("includes SUM and field references in formula mode", () => {
     const items = buildFormulaCompletions(emptyCalculatorConfig, {
       fieldId: "output_total",
     });
@@ -40,13 +41,52 @@ describe("formula code completions (builder code editor)", () => {
     expect(items.some((item) => item.label === "calc_self")).toBe(false);
   });
 
-  it("adds script keywords in scriptMode", () => {
+  it("suggests output highlight inside output block in script mode", () => {
+    const source = `output output_total "Total" {
+  `;
     const items = buildFormulaCompletions(
       emptyCalculatorConfig,
       { fieldId: "output_total" },
-      { scriptMode: true },
+      {
+        scriptMode: true,
+        scriptSource: source,
+        scriptPos: source.length,
+        scriptFileId: SCRIPT_FILE_OUTPUTS,
+      },
     );
-    expect(items.some((item) => item.label === "input")).toBe(true);
-    expect(items.some((item) => item.label === "calc")).toBe(true);
+    expect(items.some((item) => item.label === "highlight")).toBe(true);
+    expect(items.some((item) => item.label === "SUM")).toBe(false);
+  });
+
+  it("suggests formula functions inside formula expression", () => {
+    const source = `output output_total "Total" {
+  formula {
+    return SUM(`;
+    const items = buildFormulaCompletions(
+      emptyCalculatorConfig,
+      { fieldId: "output_total" },
+      {
+        scriptMode: true,
+        scriptSource: source,
+        scriptPos: source.length,
+        scriptFileId: SCRIPT_FILE_OUTPUTS,
+      },
+    );
+    expect(items.some((item) => item.label === "field_item.var_price")).toBe(true);
+  });
+
+  it("suggests declarations at file root in script mode", () => {
+    const items = buildFormulaCompletions(
+      emptyCalculatorConfig,
+      { fieldId: "output_total" },
+      {
+        scriptMode: true,
+        scriptSource: "",
+        scriptPos: 0,
+        scriptFileId: SCRIPT_FILE_OUTPUTS,
+      },
+    );
+    expect(items.some((item) => item.label === "output")).toBe(true);
+    expect(items.some((item) => item.label === "#include")).toBe(true);
   });
 });
