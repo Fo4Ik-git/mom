@@ -1,12 +1,22 @@
 import { Role } from "@prisma/client";
 import { auth } from "@/auth";
 import { assertActiveUser, UserAccessError } from "@/lib/access/user-limits";
+import { db } from "@/lib/platform/db";
 
 export async function requireAuth() {
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error("Unauthorized");
   }
+
+  const dbUser = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+  if (dbUser) {
+    session.user.role = dbUser.role;
+  }
+
   return session;
 }
 

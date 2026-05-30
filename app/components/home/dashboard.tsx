@@ -15,6 +15,9 @@ interface CalculatorSummary {
   slug: string;
   isPublic: boolean;
   updatedAt: string;
+  isOwner?: boolean;
+  canEdit?: boolean;
+  accessKind?: string;
 }
 
 interface Quota {
@@ -29,6 +32,7 @@ interface Quota {
 export function Dashboard() {
   const t = useTranslations("home");
   const tc = useTranslations("common");
+  const ts = useTranslations("sharing");
   const tl = useTranslations("limits");
   const locale = useLocale();
   const [calculators, setCalculators] = useState<CalculatorSummary[]>([]);
@@ -175,6 +179,11 @@ export function Dashboard() {
                 <h3 className="font-semibold">{calculator.name}</h3>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {calculator.isPublic ? tc("public") : tc("private")}
+                  {calculator.isOwner === false && (
+                    <span className="ml-2 rounded-md bg-muted px-1.5 py-0.5">
+                      {calculator.canEdit ? ts("sharedEdit") : ts("sharedView")}
+                    </span>
+                  )}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
                   <Link
@@ -183,20 +192,24 @@ export function Dashboard() {
                   >
                     {tc("open")}
                   </Link>
-                  <Link
-                    href={`/builder/${calculator.id}`}
-                    className="text-muted-foreground underline"
-                  >
-                    {tc("edit")}
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => removeCalculator(calculator.id, calculator.name)}
-                    disabled={deletingId === calculator.id}
-                    className="text-destructive hover:underline disabled:opacity-50"
-                  >
-                    {deletingId === calculator.id ? tc("loading") : tc("delete")}
-                  </button>
+                  {calculator.canEdit !== false && (
+                    <Link
+                      href={`/builder/${calculator.id}`}
+                      className="text-muted-foreground underline"
+                    >
+                      {tc("edit")}
+                    </Link>
+                  )}
+                  {calculator.isOwner !== false && (
+                    <button
+                      type="button"
+                      onClick={() => removeCalculator(calculator.id, calculator.name)}
+                      disabled={deletingId === calculator.id}
+                      className="text-destructive hover:underline disabled:opacity-50"
+                    >
+                      {deletingId === calculator.id ? tc("loading") : tc("delete")}
+                    </button>
+                  )}
                 </div>
               </Card>
             </li>

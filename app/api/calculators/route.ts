@@ -1,16 +1,20 @@
 import { requireActiveUser } from "@/lib/auth/auth-session";
 import {
-    CalculatorValidationError,
-    createUniqueSlug,
-    serializeConfig,
-    toCalculatorResponse,
-    validateCalculatorConfig,
+  accessKindToResponse,
+  type CalculatorAccessKind,
+} from "@/lib/calculator/access";
+import {
+  CalculatorValidationError,
+  createUniqueSlug,
+  serializeConfig,
+  toCalculatorResponse,
+  validateCalculatorConfig,
 } from "@/lib/calculator/service";
 import { db } from "@/lib/platform/db";
 import { UserAccessError, assertCanCreateCalculator } from "@/lib/access/user-limits";
 import {
-    formatZodIssues,
-    validationErrorResponse,
+  formatZodIssues,
+  validationErrorResponse,
 } from "@/lib/platform/validation-errors";
 import { calculatorConfigSchema } from "@/types/calculator";
 import { NextResponse } from "next/server";
@@ -23,22 +27,51 @@ const createSchema = z.object({
   isPublic: z.boolean().optional(),
 });
 
+function withAccess(
+  calculator: Parameters<typeof toCalculatorResponse>[0],
+  kind: CalculatorAccessKind,
+) {
+  return {
+    ...toCalculatorResponse(calculator),
+    ...accessKindToResponse(kind),
+  };
+}
+
 export async function GET() {
   try {
     const session = await requireActiveUser();
-    const calculators = await db.calculator.findMany({
-      where: { userId: session.user.id, isTemplate: false },
-      orderBy: { updatedAt: "desc" },
-    });
+    const userId = session.user.id;
 
-    return NextResponse.json({
-      calculators: calculators.map(toCalculatorResponse),
-    });
+    const [owned, sharedRows] = await Promise.all([
+      db.calculator.findMany({
+        where: { userId, isTemplate: false },
+        orderBy: { updatedAt: "desc" },
+      }),
+      db.calculatorShare.findMany({
+        where: { userId },
+        include: { calculator: true },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    const calculators = [
+      ...owned.map((calculator) => withAccess(calculator, "owner")),
+      ...sharedRows
+        .filter((row) => !row.calculator.isTemplate)
+        .map((row) =>
+          withAccess(
+            row.calculator,
+            row.role === "EDIT" ? "edit" : "view",
+          ),
+        ),
+    ];
+
+    return NextResponse.json({ calculators });
   } catch (error) {
     if (error instanceof UserAccessError) {
       return NextResponse.json(
         { error: error.code, message: error.message },
-        { status: error.code === "banned" ? 403 : 403 },
+        { status: 403 },
       );
     }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -65,7 +98,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(
-      { calculator: toCalculatorResponse(calculator) },
+      { calculator: withAccess(calculator, "owner") },
       { status: 201 },
     );
   } catch (error) {

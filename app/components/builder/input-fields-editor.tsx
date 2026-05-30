@@ -31,6 +31,7 @@ import {
   normalizeInputSection,
   type InputSectionId,
 } from "@/lib/calculator/config/input-sections";
+import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 import { useFormulaDndSensors } from "@/lib/hooks/use-formula-dnd-sensors";
 import type { CalculatorConfig, InputField } from "@/types/calculator";
 import { useTranslations } from "next-intl";
@@ -118,6 +119,51 @@ function SortableInputCard({
   );
 }
 
+function StaticInputCard({
+  field,
+  index,
+  canRemove,
+  defaultOpen,
+  onChange,
+  onRemove,
+  onDuplicate,
+  section,
+  onSectionChange,
+}: {
+  field: InputField;
+  index: number;
+  canRemove: boolean;
+  defaultOpen?: boolean;
+  onChange: (field: InputField) => void;
+  onRemove: () => void;
+  onDuplicate: () => void;
+  section: InputSectionId;
+  onSectionChange: (section: InputSectionId) => void;
+}) {
+  return (
+    <div className="flex gap-2">
+      <div
+        className="mt-4 flex h-9 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground"
+        aria-hidden
+      >
+        ⠿
+      </div>
+      <div className="min-w-0 flex-1">
+        <InputFieldCard
+          field={field}
+          canRemove={canRemove}
+          defaultOpen={defaultOpen}
+          section={section}
+          onSectionChange={onSectionChange}
+          onChange={onChange}
+          onRemove={onRemove}
+          onDuplicate={onDuplicate}
+        />
+      </div>
+    </div>
+  );
+}
+
 function SectionDropZone({
   section,
   children,
@@ -147,6 +193,7 @@ export function InputFieldsEditor({
   onConfigChange,
 }: InputFieldsEditorProps) {
   const t = useTranslations("builder");
+  const dndReady = useClientMounted();
   const [search, setSearch] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const sensors = useFormulaDndSensors();
@@ -226,6 +273,91 @@ export function InputFieldsEditor({
     (entries) => entries.length > 0,
   );
 
+  function renderFieldCard(
+    sortable: boolean,
+    section: InputSectionId,
+    entry: { field: InputField; index: number },
+  ) {
+    const { field, index } = entry;
+    const cardProps = {
+      field,
+      index,
+      canRemove: config.inputs.length > 1,
+      defaultOpen:
+        index === config.inputs.length - 1 && !field.label.trim(),
+      section,
+      onSectionChange: (nextSection: InputSectionId) =>
+        onConfigChange(setInputFieldSection(config, field.id, nextSection)),
+      onChange: (updated: InputField) => updateAtIndex(index, updated),
+      onRemove: () => removeAtIndex(index),
+      onDuplicate: () =>
+        onConfigChange(
+          duplicateInputField(
+            config,
+            index,
+            autoTotalSuffix,
+            t("duplicateSuffix"),
+          ),
+        ),
+    };
+
+    return sortable ? (
+      <SortableInputCard key={field.id} {...cardProps} />
+    ) : (
+      <StaticInputCard key={field.id} {...cardProps} />
+    );
+  }
+
+  function renderSections(sortable: boolean) {
+    return (
+      <div className="space-y-3">
+        {INPUT_SECTION_IDS.map((section) => {
+          const entries = visibleBySection.get(section) ?? [];
+          if (entries.length === 0 && search.trim()) {
+            return null;
+          }
+
+          const sectionFields = grouped.get(section) ?? [];
+          const fieldIds = sectionFields.map((field) => field.id);
+
+          const list = (
+            <div className="space-y-3">
+              {entries.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">
+                  {t("inputSectionEmpty")}
+                </p>
+              ) : (
+                entries.map((entry) => renderFieldCard(sortable, section, entry))
+              )}
+            </div>
+          );
+
+          return (
+            <BuilderSection
+              key={section}
+              title={t(`inputSection_${section}`)}
+              count={sectionFields.length}
+              defaultOpen={section !== "other" || sectionFields.length <= 6}
+            >
+              {sortable ? (
+                <SectionDropZone section={section}>
+                  <SortableContext
+                    items={fieldIds}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {list}
+                  </SortableContext>
+                </SectionDropZone>
+              ) : (
+                <div className="min-h-[2rem] rounded-xl">{list}</div>
+              )}
+            </BuilderSection>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <input
@@ -240,80 +372,15 @@ export function InputFieldsEditor({
         <p className="rounded-xl border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
           {t("inputFieldsSearchEmpty")}
         </p>
-      ) : (
+      ) : dndReady ? (
         <DndContext
+          id="builder-input-fields"
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="space-y-3">
-            {INPUT_SECTION_IDS.map((section) => {
-              const entries = visibleBySection.get(section) ?? [];
-              if (entries.length === 0 && search.trim()) {
-                return null;
-              }
-
-              const sectionFields = grouped.get(section) ?? [];
-              const fieldIds = sectionFields.map((field) => field.id);
-
-              return (
-                <BuilderSection
-                  key={section}
-                  title={t(`inputSection_${section}`)}
-                  count={sectionFields.length}
-                  defaultOpen={section !== "other" || sectionFields.length <= 6}
-                >
-                  <SectionDropZone section={section}>
-                    <SortableContext
-                      items={fieldIds}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="space-y-3">
-                        {entries.length === 0 ? (
-                          <p className="rounded-xl border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">
-                            {t("inputSectionEmpty")}
-                          </p>
-                        ) : (
-                          entries.map(({ field, index }) => (
-                            <SortableInputCard
-                              key={field.id}
-                              field={field}
-                              index={index}
-                              canRemove={config.inputs.length > 1}
-                              defaultOpen={
-                                index === config.inputs.length - 1 &&
-                                !field.label.trim()
-                              }
-                              section={section}
-                              onSectionChange={(nextSection) =>
-                                onConfigChange(
-                                  setInputFieldSection(config, field.id, nextSection),
-                                )
-                              }
-                              onChange={(updated) => updateAtIndex(index, updated)}
-                              onRemove={() => removeAtIndex(index)}
-                              onDuplicate={() =>
-                                onConfigChange(
-                                  duplicateInputField(
-                                    config,
-                                    index,
-                                    autoTotalSuffix,
-                                    t("duplicateSuffix"),
-                                  ),
-                                )
-                              }
-                            />
-                          ))
-                        )}
-                      </div>
-                    </SortableContext>
-                  </SectionDropZone>
-                </BuilderSection>
-              );
-            })}
-          </div>
-
+          {renderSections(true)}
           <DragOverlay>
             {activeField ? (
               <div className="rounded-2xl border border-accent bg-card px-4 py-3 text-sm font-medium shadow-card-lg">
@@ -322,6 +389,8 @@ export function InputFieldsEditor({
             ) : null}
           </DragOverlay>
         </DndContext>
+      ) : (
+        renderSections(false)
       )}
     </div>
   );

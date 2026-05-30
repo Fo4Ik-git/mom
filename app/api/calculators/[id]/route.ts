@@ -1,14 +1,20 @@
-import { requireAuth } from "@/lib/auth/auth-session";
+import { requireActiveUser } from "@/lib/auth/auth-session";
 import {
-    CalculatorValidationError,
-    serializeConfig,
-    toCalculatorResponse,
-    validateCalculatorConfig,
+  accessKindToResponse,
+  canDeleteCalculator,
+  canEditCalculator,
+  getCalculatorAccess,
+} from "@/lib/calculator/access";
+import {
+  CalculatorValidationError,
+  serializeConfig,
+  toCalculatorResponse,
+  validateCalculatorConfig,
 } from "@/lib/calculator/service";
 import { db } from "@/lib/platform/db";
 import {
-    formatZodIssues,
-    validationErrorResponse,
+  formatZodIssues,
+  validationErrorResponse,
 } from "@/lib/platform/validation-errors";
 import { calculatorConfigSchema } from "@/types/calculator";
 import { NextResponse } from "next/server";
@@ -21,26 +27,29 @@ const updateSchema = z.object({
   isPublic: z.boolean().optional(),
 });
 
-async function getOwnedCalculator(id: string, userId: string) {
-  return db.calculator.findFirst({
-    where: { id, userId },
-  });
-}
-
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { id } = await params;
-    const calculator = await getOwnedCalculator(id, session.user.id);
+    const access = await getCalculatorAccess(
+      id,
+      session.user.id,
+      session.user.role,
+    );
 
-    if (!calculator) {
+    if (!access) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ calculator: toCalculatorResponse(calculator) });
+    return NextResponse.json({
+      calculator: {
+        ...toCalculatorResponse(access.calculator),
+        ...accessKindToResponse(access.kind),
+      },
+    });
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -51,11 +60,15 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { id } = await params;
-    const calculator = await getOwnedCalculator(id, session.user.id);
+    const access = await getCalculatorAccess(
+      id,
+      session.user.id,
+      session.user.role,
+    );
 
-    if (!calculator) {
+    if (!access || !canEditCalculator(access)) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
@@ -74,7 +87,12 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json({ calculator: toCalculatorResponse(updated) });
+    return NextResponse.json({
+      calculator: {
+        ...toCalculatorResponse(updated),
+        ...accessKindToResponse(access.kind),
+      },
+    });
   } catch (error) {
     if (error instanceof CalculatorValidationError) {
       return NextResponse.json(validationErrorResponse(error.issues), {
@@ -100,11 +118,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { id } = await params;
-    const calculator = await getOwnedCalculator(id, session.user.id);
+    const access = await getCalculatorAccess(
+      id,
+      session.user.id,
+      session.user.role,
+    );
 
-    if (!calculator || calculator.isTemplate) {
+    if (!access || !canDeleteCalculator(access)) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 

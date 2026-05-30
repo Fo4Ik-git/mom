@@ -31,6 +31,7 @@ import type {
     OutputField,
 } from "@/types/calculator";
 import { emptyBlockExpression, slugifyId } from "@/types/calculator";
+import { CalculatorSharesPanel } from "@/app/components/builder/calculator-shares-panel";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -40,6 +41,10 @@ interface CalculatorBuilderProps {
   initialDescription?: string;
   initialConfig: CalculatorConfig;
   initialIsPublic?: boolean;
+  readOnly?: boolean;
+  canManageShares?: boolean;
+  /** When admin edits another user's calculator */
+  apiBase?: string;
 }
 
 function randomId(prefix: string) {
@@ -126,6 +131,9 @@ export function CalculatorBuilder({
   initialDescription = "",
   initialConfig,
   initialIsPublic = false,
+  readOnly = false,
+  canManageShares = false,
+  apiBase = "/api/calculators",
 }: CalculatorBuilderProps) {
   const t = useTranslations("builder");
   const tc = useTranslations("common");
@@ -160,29 +168,37 @@ export function CalculatorBuilder({
   }
 
   async function handleSave() {
+    if (readOnly) {
+      return;
+    }
     setSaving(true);
     setError(null);
     setErrorIssues([]);
 
     const payload = { name, description, config, isPublic };
-    const response = await appFetch(
-      calculatorId ? `/api/calculators/${calculatorId}` : "/api/calculators",
-      {
-        method: calculatorId ? "PATCH" : "POST",
-        body: JSON.stringify(payload),
-      },
-    );
+    const saveUrl = calculatorId ? `${apiBase}/${calculatorId}` : apiBase;
+    const response = await appFetch(saveUrl, {
+      method: calculatorId ? "PATCH" : "POST",
+      body: JSON.stringify(payload),
+    });
 
     const data = await response.json();
     setSaving(false);
 
     if (!response.ok) {
-      setError(data.error ?? t("saveError"));
+      const message =
+        response.status === 404
+          ? t("saveForbidden")
+          : data.error ?? t("saveError");
+      setError(message);
       setErrorIssues(Array.isArray(data.issues) ? data.issues : []);
       return;
     }
 
-    router.push(`/builder/${data.calculator.id}`);
+    const savedId = data.calculator?.id ?? calculatorId;
+    if (savedId) {
+      router.push(`/builder/${savedId}`);
+    }
     router.refresh();
   }
 
@@ -198,7 +214,7 @@ export function CalculatorBuilder({
     setError(null);
     setErrorIssues([]);
 
-    const response = await appFetch(`/api/calculators/${calculatorId}`, {
+    const response = await appFetch(`${apiBase}/${calculatorId}`, {
       method: "DELETE",
     });
 
@@ -236,12 +252,13 @@ export function CalculatorBuilder({
       <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(280px,380px)] 2xl:grid-cols-[minmax(0,3.5fr)_minmax(300px,400px)]">
         <div className="min-w-0 space-y-5">
           <BuilderSection title={t("settings")} defaultOpen={false}>
-            <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+            <div className="space-y-3 rounded-2xl border border-border bg-card p-4" aria-disabled={readOnly}>
               <label className="block space-y-1.5">
                 <span className="text-sm text-muted-foreground">{t("title")}</span>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  readOnly={readOnly}
                   className="h-11 w-full rounded-xl border border-border bg-input px-3.5 text-sm"
                 />
               </label>
@@ -252,6 +269,7 @@ export function CalculatorBuilder({
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  readOnly={readOnly}
                   rows={2}
                   className="w-full rounded-xl border border-border bg-input px-3.5 py-2.5 text-sm"
                 />
@@ -261,11 +279,15 @@ export function CalculatorBuilder({
                   type="checkbox"
                   checked={isPublic}
                   onChange={(e) => setIsPublic(e.target.checked)}
+                  disabled={readOnly}
                   className="size-4 accent-accent"
                 />
                 {t("publicToggle")}
               </label>
-              {calculatorId && (
+              {calculatorId && canManageShares && (
+                <CalculatorSharesPanel calculatorId={calculatorId} />
+              )}
+              {calculatorId && !readOnly && (
                 <div className="border-t border-border/70 pt-3">
                   <button
                     type="button"
@@ -280,6 +302,10 @@ export function CalculatorBuilder({
             </div>
           </BuilderSection>
 
+          <fieldset
+            disabled={readOnly}
+            className="min-w-0 space-y-5 border-0 p-0 disabled:opacity-90"
+          >
           <BuilderSection
             title={t("inputFields")}
             description={t("inputFieldsDesc")}
@@ -646,6 +672,8 @@ export function CalculatorBuilder({
             </div>
           </BuilderSection>
 
+          </fieldset>
+
           {error && (
             <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               <p className="font-medium">{error}</p>
@@ -659,24 +687,26 @@ export function CalculatorBuilder({
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCodeSheetOpen(true)}
-              className="w-full sm:w-auto"
-            >
-              {t("codeModeOpen")}
-            </Button>
-            <DocsHelpLink hash="input" />
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full sm:w-auto"
-            >
-              {saving ? tc("saving") : tc("save")}
-            </Button>
-          </div>
+          {!readOnly && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCodeSheetOpen(true)}
+                className="w-full sm:w-auto"
+              >
+                {t("codeModeOpen")}
+              </Button>
+              <DocsHelpLink hash="input" />
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="w-full sm:w-auto"
+              >
+                {saving ? tc("saving") : tc("save")}
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="min-w-0 xl:sticky xl:top-24 xl:self-start">

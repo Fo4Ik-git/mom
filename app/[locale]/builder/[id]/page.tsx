@@ -2,9 +2,14 @@ import { CalculatorBuilder } from "@/app/components/builder/calculator-builder";
 import { PageShell } from "@/app/components/layout/page-shell";
 import { auth } from "@/auth";
 import { Link, redirect } from "@/i18n/navigation";
+import {
+  canEditCalculator,
+  getCalculatorAccess,
+} from "@/lib/calculator/access";
 import { calculatorPublicPath } from "@/lib/calculator/route";
-import { db } from "@/lib/platform/db";
 import { isAccessActive } from "@/lib/access/user-limits";
+import { db } from "@/lib/platform/db";
+import { Role } from "@prisma/client";
 import { parseCalculatorConfig } from "@/types/calculator";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -28,33 +33,54 @@ export default async function EditBuilderPage({
     redirect({ href: "/", locale });
   }
 
-  const calculator = await db.calculator.findFirst({
-    where: { id, userId },
-  });
+  const access = await getCalculatorAccess(
+    id,
+    userId,
+    session.user.role ?? Role.USER,
+  );
 
-  if (!calculator || calculator.isTemplate) {
+  if (!access) {
     notFound();
   }
+
+  const readOnly = !canEditCalculator(access);
+  const canManageShares =
+    access.kind === "owner" || access.kind === "admin";
 
   const t = await getTranslations("builder");
 
   return (
     <PageShell width="full">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">{t("editTitle")}</h1>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{t("editTitle")}</h1>
+          {readOnly && (
+            <p className="mt-1 text-sm text-muted-foreground">{t("readOnlyHint")}</p>
+          )}
+          {access.kind === "admin" && (
+            <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+              {t("adminEditHint")}
+            </p>
+          )}
+        </div>
         <Link
-          href={calculatorPublicPath(calculator.id)}
+          href={calculatorPublicPath(access.calculator.id)}
           className="text-sm font-medium text-accent underline"
         >
           {t("openCalculator")}
         </Link>
       </div>
       <CalculatorBuilder
-        calculatorId={calculator.id}
-        initialName={calculator.name}
-        initialDescription={calculator.description ?? ""}
-        initialConfig={parseCalculatorConfig(calculator.config)}
-        initialIsPublic={calculator.isPublic}
+        calculatorId={access.calculator.id}
+        initialName={access.calculator.name}
+        initialDescription={access.calculator.description ?? ""}
+        initialConfig={parseCalculatorConfig(access.calculator.config)}
+        initialIsPublic={access.calculator.isPublic}
+        readOnly={readOnly}
+        canManageShares={canManageShares}
+        apiBase={
+          access.kind === "admin" ? "/api/admin/calculators" : "/api/calculators"
+        }
       />
     </PageShell>
   );
