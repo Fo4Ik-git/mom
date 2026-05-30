@@ -1,6 +1,7 @@
 import "server-only";
 
 import { AsyncLocalStorage } from "node:async_hooks";
+import { decodeHeaderUtf8 } from "@/lib/http/safe-header";
 import { generateTraceId } from "@/lib/logger/trace-id";
 
 export type RequestUserContext = {
@@ -41,7 +42,8 @@ export function runWithRequestContext<T>(
 export function bindRequestContextFromHeaders(headers: Headers): RequestLogContext {
   const userId = headers.get("x-user-id") ?? undefined;
   const email = headers.get("x-user-email");
-  const name = headers.get("x-user-name");
+  const nameRaw = headers.get("x-user-name");
+  const name = nameRaw ? decodeHeaderUtf8(nameRaw) : null;
   const role = headers.get("x-user-role") ?? undefined;
 
   const user =

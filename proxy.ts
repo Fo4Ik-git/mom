@@ -1,6 +1,7 @@
 import createIntlMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { encodeHeaderUtf8 } from "@/lib/http/safe-header";
 import { generateTraceId } from "@/lib/logger/trace-id";
 import { isAllowedFrontendRequest } from "@/lib/api/api-security";
 import { stripLocalePrefix, withLocalePath } from "@/i18n/locale";
@@ -24,7 +25,7 @@ function withTraceHeaders(request: NextRequest): Headers {
     headers.set("x-user-email", user.email);
   }
   if (user?.name) {
-    headers.set("x-user-name", user.name);
+    headers.set("x-user-name", encodeHeaderUtf8(user.name));
   }
   if (user?.role) {
     headers.set("x-user-role", user.role);

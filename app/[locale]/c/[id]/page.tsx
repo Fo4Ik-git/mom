@@ -4,9 +4,14 @@ import { Button } from "@/app/components/ui/button";
 import { auth } from "@/auth";
 import { Link, redirect } from "@/i18n/navigation";
 import {
-    calculatorPublicPath,
-    findCalculatorByRouteParam,
+  canEditCalculator,
+  getCalculatorAccess,
+} from "@/lib/calculator/access";
+import {
+  calculatorPublicPath,
+  findCalculatorByRouteParam,
 } from "@/lib/calculator/route";
+import { Role } from "@prisma/client";
 import { parseCalculatorConfig } from "@/types/calculator";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -28,8 +33,17 @@ export default async function CalculatorPage({
     notFound();
   }
 
-  const isOwner = session?.user?.id === calculator.userId;
-  const canView = calculator.isPublic || calculator.isTemplate || isOwner;
+  const userId = session?.user?.id;
+  const access = userId
+    ? await getCalculatorAccess(
+        calculator.id,
+        userId,
+        session.user.role ?? Role.USER,
+      )
+    : null;
+
+  const canView =
+    calculator.isPublic || calculator.isTemplate || access !== null;
 
   if (!canView) {
     if (!session?.user) {
@@ -40,6 +54,8 @@ export default async function CalculatorPage({
     }
     notFound();
   }
+
+  const showEditLink = access !== null && canEditCalculator(access);
 
   const config = parseCalculatorConfig(calculator.config);
 
@@ -52,7 +68,7 @@ export default async function CalculatorPage({
             <p className="mt-2 text-muted-foreground">{calculator.description}</p>
           )}
         </div>
-        {isOwner && (
+        {showEditLink && (
           <Link href={`/builder/${calculator.id}`}>
             <Button variant="outline">{t("edit")}</Button>
           </Link>
