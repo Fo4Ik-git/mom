@@ -10,6 +10,8 @@ export type UserOption = {
   name: string | null;
 };
 
+const USER_SELECT_MAX = 10;
+
 function formatLabel(user: UserOption) {
   return user.name ? `${user.name} · ${user.email}` : user.email;
 }
@@ -18,19 +20,29 @@ export function AdminUserSelect({
   value,
   onChange,
   disabled,
+  placeholder,
+  emptyLabel,
+  clearLabel,
 }: {
   value: string;
   onChange: (userId: string, user: UserOption | null) => void;
   disabled?: boolean;
+  placeholder?: string;
+  emptyLabel?: string;
+  clearLabel?: string;
 }) {
   const t = useTranslations("admin");
   const tc = useTranslations("common");
+  const searchPlaceholder = placeholder ?? t("accessKeyReferrerPlaceholder");
+  const noResultsLabel = emptyLabel ?? t("accessKeyReferrerEmpty");
+  const clearButtonLabel = clearLabel ?? t("accessKeyReferrerClear");
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [options, setOptions] = useState<UserOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
 
   const loadById = useCallback(async (userId: string) => {
     if (!userId) {
@@ -59,16 +71,14 @@ export function AdminUserSelect({
       setLoading(true);
       const params = new URLSearchParams({
         page: "1",
-        pageSize: "15",
+        pageSize: String(USER_SELECT_MAX),
         q: query.trim(),
       });
       const res = await appFetch(`/api/admin/users?${params}`);
       const data = await res.json();
-      setOptions(
-        (data.users ?? []).map(
-          (u: UserOption) => u,
-        ),
-      );
+      const users = (data.users ?? []) as UserOption[];
+      setOptions(users.slice(0, USER_SELECT_MAX));
+      setHasMore((data.pagination?.total ?? users.length) > USER_SELECT_MAX);
       setLoading(false);
     }, 250);
     return () => window.clearTimeout(timer);
@@ -107,7 +117,7 @@ export function AdminUserSelect({
         aria-controls={listId}
         disabled={disabled}
         value={query}
-        placeholder={t("accessKeyReferrerPlaceholder")}
+        placeholder={searchPlaceholder}
         className={inputClass}
         autoComplete="off"
         onFocus={() => setOpen(true)}
@@ -124,7 +134,7 @@ export function AdminUserSelect({
           type="button"
           className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
           onClick={clear}
-          aria-label={t("accessKeyReferrerClear")}
+          aria-label={clearButtonLabel}
         >
           ×
         </button>
@@ -140,7 +150,7 @@ export function AdminUserSelect({
           )}
           {!loading && options.length === 0 && (
             <li className="px-3 py-2 text-muted-foreground">
-              {t("accessKeyReferrerEmpty")}
+              {noResultsLabel}
             </li>
           )}
           {options.map((user) => (
@@ -157,6 +167,11 @@ export function AdminUserSelect({
               </button>
             </li>
           ))}
+          {!loading && hasMore && (
+            <li className="border-t border-border px-3 py-2 text-xs text-muted-foreground">
+              {t("userSelectRefineSearch")}
+            </li>
+          )}
         </ul>
       )}
     </div>

@@ -2,6 +2,11 @@
 
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import {
+  AdminUserSelect,
+  type UserOption,
+} from "@/app/components/admin/admin-user-select";
+import { Button } from "@/app/components/ui/button";
 import { appFetch } from "@/lib/api/api-client";
 
 type ShareRow = {
@@ -22,8 +27,11 @@ export function CalculatorSharesPanel({
   apiBase = "/api/calculators",
 }: CalculatorSharesPanelProps) {
   const t = useTranslations("sharing");
+  const isAdminApi = apiBase.includes("/api/admin/");
   const [shares, setShares] = useState<ShareRow[]>([]);
   const [email, setEmail] = useState("");
+  const [pickUserId, setPickUserId] = useState("");
+  const [pickUserEmail, setPickUserEmail] = useState("");
   const [role, setRole] = useState<"VIEW" | "EDIT">("EDIT");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -50,7 +58,8 @@ export function CalculatorSharesPanel({
 
   async function addShare(event: React.FormEvent) {
     event.preventDefault();
-    if (!email.trim()) {
+    const shareEmail = isAdminApi ? pickUserEmail.trim() : email.trim();
+    if (!shareEmail) {
       return;
     }
     setSaving(true);
@@ -58,7 +67,7 @@ export function CalculatorSharesPanel({
     const res = await appFetch(`${apiBase}/${calculatorId}/shares`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim(), role }),
+      body: JSON.stringify({ email: shareEmail, role }),
     });
     const data = await res.json();
     setSaving(false);
@@ -67,8 +76,18 @@ export function CalculatorSharesPanel({
       return;
     }
     setEmail("");
+    setPickUserId("");
+    setPickUserEmail("");
     await load();
   }
+
+  function onPickUser(userId: string, user: UserOption | null) {
+    setPickUserId(userId);
+    setPickUserEmail(user?.email ?? "");
+  }
+
+  const inputClass =
+    "block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm";
 
   async function removeShare(userId: string) {
     if (!confirm(t("removeConfirm"))) {
@@ -95,35 +114,49 @@ export function CalculatorSharesPanel({
         <p className="text-xs text-destructive">{error}</p>
       )}
 
-      <form onSubmit={addShare} className="flex flex-wrap items-end gap-2">
-        <label className="min-w-[180px] flex-1 space-y-1">
-          <span className="text-xs text-muted-foreground">{t("email")}</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
-            placeholder={t("emailPlaceholder")}
-          />
-        </label>
+      <form
+        onSubmit={addShare}
+        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+      >
+        {isAdminApi ? (
+          <label className="space-y-1 sm:col-span-2 lg:col-span-3">
+            <span className="text-sm text-muted-foreground">{t("pickUser")}</span>
+            <AdminUserSelect
+              value={pickUserId}
+              onChange={onPickUser}
+              disabled={saving}
+              placeholder={t("pickUserPlaceholder")}
+              emptyLabel={t("pickUserEmpty")}
+            />
+          </label>
+        ) : (
+          <label className="space-y-1 sm:col-span-2 lg:col-span-3">
+            <span className="text-sm text-muted-foreground">{t("email")}</span>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputClass}
+              placeholder={t("emailPlaceholder")}
+            />
+          </label>
+        )}
         <label className="space-y-1">
-          <span className="text-xs text-muted-foreground">{t("role")}</span>
+          <span className="text-sm text-muted-foreground">{t("role")}</span>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as "VIEW" | "EDIT")}
-            className="h-10 rounded-xl border border-border bg-input px-3 text-sm"
+            className={inputClass}
           >
             <option value="EDIT">{t("roleEdit")}</option>
             <option value="VIEW">{t("roleView")}</option>
           </select>
         </label>
-        <button
-          type="submit"
-          disabled={saving}
-          className="h-10 rounded-xl bg-accent px-4 text-sm font-medium text-accent-foreground disabled:opacity-50"
-        >
-          {saving ? t("adding") : t("add")}
-        </button>
+        <div className="flex items-end">
+          <Button type="submit" disabled={saving || (isAdminApi && !pickUserId)}>
+            {saving ? t("adding") : t("add")}
+          </Button>
+        </div>
       </form>
 
       {loading ? (

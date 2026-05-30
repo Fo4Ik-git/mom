@@ -4,6 +4,10 @@ import { CalculatorSharesPanel } from "@/app/components/builder/calculator-share
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
+import {
+  AdminUserSelect,
+  type UserOption,
+} from "@/app/components/admin/admin-user-select";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
 import { Button } from "@/app/components/ui/button";
 import { DataTable } from "@/app/components/ui/data-table";
@@ -30,11 +34,15 @@ const tableActionClass = "h-8 px-3 text-xs";
 
 export function AdminCalculators() {
   const t = useTranslations("admin");
+  const ts = useTranslations("sharing");
   const tc = useTranslations("common");
   const router = useRouter();
   const [actionError, setActionError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [transferEmail, setTransferEmail] = useState<Record<string, string>>({});
+  const [transferUserId, setTransferUserId] = useState<Record<string, string>>({});
+  const [transferUserEmail, setTransferUserEmail] = useState<
+    Record<string, string>
+  >({});
   const [transferringId, setTransferringId] = useState<string | null>(null);
 
   const fetchPage = useCallback(
@@ -119,8 +127,20 @@ export function AdminCalculators() {
     await refresh();
   }
 
+  function setTransferPick(
+    calculatorId: string,
+    userId: string,
+    user: UserOption | null,
+  ) {
+    setTransferUserId((current) => ({ ...current, [calculatorId]: userId }));
+    setTransferUserEmail((current) => ({
+      ...current,
+      [calculatorId]: user?.email ?? "",
+    }));
+  }
+
   async function transfer(id: string) {
-    const email = transferEmail[id]?.trim();
+    const email = transferUserEmail[id]?.trim();
     if (!email) {
       return;
     }
@@ -140,7 +160,8 @@ export function AdminCalculators() {
       setActionError(transferErrorMessage(data.error, t));
       return;
     }
-    setTransferEmail((current) => ({ ...current, [id]: "" }));
+    setTransferUserId((current) => ({ ...current, [id]: "" }));
+    setTransferUserEmail((current) => ({ ...current, [id]: "" }));
     await refresh();
   }
 
@@ -256,28 +277,36 @@ export function AdminCalculators() {
               <div className="mx-auto max-w-xl space-y-4">
                 <div>
                   <p className="mb-2 text-sm font-medium">{t("transferTitle")}</p>
-                  <div className="flex flex-wrap gap-2">
-                    <input
-                      type="email"
-                      value={transferEmail[calculator.id] ?? ""}
-                      onChange={(e) =>
-                        setTransferEmail((current) => ({
-                          ...current,
-                          [calculator.id]: e.target.value,
-                        }))
-                      }
-                      placeholder={t("transferEmailPlaceholder")}
-                      className="h-10 min-w-[200px] flex-1 rounded-xl border border-border bg-input px-3 text-sm"
-                    />
-                    <Button
-                      type="button"
-                      disabled={transferringId === calculator.id}
-                      onClick={() => transfer(calculator.id)}
-                    >
-                      {transferringId === calculator.id
-                        ? t("transferring")
-                        : t("transferBtn")}
-                    </Button>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="space-y-1 sm:col-span-2">
+                      <span className="text-sm text-muted-foreground">
+                        {ts("pickUser")}
+                      </span>
+                      <AdminUserSelect
+                        key={calculator.id}
+                        value={transferUserId[calculator.id] ?? ""}
+                        onChange={(userId, user) =>
+                          setTransferPick(calculator.id, userId, user)
+                        }
+                        disabled={transferringId === calculator.id}
+                        placeholder={ts("pickUserPlaceholder")}
+                        emptyLabel={ts("pickUserEmpty")}
+                      />
+                    </label>
+                    <div className="flex items-end sm:col-span-2">
+                      <Button
+                        type="button"
+                        disabled={
+                          transferringId === calculator.id ||
+                          !transferUserId[calculator.id]
+                        }
+                        onClick={() => transfer(calculator.id)}
+                      >
+                        {transferringId === calculator.id
+                          ? t("transferring")
+                          : t("transferBtn")}
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 <CalculatorSharesPanel
