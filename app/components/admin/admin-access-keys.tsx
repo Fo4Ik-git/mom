@@ -1,15 +1,24 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
 import { Button } from "@/app/components/ui/button";
+
+const tableActionClass = "h-8 px-3 text-xs";
 import { Card, CardTitle } from "@/app/components/ui/card";
+import { DataTable } from "@/app/components/ui/data-table";
+import type { DataTableColumn } from "@/app/components/ui/data-table";
 import { appFetch } from "@/lib/api/api-client";
 import { adminApiErrorMessage } from "@/lib/admin/admin-api-error";
+import { usePaginatedTable } from "@/lib/hooks/use-paginated-table";
+import {
+  buildTablePagination,
+  tableQueryParams,
+} from "@/lib/ui/table-pagination";
 import { signupAbsoluteUrl } from "@/lib/auth/signup-url";
 
-interface AccessKeyRow {
+export interface AccessKeyRow {
   id: string;
   code: string;
   kind: "REGISTRATION" | "REFERRAL";
@@ -26,7 +35,6 @@ interface AccessKeyRow {
 export function AdminAccessKeys() {
   const t = useTranslations("admin");
   const tc = useTranslations("common");
-  const [keys, setKeys] = useState<AccessKeyRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -39,21 +47,66 @@ export function AdminAccessKeys() {
     kind: "REGISTRATION" as "REGISTRATION" | "REFERRAL",
   });
 
-  const load = useCallback(async () => {
-    setLoadError(null);
-    const res = await appFetch("/api/admin/access-keys");
-    const data = await res.json();
-    if (!res.ok) {
-      setLoadError(adminApiErrorMessage(data, t));
-      setKeys([]);
-      return;
-    }
-    setKeys(data.keys ?? []);
-  }, [t]);
+  const fetchPage = useCallback(
+    async ({
+      page,
+      pageSize,
+      query,
+    }: {
+      page: number;
+      pageSize: number;
+      query: string;
+    }) => {
+      const res = await appFetch(
+        `/api/admin/access-keys?${tableQueryParams(page, pageSize, query)}`,
+      );
+      const data = await res.json();
 
-  useEffect(() => {
-    load();
-  }, [load]);
+      if (!res.ok) {
+        setLoadError(adminApiErrorMessage(data, t));
+        return {
+          rows: [] as AccessKeyRow[],
+          pagination: buildTablePagination(page, pageSize, 0),
+        };
+      }
+
+      setLoadError(null);
+      return {
+        rows: (data.keys ?? []) as AccessKeyRow[],
+        pagination:
+          data.pagination ?? buildTablePagination(page, pageSize, 0),
+      };
+    },
+    [t],
+  );
+
+  const {
+    rows: keys,
+    loading,
+    pagination,
+    setPage,
+    pageSize,
+    setPageSize,
+    searchInput,
+    setSearchInput,
+    refresh,
+  } = usePaginatedTable<AccessKeyRow>({ fetchPage });
+
+  const tableLabels = useMemo(
+    () => ({
+      loading: tc("loading"),
+      noResults: t("accessKeyEmpty"),
+      refresh: t("refresh"),
+      formatShowing: (from: number, to: number, total: number) =>
+        t("usersShowing", { from, to, total }),
+      formatPage: (pageNum: number, pages: number) =>
+        t("usersPage", { page: pageNum, pages }),
+      pageSize: t("usersPageSize"),
+      prev: t("usersPrev"),
+      next: t("usersNext"),
+    }),
+    [t, tc],
+  );
 
   async function createKey(event: React.FormEvent) {
     event.preventDefault();
@@ -76,8 +129,14 @@ export function AdminAccessKeys() {
       setLoadError(adminApiErrorMessage(data, t));
       return;
     }
-    setForm({ label: "", maxUses: "", expiresAt: "", accessDays: "", kind: "REGISTRATION" });
-    await load();
+    setForm({
+      label: "",
+      maxUses: "",
+      expiresAt: "",
+      accessDays: "",
+      kind: "REGISTRATION",
+    });
+    await refresh();
   }
 
   async function toggleActive(key: AccessKeyRow) {
@@ -85,7 +144,7 @@ export function AdminAccessKeys() {
       method: "PATCH",
       body: JSON.stringify({ active: !key.active }),
     });
-    await load();
+    await refresh();
   }
 
   async function removeKey(id: string) {
@@ -93,7 +152,7 @@ export function AdminAccessKeys() {
       return;
     }
     await appFetch(`/api/admin/access-keys/${id}`, { method: "DELETE" });
-    await load();
+    await refresh();
   }
 
   async function copyLink(key: AccessKeyRow) {
@@ -110,6 +169,99 @@ export function AdminAccessKeys() {
     return `${key.usedCount} / ${key.maxUses}`;
   }
 
+  const columns = useMemo((): DataTableColumn<AccessKeyRow>[] => {
+    return [
+      {
+        id: "code",
+        header: t("accessKeyCode"),
+        cellClassName: "font-mono text-xs font-semibold tracking-wide",
+        cell: (key) => key.code,
+      },
+      {
+        id: "label",
+        header: t("accessKeyLabel"),
+        cellClassName: "text-muted-foreground",
+        cell: (key) => (
+          <>
+            {key.label ?? "—"}
+            {key.referrerEmail && (
+              <span className="mt-0.5 block text-[11px]">
+                {t("accessKeyReferrer")}: {key.referrerEmail}
+              </span>
+            )}
+          </>
+        ),
+      },
+      {
+        id: "uses",
+        header: t("accessKeyUses"),
+        cellClassName: "tabular-nums",
+        cell: (key) => usesLabel(key),
+      },
+      {
+        id: "kind",
+        header: t("accessKeyKind"),
+        cellClassName: "text-xs",
+        cell: (key) =>
+          key.kind === "REFERRAL"
+            ? t("accessKeyKindReferral")
+            : t("accessKeyKindRegistration"),
+      },
+      {
+        id: "status",
+        header: t("status"),
+        cell: (key) => (
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+              key.active
+                ? "bg-green-500/15 text-green-700 dark:text-green-400"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {key.active ? t("accessKeyActive") : t("accessKeyInactive")}
+          </span>
+        ),
+      },
+      {
+        id: "actions",
+        header: t("actions"),
+        headerClassName: "text-right",
+        cellClassName: "text-right",
+        cell: (key) => (
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant={copiedId === key.id ? "primary" : "outline"}
+              className={tableActionClass}
+              onClick={() => copyLink(key)}
+            >
+              {copiedId === key.id ? t("accessKeyCopied") : t("accessKeyCopyLink")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className={tableActionClass}
+              onClick={() => toggleActive(key)}
+            >
+              {key.active ? t("accessKeyDeactivate") : t("accessKeyActivate")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className={tableActionClass}
+              onClick={() => removeKey(key.id)}
+            >
+              {tc("delete")}
+            </Button>
+          </div>
+        ),
+      },
+    ];
+  }, [t, tc, copiedId]);
+
+  const inputClass =
+    "block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm";
+
   return (
     <div className="space-y-6">
       <AdminErrorAlert message={loadError} />
@@ -123,7 +275,7 @@ export function AdminAccessKeys() {
               value={form.label}
               onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
               placeholder={t("accessKeyLabelPlaceholder")}
-              className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+              className={inputClass}
             />
           </label>
           <label className="space-y-1">
@@ -136,7 +288,7 @@ export function AdminAccessKeys() {
                   kind: e.target.value as "REGISTRATION" | "REFERRAL",
                 }))
               }
-              className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+              className={inputClass}
             >
               <option value="REGISTRATION">{t("accessKeyKindRegistration")}</option>
               <option value="REFERRAL">{t("accessKeyKindReferral")}</option>
@@ -150,7 +302,7 @@ export function AdminAccessKeys() {
               value={form.maxUses}
               onChange={(e) => setForm((f) => ({ ...f, maxUses: e.target.value }))}
               placeholder="∞"
-              className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+              className={inputClass}
             />
           </label>
           <label className="space-y-1">
@@ -159,7 +311,7 @@ export function AdminAccessKeys() {
               type="date"
               value={form.expiresAt}
               onChange={(e) => setForm((f) => ({ ...f, expiresAt: e.target.value }))}
-              className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+              className={inputClass}
             />
           </label>
           <label className="space-y-1">
@@ -170,7 +322,7 @@ export function AdminAccessKeys() {
               value={form.accessDays}
               onChange={(e) => setForm((f) => ({ ...f, accessDays: e.target.value }))}
               placeholder={t("accessKeyAccessDaysDefault")}
-              className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+              className={inputClass}
             />
           </label>
           <div className="flex items-end sm:col-span-2 lg:col-span-3">
@@ -181,86 +333,32 @@ export function AdminAccessKeys() {
         </form>
       </Card>
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card/90 shadow-card">
-        <table className="w-full min-w-[800px] text-left text-sm">
-          <thead className="border-b border-border bg-muted/40">
-            <tr>
-              <th className="px-4 py-3 font-medium">{t("accessKeyCode")}</th>
-              <th className="px-4 py-3 font-medium">{t("accessKeyLabel")}</th>
-              <th className="px-4 py-3 font-medium">{t("accessKeyUses")}</th>
-              <th className="px-4 py-3 font-medium">{t("accessKeyKind")}</th>
-              <th className="px-4 py-3 font-medium">{t("status")}</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {keys.map((key) => (
-              <tr key={key.id} className="border-b border-border/60">
-                <td className="px-4 py-3 font-mono text-xs font-semibold tracking-wide">
-                  {key.code}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {key.label ?? "—"}
-                  {key.referrerEmail && (
-                    <span className="mt-0.5 block text-[11px]">
-                      {t("accessKeyReferrer")}: {key.referrerEmail}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3 tabular-nums">{usesLabel(key)}</td>
-                <td className="px-4 py-3 text-xs">
-                  {key.kind === "REFERRAL"
-                    ? t("accessKeyKindReferral")
-                    : t("accessKeyKindRegistration")}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      key.active
-                        ? "bg-green-500/15 text-green-700 dark:text-green-400"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {key.active ? t("accessKeyActive") : t("accessKeyInactive")}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => copyLink(key)}
-                      className="text-xs font-medium text-accent underline"
-                    >
-                      {copiedId === key.id ? t("accessKeyCopied") : t("accessKeyCopyLink")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleActive(key)}
-                      className="text-xs text-muted-foreground underline"
-                    >
-                      {key.active ? t("accessKeyDeactivate") : t("accessKeyActivate")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeKey(key.id)}
-                      className="text-xs font-medium text-destructive underline"
-                    >
-                      {tc("delete")}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {keys.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                  {t("accessKeyEmpty")}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable<AccessKeyRow>
+        title={t("accessKeys")}
+        columns={columns}
+        rows={keys}
+        rowKey={(key) => key.id}
+        labels={tableLabels}
+        pagination={pagination}
+        pageSize={pageSize}
+        loading={loading}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        onRefresh={() => void refresh()}
+        toolbar={
+          <label className="block space-y-1">
+            <span className="sr-only">{t("accessKeysSearchPlaceholder")}</span>
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder={t("accessKeysSearchPlaceholder")}
+              className={inputClass}
+              autoComplete="off"
+            />
+          </label>
+        }
+      />
     </div>
   );
 }

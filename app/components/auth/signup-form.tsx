@@ -38,41 +38,36 @@ export function SignUpForm({ initialAccessKey = "" }: { initialAccessKey?: strin
     setAccessKey(initialAccessKey);
   }, [initialAccessKey]);
 
-  useEffect(() => {
-    const normalized = normalizeAccessKeyCode(accessKey);
-    if (normalized.length < 4) {
-      setKeyState("idle");
-      setKeyLabel(null);
-      return;
-    }
-
+  async function validateAccessKey(
+    normalized: string,
+  ): Promise<{ ok: true; label: string | null } | { ok: false; reason: KeyCheckState }> {
     setKeyState("checking");
-    const timer = setTimeout(async () => {
-      try {
-        const response = await appFetch(
-          `/api/auth/access-key?code=${encodeURIComponent(normalized)}`,
-        );
-        const data = await response.json();
-        if (data.valid) {
-          setKeyState("valid");
-          setKeyLabel(data.label ?? null);
-        } else {
-          setKeyState((data.reason as KeyCheckState) ?? "invalid");
-          setKeyLabel(null);
-        }
-      } catch {
-        setKeyState("invalid");
-        setKeyLabel(null);
+    try {
+      const response = await appFetch(
+        `/api/auth/access-key?code=${encodeURIComponent(normalized)}`,
+      );
+      const data = await response.json();
+      if (data.valid) {
+        const label = (data.label as string | undefined) ?? null;
+        setKeyState("valid");
+        setKeyLabel(label);
+        return { ok: true, label };
       }
-    }, 350);
+      const reason = (data.reason as KeyCheckState) ?? "invalid";
+      setKeyState(reason);
+      setKeyLabel(null);
+      return { ok: false, reason };
+    } catch {
+      setKeyState("invalid");
+      setKeyLabel(null);
+      return { ok: false, reason: "invalid" };
+    }
+  }
 
-    return () => clearTimeout(timer);
-  }, [accessKey]);
-
-  function keyStateMessage(): string | null {
-    switch (keyState) {
+  function keyStateMessage(state: KeyCheckState = keyState, label = keyLabel): string | null {
+    switch (state) {
       case "valid":
-        return keyLabel ? t("accessKeyValidWithLabel", { label: keyLabel }) : t("accessKeyValid");
+        return label ? t("accessKeyValidWithLabel", { label }) : t("accessKeyValid");
       case "expired":
         return t("accessKeyExpired");
       case "exhausted":
@@ -92,13 +87,16 @@ export function SignUpForm({ initialAccessKey = "" }: { initialAccessKey?: strin
 
     const normalizedKey = normalizeAccessKeyCode(accessKey);
     if (normalizedKey.length < 4) {
+      setKeyState("idle");
+      setKeyLabel(null);
       setError(t("accessKeyRequired"));
       setLoading(false);
       return;
     }
 
-    if (keyState !== "valid") {
-      setError(keyStateMessage() ?? t("accessKeyInvalid"));
+    const keyCheck = await validateAccessKey(normalizedKey);
+    if (!keyCheck.ok) {
+      setError(keyStateMessage(keyCheck.reason) ?? t("accessKeyInvalid"));
       setLoading(false);
       return;
     }
@@ -179,11 +177,15 @@ export function SignUpForm({ initialAccessKey = "" }: { initialAccessKey?: strin
             autoComplete="off"
             spellCheck={false}
             value={accessKey}
-            onChange={(e) => setAccessKey(e.target.value.toUpperCase())}
+            onChange={(e) => {
+              setAccessKey(e.target.value.toUpperCase());
+              setKeyState("idle");
+              setKeyLabel(null);
+            }}
             placeholder="XXXXXXXXXX"
             className="block h-11 w-full rounded-xl border border-border bg-input px-3.5 font-mono text-sm tracking-widest"
           />
-          {keyHint && (
+          {keyHint && keyState !== "idle" && (
             <p className={`text-xs ${keyHintClass}`}>
               {keyState === "checking" ? t("accessKeyChecking") : keyHint}
             </p>
@@ -222,11 +224,7 @@ export function SignUpForm({ initialAccessKey = "" }: { initialAccessKey?: strin
           />
         </FormField>
 
-        <Button
-          type="submit"
-          disabled={loading || keyState === "checking"}
-          className="w-full"
-        >
+        <Button type="submit" disabled={loading} className="w-full">
           {loading ? t("signingUp") : t("signUp")}
         </Button>
 

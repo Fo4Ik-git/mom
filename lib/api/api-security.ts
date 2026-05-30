@@ -134,6 +134,14 @@ export function isAllowedFrontendRequest(request: RequestLike): boolean {
     );
   }
 
+  // Some mobile browsers omit Origin/Referer on same-site fetch; host still matches.
+  const requestOrigin = getRequestOrigin(request);
+  if (requestOrigin) {
+    return allowedOrigins.some((allowed) =>
+      matchesAllowedOrigin(requestOrigin, allowed),
+    );
+  }
+
   return false;
 }
 

@@ -2,11 +2,19 @@
 
 import { CalculatorSharesPanel } from "@/app/components/builder/calculator-shares-panel";
 import { useTranslations } from "next-intl";
-import { Fragment, useEffect, useState } from "react";
-import { Link } from "@/i18n/navigation";
+import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "@/i18n/navigation";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
+import { Button } from "@/app/components/ui/button";
+import { DataTable } from "@/app/components/ui/data-table";
+import type { DataTableColumn } from "@/app/components/ui/data-table";
 import { appFetch } from "@/lib/api/api-client";
 import { adminApiErrorMessage } from "@/lib/admin/admin-api-error";
+import { usePaginatedTable } from "@/lib/hooks/use-paginated-table";
+import {
+  buildTablePagination,
+  tableQueryParams,
+} from "@/lib/ui/table-pagination";
 
 interface CalculatorRow {
   id: string;
@@ -18,31 +26,79 @@ interface CalculatorRow {
   ownerMissing?: boolean;
 }
 
+const tableActionClass = "h-8 px-3 text-xs";
+
 export function AdminCalculators() {
   const t = useTranslations("admin");
   const tc = useTranslations("common");
-  const [calculators, setCalculators] = useState<CalculatorRow[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const router = useRouter();
   const [actionError, setActionError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [transferEmail, setTransferEmail] = useState<Record<string, string>>({});
   const [transferringId, setTransferringId] = useState<string | null>(null);
 
-  async function load() {
-    setLoadError(null);
-    const response = await appFetch("/api/admin/calculators");
-    const data = await response.json();
-    if (!response.ok) {
-      setLoadError(adminApiErrorMessage(data, t));
-      setCalculators([]);
-      return;
-    }
-    setCalculators(data.calculators ?? []);
-  }
+  const fetchPage = useCallback(
+    async ({
+      page,
+      pageSize,
+      query,
+    }: {
+      page: number;
+      pageSize: number;
+      query: string;
+    }) => {
+      const response = await appFetch(
+        `/api/admin/calculators?${tableQueryParams(page, pageSize, query)}`,
+      );
+      const data = await response.json();
 
-  useEffect(() => {
-    load();
-  }, []);
+      if (!response.ok) {
+        setListError(adminApiErrorMessage(data, t));
+        return {
+          rows: [] as CalculatorRow[],
+          pagination: buildTablePagination(page, pageSize, 0),
+        };
+      }
+
+      setListError(null);
+      return {
+        rows: (data.calculators ?? []) as CalculatorRow[],
+        pagination:
+          data.pagination ?? buildTablePagination(page, pageSize, 0),
+      };
+    },
+    [t],
+  );
+
+  const [listError, setListError] = useState<string | null>(null);
+
+  const {
+    rows: calculators,
+    loading,
+    pagination,
+    setPage,
+    pageSize,
+    setPageSize,
+    searchInput,
+    setSearchInput,
+    refresh,
+  } = usePaginatedTable<CalculatorRow>({ fetchPage });
+
+  const tableLabels = useMemo(
+    () => ({
+      loading: tc("loading"),
+      noResults: t("calculatorsEmpty"),
+      refresh: t("refresh"),
+      formatShowing: (from: number, to: number, total: number) =>
+        t("usersShowing", { from, to, total }),
+      formatPage: (pageNum: number, pages: number) =>
+        t("usersPage", { page: pageNum, pages }),
+      pageSize: t("usersPageSize"),
+      prev: t("usersPrev"),
+      next: t("usersNext"),
+    }),
+    [t, tc],
+  );
 
   async function remove(id: string) {
     if (!confirm(t("deleteConfirm"))) {
@@ -60,7 +116,7 @@ export function AdminCalculators() {
     if (expandedId === id) {
       setExpandedId(null);
     }
-    await load();
+    await refresh();
   }
 
   async function transfer(id: string) {
@@ -85,121 +141,167 @@ export function AdminCalculators() {
       return;
     }
     setTransferEmail((current) => ({ ...current, [id]: "" }));
-    await load();
+    await refresh();
   }
+
+  const columns = useMemo((): DataTableColumn<CalculatorRow>[] => {
+    return [
+      {
+        id: "name",
+        header: t("title"),
+        cell: (calculator) => (
+          <span className="font-medium">{calculator.name}</span>
+        ),
+      },
+      {
+        id: "owner",
+        header: t("owner"),
+        cell: (calculator) =>
+          calculator.ownerMissing ? (
+            <span className="italic text-muted-foreground">
+              {t("ownerMissing")}
+            </span>
+          ) : (
+            calculator.ownerEmail
+          ),
+      },
+      {
+        id: "slug",
+        header: t("slug"),
+        cellClassName: "font-mono text-xs",
+        cell: (calculator) => calculator.slug,
+      },
+      {
+        id: "flags",
+        header: t("flags"),
+        cellClassName: "text-xs text-muted-foreground",
+        cell: (calculator) => (
+          <>
+            {calculator.isTemplate && `${tc("template")} `}
+            {calculator.isPublic && tc("public")}
+          </>
+        ),
+      },
+      {
+        id: "actions",
+        header: t("actions"),
+        headerClassName: "text-right",
+        cellClassName: "text-right",
+        cell: (calculator) => {
+          if (calculator.isTemplate) {
+            return null;
+          }
+          const isExpanded = expandedId === calculator.id;
+          return (
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className={tableActionClass}
+                onClick={() => router.push(`/builder/${calculator.id}`)}
+              >
+                {t("editCalculator")}
+              </Button>
+              <Button
+                type="button"
+                variant={isExpanded ? "primary" : "outline"}
+                className={tableActionClass}
+                onClick={() =>
+                  setExpandedId(isExpanded ? null : calculator.id)
+                }
+              >
+                {isExpanded ? t("manageClose") : t("manage")}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                className={tableActionClass}
+                onClick={() => remove(calculator.id)}
+              >
+                {tc("delete")}
+              </Button>
+            </div>
+          );
+        },
+      },
+    ];
+  }, [t, tc, expandedId, router]);
+
+  const inputClass =
+    "block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm";
 
   return (
     <div className="space-y-4">
-      <AdminErrorAlert message={loadError ?? actionError} />
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card/90 shadow-card">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-border bg-muted/40">
-            <tr>
-              <th className="px-4 py-3 font-medium">{t("title")}</th>
-              <th className="px-4 py-3 font-medium">{t("owner")}</th>
-              <th className="px-4 py-3 font-medium">{t("slug")}</th>
-              <th className="px-4 py-3 font-medium">{t("flags")}</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {calculators.map((calculator) => (
-              <Fragment key={calculator.id}>
-                <tr className="border-b border-border/60">
-                  <td className="px-4 py-3 font-medium">{calculator.name}</td>
-                  <td className="px-4 py-3">
-                    {calculator.ownerMissing ? (
-                      <span className="text-muted-foreground italic">
-                        {t("ownerMissing")}
-                      </span>
-                    ) : (
-                      calculator.ownerEmail
-                    )}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs">{calculator.slug}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {calculator.isTemplate && `${tc("template")} `}
-                    {calculator.isPublic && tc("public")}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex flex-wrap justify-end gap-2">
-                      {!calculator.isTemplate && (
-                        <>
-                          <Link
-                            href={`/builder/${calculator.id}`}
-                            className="text-xs font-medium text-accent underline"
-                          >
-                            {t("editCalculator")}
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedId((current) =>
-                                current === calculator.id ? null : calculator.id,
-                              )
-                            }
-                            className="text-xs font-medium underline"
-                          >
-                            {expandedId === calculator.id
-                              ? t("manageClose")
-                              : t("manage")}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => remove(calculator.id)}
-                            className="text-xs font-medium text-destructive underline"
-                          >
-                            {tc("delete")}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-                {expandedId === calculator.id && !calculator.isTemplate && (
-                  <tr key={`${calculator.id}-manage`} className="border-b border-border/60 bg-muted/20">
-                    <td colSpan={5} className="px-4 py-4">
-                      <div className="mx-auto max-w-xl space-y-4">
-                        <div>
-                          <p className="mb-2 text-sm font-medium">{t("transferTitle")}</p>
-                          <div className="flex flex-wrap gap-2">
-                            <input
-                              type="email"
-                              value={transferEmail[calculator.id] ?? ""}
-                              onChange={(e) =>
-                                setTransferEmail((current) => ({
-                                  ...current,
-                                  [calculator.id]: e.target.value,
-                                }))
-                              }
-                              placeholder={t("transferEmailPlaceholder")}
-                              className="h-10 min-w-[200px] flex-1 rounded-xl border border-border bg-input px-3 text-sm"
-                            />
-                            <button
-                              type="button"
-                              disabled={transferringId === calculator.id}
-                              onClick={() => transfer(calculator.id)}
-                              className="h-10 rounded-xl bg-accent px-4 text-sm font-medium text-accent-foreground disabled:opacity-50"
-                            >
-                              {transferringId === calculator.id
-                                ? t("transferring")
-                                : t("transferBtn")}
-                            </button>
-                          </div>
-                        </div>
-                        <CalculatorSharesPanel
-                          calculatorId={calculator.id}
-                          apiBase="/api/admin/calculators"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AdminErrorAlert message={listError ?? actionError} />
+
+      <DataTable<CalculatorRow>
+        title={t("calculators")}
+        columns={columns}
+        rows={calculators}
+        rowKey={(calculator) => calculator.id}
+        labels={tableLabels}
+        pagination={pagination}
+        pageSize={pageSize}
+        loading={loading}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        onRefresh={() => void refresh()}
+        minTableWidth="720px"
+        renderRowDetail={(calculator) => {
+          if (expandedId !== calculator.id || calculator.isTemplate) {
+            return null;
+          }
+          return (
+            <div className="border-b border-border/60 bg-muted/20 px-4 py-4">
+              <div className="mx-auto max-w-xl space-y-4">
+                <div>
+                  <p className="mb-2 text-sm font-medium">{t("transferTitle")}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      type="email"
+                      value={transferEmail[calculator.id] ?? ""}
+                      onChange={(e) =>
+                        setTransferEmail((current) => ({
+                          ...current,
+                          [calculator.id]: e.target.value,
+                        }))
+                      }
+                      placeholder={t("transferEmailPlaceholder")}
+                      className="h-10 min-w-[200px] flex-1 rounded-xl border border-border bg-input px-3 text-sm"
+                    />
+                    <Button
+                      type="button"
+                      disabled={transferringId === calculator.id}
+                      onClick={() => transfer(calculator.id)}
+                    >
+                      {transferringId === calculator.id
+                        ? t("transferring")
+                        : t("transferBtn")}
+                    </Button>
+                  </div>
+                </div>
+                <CalculatorSharesPanel
+                  calculatorId={calculator.id}
+                  apiBase="/api/admin/calculators"
+                />
+              </div>
+            </div>
+          );
+        }}
+        toolbar={
+          <label className="block space-y-1">
+            <span className="sr-only">{t("calculatorsSearchPlaceholder")}</span>
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder={t("calculatorsSearchPlaceholder")}
+              className={inputClass}
+              autoComplete="off"
+            />
+          </label>
+        }
+      />
     </div>
   );
 }

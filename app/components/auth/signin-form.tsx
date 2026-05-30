@@ -12,7 +12,8 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { appFetch } from "@/lib/api/api-client";
 
 type SignInCheckResponse = {
-  status?: string;
+  /** Auth outcome (`status` is reserved for API module/code envelope). */
+  result?: string;
   messageKey?: string;
 };
 
@@ -34,12 +35,16 @@ export function SignInForm() {
     setError(null);
 
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPassword = password.trim();
 
     try {
       try {
         const check = await appFetch("/api/auth/signin-check", {
           method: "POST",
-          body: JSON.stringify({ email: normalizedEmail, password }),
+          body: JSON.stringify({
+            email: normalizedEmail,
+            password: normalizedPassword,
+          }),
         });
 
         let checkData: SignInCheckResponse = {};
@@ -50,7 +55,7 @@ export function SignInForm() {
         }
 
         if (check.ok) {
-          if (checkData.status === "banned") {
+          if (checkData.result === "banned") {
             setError(
               checkData.messageKey
                 ? t(checkData.messageKey as "banReason_ACCESS_EXPIRED")
@@ -59,12 +64,12 @@ export function SignInForm() {
             return;
           }
 
-          if (checkData.status === "invalid") {
+          if (checkData.result === "invalid") {
             setError(t("signInError"));
             return;
           }
 
-          if (checkData.status !== "ok") {
+          if (checkData.result !== "ok") {
             setError(t("signInError"));
             return;
           }
@@ -81,7 +86,7 @@ export function SignInForm() {
 
       const result = await signIn("credentials", {
         email: normalizedEmail,
-        password,
+        password: normalizedPassword,
         redirect: false,
       });
 

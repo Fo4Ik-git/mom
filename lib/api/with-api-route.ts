@@ -135,10 +135,27 @@ async function enrichJsonResponse(response: Response): Promise<Response> {
     return response;
   }
 
+  const row = payload as Record<string, unknown>;
   const headers = new Headers(response.headers);
+  if (typeof row.status === "string") {
+    const { status: legacyOutcome, ...rest } = row;
+    return NextResponse.json(
+      {
+        ...rest,
+        result: legacyOutcome,
+        [API_STATUS_KEY]: { ...API_SUCCESS },
+      },
+      {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      },
+    );
+  }
+
   return NextResponse.json(
     {
-      ...(payload as Record<string, unknown>),
+      ...row,
       [API_STATUS_KEY]: { ...API_SUCCESS },
     },
     {

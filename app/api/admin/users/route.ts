@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/platform/db";
+import { buildAdminUsersSearchWhere } from "@/lib/admin/admin-users-list";
 import {
-  buildAdminUsersSearchWhere,
-  parseAdminUsersPage,
-  parseAdminUsersPageSize,
-} from "@/lib/admin/admin-users-list";
+  buildTablePagination,
+  parseTablePage,
+  parseTablePageSize,
+} from "@/lib/ui/table-pagination";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
 import { hashPassword } from "@/lib/auth/password";
@@ -81,8 +82,8 @@ export const GET = withApiRoute(async function GET(request: Request) {
     await requireAdmin();
     const { searchParams } = new URL(request.url);
     const q = (searchParams.get("q") ?? "").trim();
-    const page = parseAdminUsersPage(searchParams.get("page"));
-    const pageSize = parseAdminUsersPageSize(searchParams.get("pageSize"));
+    const page = parseTablePage(searchParams.get("page"));
+    const pageSize = parseTablePageSize(searchParams.get("pageSize"));
     const where = buildAdminUsersSearchWhere(q);
     const skip = (page - 1) * pageSize;
 
@@ -99,18 +100,11 @@ export const GET = withApiRoute(async function GET(request: Request) {
     ]);
 
     const rows = await Promise.all(users.map(mapUserRow));
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    const safePage = Math.min(page, totalPages);
 
     return NextResponse.json({
       users: rows,
       defaultMaxCalculators: platform.defaultMaxCalculators,
-      pagination: {
-        page: safePage,
-        pageSize,
-        total,
-        totalPages,
-      },
+      pagination: buildTablePagination(page, pageSize, total),
     });
   } catch (error) {
     return handleAdminApiError(error, "admin/users GET");

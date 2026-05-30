@@ -1,23 +1,15 @@
 import type { Prisma } from "@prisma/client";
+import {
+  TABLE_PAGE_SIZES,
+  parseTablePage,
+  parseTablePageSize,
+  type TablePageSize,
+} from "@/lib/ui/table-pagination";
 
-export const ADMIN_USERS_PAGE_SIZES = [10, 25, 50, 100] as const;
-export type AdminUsersPageSize = (typeof ADMIN_USERS_PAGE_SIZES)[number];
-
-export function parseAdminUsersPageSize(value: string | null): AdminUsersPageSize {
-  const n = Number(value);
-  if (ADMIN_USERS_PAGE_SIZES.includes(n as AdminUsersPageSize)) {
-    return n as AdminUsersPageSize;
-  }
-  return 10;
-}
-
-export function parseAdminUsersPage(value: string | null): number {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n < 1) {
-    return 1;
-  }
-  return Math.floor(n);
-}
+export const ADMIN_USERS_PAGE_SIZES = TABLE_PAGE_SIZES;
+export type AdminUsersPageSize = TablePageSize;
+export const parseAdminUsersPageSize = parseTablePageSize;
+export const parseAdminUsersPage = parseTablePage;
 
 export function buildAdminUsersSearchWhere(
   query: string,

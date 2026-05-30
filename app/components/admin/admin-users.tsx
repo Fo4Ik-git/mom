@@ -8,10 +8,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { DataTable } from "@/app/components/ui/data-table";
+import type { DataTableColumn } from "@/app/components/ui/data-table";
+import { usePaginatedTable } from "@/lib/hooks/use-paginated-table";
 import {
-  ADMIN_USERS_PAGE_SIZES,
-  type AdminUsersPageSize,
-} from "@/lib/admin/admin-users-list";
+  buildTablePagination,
+  tableQueryParams,
+} from "@/lib/ui/table-pagination";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardTitle } from "@/app/components/ui/card";
 import { PasswordInput } from "@/app/components/ui/password-input";
@@ -391,25 +394,13 @@ export function AdminUsers() {
   const t = useTranslations("admin");
   const tc = useTranslations("common");
   const locale = useLocale();
-  const [users, setUsers] = useState<UserRow[]>([]);
   const [defaultMax, setDefaultMax] = useState(5);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [pendingBanId, setPendingBanId] = useState<string | null>(null);
   const [banReason, setBanReason] = useState<"ACCESS_EXPIRED">("ACCESS_EXPIRED");
-  const [searchInput, setSearchInput] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<AdminUsersPageSize>(10);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: 10,
-    total: 0,
-    totalPages: 1,
-  });
 
   const [newUser, setNewUser] = useState({
     email: "",
@@ -427,75 +418,76 @@ export function AdminUsers() {
   const [emailSuccessId, setEmailSuccessId] = useState<string | null>(null);
   const [emailErrors, setEmailErrors] = useState<Record<string, string | null>>({});
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
+  const fetchPage = useCallback(
+    async ({
+      page,
+      pageSize,
+      query,
+    }: {
+      page: number;
+      pageSize: number;
+      query: string;
+    }) => {
+      const response = await appFetch(
+        `/api/admin/users?${tableQueryParams(page, pageSize, query)}`,
+      );
+      const data = await response.json();
 
-    const params = new URLSearchParams({
-      page: String(page),
-      pageSize: String(pageSize),
-    });
-    if (searchQuery) {
-      params.set("q", searchQuery);
-    }
-
-    const response = await appFetch(`/api/admin/users?${params}`);
-    const data = await response.json();
-    setLoading(false);
-
-    if (!response.ok) {
-      setLoadError(adminApiErrorMessage(data, t));
-      setUsers([]);
-      return;
-    }
-
-    const loadedUsers: UserRow[] = data.users ?? [];
-    setUsers(loadedUsers);
-    if (typeof data.defaultMaxCalculators === "number") {
-      setDefaultMax(data.defaultMaxCalculators);
-    }
-    if (data.pagination) {
-      setPagination(data.pagination);
-      if (data.pagination.page !== page) {
-        setPage(data.pagination.page);
-      }
-    }
-
-    setEdits((current) => {
-      const next = { ...current };
-      for (const user of loadedUsers) {
-        next[user.id] = {
-          maxCalculators:
-            user.maxCalculators != null ? String(user.maxCalculators) : "",
-          accessExpiresAt: formatDateInputLocal(user.accessExpiresAt),
-          adminNotes: user.adminNotes ?? "",
-          useDefaultLimit: user.usesDefaultLimit,
-          newPassword: "",
-          newEmail: user.email,
+      if (!response.ok) {
+        setLoadError(adminApiErrorMessage(data, t));
+        return {
+          rows: [] as UserRow[],
+          pagination: buildTablePagination(page, pageSize, 0),
         };
       }
-      return next;
-    });
 
-    setExpandedId((current) =>
-      current && loadedUsers.some((u) => u.id === current) ? current : null,
-    );
-  }, [page, pageSize, searchQuery, t]);
+      setLoadError(null);
+      const loadedUsers: UserRow[] = data.users ?? [];
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setSearchQuery(searchInput.trim());
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [searchInput]);
+      if (typeof data.defaultMaxCalculators === "number") {
+        setDefaultMax(data.defaultMaxCalculators);
+      }
 
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, pageSize]);
+      setEdits((current) => {
+        const next = { ...current };
+        for (const user of loadedUsers) {
+          next[user.id] = {
+            maxCalculators:
+              user.maxCalculators != null ? String(user.maxCalculators) : "",
+            accessExpiresAt: formatDateInputLocal(user.accessExpiresAt),
+            adminNotes: user.adminNotes ?? "",
+            useDefaultLimit: user.usesDefaultLimit,
+            newPassword: "",
+            newEmail: user.email,
+          };
+        }
+        return next;
+      });
 
-  useEffect(() => {
-    load();
-  }, [load]);
+      setExpandedId((current) =>
+        current && loadedUsers.some((u) => u.id === current) ? current : null,
+      );
+
+      return {
+        rows: loadedUsers,
+        pagination:
+          data.pagination ?? buildTablePagination(page, pageSize, 0),
+      };
+    },
+    [t],
+  );
+
+  const {
+    rows: users,
+    loading,
+    pagination,
+    setPage,
+    pageSize,
+    setPageSize,
+    searchInput,
+    setSearchInput,
+    refresh,
+  } = usePaginatedTable<UserRow>({ fetchPage });
 
   async function updateUser(id: string, patch: Record<string, unknown>) {
     const response = await appFetch(`/api/admin/users/${id}`, {
@@ -507,7 +499,7 @@ export function AdminUsers() {
       setLoadError(adminApiErrorMessage(data, t));
       return;
     }
-    await load();
+    await refresh();
   }
 
   async function saveUserPassword(user: UserRow) {
@@ -577,7 +569,7 @@ export function AdminUsers() {
     window.setTimeout(() => {
       setEmailSuccessId((current) => (current === user.id ? null : current));
     }, 3000);
-    await load();
+    await refresh();
   }
 
   async function saveUserLimits(user: UserRow) {
@@ -641,7 +633,7 @@ export function AdminUsers() {
       maxCalculators: "",
       accessExpiresAt: "",
     });
-    await load();
+    await refresh();
   }
 
   function setEdit(userId: string, patch: Partial<UserEdit>) {
@@ -723,14 +715,77 @@ export function AdminUsers() {
   const inputClass =
     "block h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:h-10 sm:text-sm";
 
-  const rangeFrom =
-    pagination.total === 0
-      ? 0
-      : (pagination.page - 1) * pagination.pageSize + 1;
-  const rangeTo = Math.min(
-    pagination.page * pagination.pageSize,
-    pagination.total,
-  );
+  const tableLabels = {
+    loading: tc("loading"),
+    noResults: t("usersNoResults"),
+    refresh: t("refresh"),
+    formatShowing: (from: number, to: number, total: number) =>
+      t("usersShowing", { from, to, total }),
+    formatPage: (pageNum: number, pages: number) =>
+      t("usersPage", { page: pageNum, pages }),
+    pageSize: t("usersPageSize"),
+    prev: t("usersPrev"),
+    next: t("usersNext"),
+  };
+
+  const userColumns: DataTableColumn<UserRow>[] = [
+    {
+      id: "email",
+      header: tc("email"),
+      cell: (user) => (
+        <>
+          <p className="font-medium">{user.email}</p>
+          {user.name && (
+            <p className="text-xs text-muted-foreground">{user.name}</p>
+          )}
+        </>
+      ),
+    },
+    {
+      id: "role",
+      header: t("role"),
+      cell: (user) => (
+        <StatusBadge tone={user.role === "ADMIN" ? "accent" : "neutral"}>
+          {user.role}
+        </StatusBadge>
+      ),
+    },
+    {
+      id: "status",
+      header: t("status"),
+      cell: (user) => <UserStatusSection user={user} t={t} tc={tc} />,
+    },
+    {
+      id: "access",
+      header: t("access"),
+      cellClassName: "text-xs",
+      cell: (user) => accessLabel(user),
+    },
+    {
+      id: "quota",
+      header: t("calculatorsQuota"),
+      cell: (user) => quotaLabel(user),
+    },
+    {
+      id: "actions",
+      header: t("actions"),
+      headerClassName: "text-right",
+      cellClassName: "text-right",
+      cell: (user) => {
+        const isExpanded = expandedId === user.id;
+        return (
+          <Button
+            type="button"
+            variant={isExpanded ? "primary" : "outline"}
+            className="h-8 px-3 text-xs"
+            onClick={() => setExpandedId(isExpanded ? null : user.id)}
+          >
+            {isExpanded ? t("hideDetails") : t("manage")}
+          </Button>
+        );
+      },
+    },
+  ];
 
   function renderUserMobileCard(user: UserRow) {
     const edit = edits[user.id];
@@ -782,51 +837,6 @@ export function AdminUsers() {
 
         {isExpanded && edit && renderManagePanel(user, edit)}
       </article>
-    );
-  }
-
-  function renderUserTableRow(user: UserRow) {
-    const edit = edits[user.id];
-    const isExpanded = expandedId === user.id;
-
-    return (
-      <Fragment key={user.id}>
-        <tr className="border-b border-border/60">
-          <td className="px-4 py-3">
-            <p className="font-medium">{user.email}</p>
-            {user.name && (
-              <p className="text-xs text-muted-foreground">{user.name}</p>
-            )}
-          </td>
-          <td className="px-4 py-3">
-            <StatusBadge tone={user.role === "ADMIN" ? "accent" : "neutral"}>
-              {user.role}
-            </StatusBadge>
-          </td>
-          <td className="px-4 py-3">
-            <UserStatusSection user={user} t={t} tc={tc} />
-          </td>
-          <td className="px-4 py-3 text-xs">{accessLabel(user)}</td>
-          <td className="px-4 py-3">{quotaLabel(user)}</td>
-          <td className="px-4 py-3 text-right">
-            <Button
-              type="button"
-              variant={isExpanded ? "primary" : "outline"}
-              className="h-9 px-4 text-xs"
-              onClick={() => setExpandedId(isExpanded ? null : user.id)}
-            >
-              {isExpanded ? t("hideDetails") : t("manage")}
-            </Button>
-          </td>
-        </tr>
-        {isExpanded && edit && (
-          <tr>
-            <td colSpan={6} className="p-0">
-              {renderManagePanel(user, edit)}
-            </td>
-          </tr>
-        )}
-      </Fragment>
     );
   }
 
@@ -936,9 +946,27 @@ export function AdminUsers() {
         )}
       </Card>
 
-      <Card className="overflow-hidden p-0">
-        <div className="space-y-3 border-b border-border p-4">
-          <CardTitle className="mb-0">{t("usersListTitle")}</CardTitle>
+      <DataTable<UserRow>
+        title={t("usersListTitle")}
+        columns={userColumns}
+        rows={users}
+        rowKey={(user) => user.id}
+        labels={tableLabels}
+        pagination={pagination}
+        pageSize={pageSize}
+        loading={loading}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        onRefresh={() => void refresh()}
+        minTableWidth="960px"
+        renderMobileCard={renderUserMobileCard}
+        renderRowDetail={(user) => {
+          const edit = edits[user.id];
+          return expandedId === user.id && edit
+            ? renderManagePanel(user, edit)
+            : null;
+        }}
+        toolbar={
           <label className="block space-y-1">
             <span className="sr-only">{t("usersSearchPlaceholder")}</span>
             <input
@@ -950,104 +978,8 @@ export function AdminUsers() {
               autoComplete="off"
             />
           </label>
-          <p className="text-sm text-muted-foreground">
-            {loading
-              ? tc("loading")
-              : pagination.total === 0
-                ? t("usersNoResults")
-                : t("usersShowing", {
-                    from: rangeFrom,
-                    to: rangeTo,
-                    total: pagination.total,
-                  })}
-          </p>
-        </div>
-
-        {loading ? (
-          <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-            {tc("loading")}
-          </p>
-        ) : users.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-            {t("usersNoResults")}
-          </p>
-        ) : (
-          <>
-            <div className="divide-y divide-border lg:hidden">
-              {users.map(renderUserMobileCard)}
-            </div>
-
-            <div className="hidden lg:block">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-border bg-muted/40">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">{tc("email")}</th>
-                    <th className="px-4 py-3 font-medium">{t("role")}</th>
-                    <th className="px-4 py-3 font-medium">{t("status")}</th>
-                    <th className="px-4 py-3 font-medium">{t("access")}</th>
-                    <th className="px-4 py-3 font-medium">
-                      {t("calculatorsQuota")}
-                    </th>
-                    <th className="px-4 py-3 text-right font-medium">
-                      {t("actions")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>{users.map(renderUserTableRow)}</tbody>
-              </table>
-            </div>
-          </>
-        )}
-
-        <div className="flex flex-col gap-3 border-t border-border p-4">
-          <p className="text-sm text-muted-foreground">
-            {t("usersPage", {
-              page: pagination.page,
-              pages: pagination.totalPages,
-            })}
-          </p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
-              <span className="text-muted-foreground">{t("usersPageSize")}</span>
-              <select
-                value={pageSize}
-                onChange={(e) =>
-                  setPageSize(Number(e.target.value) as AdminUsersPageSize)
-                }
-                className="h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:h-10 sm:w-32 sm:text-sm"
-              >
-                {ADMIN_USERS_PAGE_SIZES.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 flex-1 sm:flex-none"
-                disabled={loading || pagination.page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                {t("usersPrev")}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 flex-1 sm:flex-none"
-                disabled={loading || pagination.page >= pagination.totalPages}
-                onClick={() =>
-                  setPage((p) => Math.min(pagination.totalPages, p + 1))
-                }
-              >
-                {t("usersNext")}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Card>
+        }
+      />
     </div>
   );
 }

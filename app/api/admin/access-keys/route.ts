@@ -1,6 +1,12 @@
 import { AccessKeyKind } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { buildAdminAccessKeysSearchWhere } from "@/lib/admin/admin-access-keys-list";
+import {
+  buildTablePagination,
+  parseTablePage,
+  parseTablePageSize,
+} from "@/lib/ui/table-pagination";
 import { createAccessKey, normalizeAccessKeyCode } from "@/lib/access/access-keys";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { db } from "@/lib/platform/db";
@@ -18,17 +24,31 @@ const createSchema = z.object({
   code: z.string().min(4).max(32).optional(),
 });
 
-export const GET = withApiRoute(async function GET() {
+export const GET = withApiRoute(async function GET(request: Request) {
   try {
     await requireAdmin();
+    const { searchParams } = new URL(request.url);
+    const q = (searchParams.get("q") ?? "").trim();
+    const page = parseTablePage(searchParams.get("page"));
+    const pageSize = parseTablePageSize(searchParams.get("pageSize"));
+    const where = buildAdminAccessKeysSearchWhere(q);
+    const skip = (page - 1) * pageSize;
 
-    const keys = await db.accessKey.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        referrerUser: { select: { id: true, email: true } },
-        _count: { select: { redemptions: true } },
-      },
-    });
+    const [total, keys] = await Promise.all([
+      db.accessKey.count({ where }),
+      db.accessKey.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: pageSize,
+        include: {
+          referrerUser: { select: { id: true, email: true } },
+          _count: { select: { redemptions: true } },
+        },
+      }),
+    ]);
+
+    const pagination = buildTablePagination(page, pageSize, total);
 
     return NextResponse.json({
       keys: keys.map((key) => ({
@@ -46,6 +66,7 @@ export const GET = withApiRoute(async function GET() {
         referrerEmail: key.referrerUser?.email ?? null,
         createdAt: key.createdAt.toISOString(),
       })),
+      pagination,
     });
   } catch (error) {
     return handleAdminApiError(error, "admin/access-keys GET");

@@ -8,7 +8,7 @@ import { verifyPassword } from "@/lib/auth/password";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().trim().min(8),
 });
 
 export const { handlers, signIn, signOut, auth } = NextAuth({

@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes } from "react";
 
-type Variant = "primary" | "secondary" | "ghost" | "outline";
+type Variant = "primary" | "secondary" | "ghost" | "outline" | "destructive";
 
 const variants: Record<Variant, string> = {
   primary:
@@ -10,6 +10,8 @@ const variants: Record<Variant, string> = {
   ghost: "text-muted-foreground hover:bg-muted hover:text-foreground",
   outline:
     "border border-border bg-card/60 text-foreground hover:border-accent/40 hover:bg-card",
+  destructive:
+    "border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/15",
 };
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -25,7 +27,7 @@ export function Button({
   return (
     <button
       type={type}
-      className={`inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${variants[variant]} ${className}`}
+      className={`inline-flex h-11 cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`}
       {...props}
     />
   );

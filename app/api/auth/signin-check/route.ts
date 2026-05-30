@@ -4,11 +4,12 @@ import { db } from "@/lib/platform/db";
 import { banReasonI18nKey } from "@/lib/access/ban-reasons";
 import { isAllowedFrontendRequest } from "@/lib/api/api-security";
 import { verifyPassword } from "@/lib/auth/password";
+import { apiJsonResponse } from "@/lib/errors/api-status";
 import { withApiRoute } from "@/lib/api/with-api-route";
 
 const schema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().trim().min(8),
 });
 
 export const POST = withApiRoute(async function POST(request: Request) {
@@ -22,23 +23,23 @@ export const POST = withApiRoute(async function POST(request: Request) {
 
     const user = await db.user.findUnique({ where: { email } });
     if (!user?.passwordHash) {
-      return NextResponse.json({ status: "invalid" });
+      return apiJsonResponse({ result: "invalid" });
     }
 
     const valid = await verifyPassword(body.password, user.passwordHash);
     if (!valid) {
-      return NextResponse.json({ status: "invalid" });
+      return apiJsonResponse({ result: "invalid" });
     }
 
     if (user.banned) {
-      return NextResponse.json({
-        status: "banned",
+      return apiJsonResponse({
+        result: "banned",
         banReason: user.banReason,
         messageKey: user.banReason ? banReasonI18nKey(user.banReason) : "bannedGeneric",
       });
     }
 
-    return NextResponse.json({ status: "ok" });
+    return apiJsonResponse({ result: "ok" });
   } catch {
     return NextResponse.json({ error: "invalid_data" }, { status: 400 });
   }
