@@ -85,7 +85,11 @@
     "calculate": "Порахувати",
     "clear": "Очистити",
     "presets": "Підказки",
-    "edit": "Редагувати"
+    "edit": "Редагувати",
+    "lineItemsHint": "Заповніть таблицю — підсумки рахуються як SUM(рядки.кільк × собівартість) тощо.",
+    "addRow": "+ Додати рядок",
+    "removeRow": "Видалити рядок",
+    "rowLabel": "Рядок"
   },
   "builder": {
     "newTitle": "Новий калькулятор",
@@ -231,7 +235,21 @@
     "outputSnippetMargin": "Маржа",
     "dragHandleAggregate": "Перетягнути агрегат",
     "removeAggregate": "Прибрати агрегат",
-    "aggregateHint": "Додавайте значення через кому всередині функції"
+    "aggregateHint": "Додавайте значення через кому всередині функції",
+    "rowsLabel": "рядки",
+    "dragHandleRowAggregate": "Перетягнути агрегат по рядках",
+    "removeRowAggregate": "Прибрати агрегат по рядках",
+    "inputPattern_lineItems": "Таблиця позицій",
+    "inputPattern_lineItemsDesc": "Таблиця з кільк., собіварт. і ціною — рядки додає користувач",
+    "patternLabelLineItems": "Позиції",
+    "patternLabelQty": "Кільк.",
+    "lineItemsColumnsHint": "Схема колонок для кожного рядка. Значення за замовч. — для нових рядків.",
+    "lineItemAutoTotalHint": "Рахувати автоматично: SUM(рядки.кільк × колонка)",
+    "addColumn": "+ Колонка",
+    "lineItemDefaultRows": "Рядків за замовч.",
+    "lineItemMaxRows": "Макс. рядків",
+    "fieldSummaryLineItems": "таблиця позицій",
+    "fieldSummaryLineColumns": "{count} кол."
   },
   "admin": {
     "title": "Адмін-панель",

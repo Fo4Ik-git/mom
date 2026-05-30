@@ -1,4 +1,5 @@
 import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
+import { buildInitialLineItemRowsState } from "@/lib/calculator/line-items";
 import {
   evaluateAllFormulaFields,
   validateFieldGraph,
@@ -63,7 +64,13 @@ export function validateConfigFormulas(config: CalculatorConfig): FormulaError[]
   try {
     evaluateAllFormulaFields(
       config,
-      Object.fromEntries(config.inputs.map((input) => [input.id, 1])),
+      Object.fromEntries(
+        config.inputs
+          .filter((input) => input.inputMode !== "lineItems")
+          .map((input) => [input.id, 1]),
+      ),
+      undefined,
+      buildInitialLineItemRowsState(config.inputs),
     );
   } catch (error) {
     errors.push({

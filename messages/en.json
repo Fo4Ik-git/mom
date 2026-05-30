@@ -85,7 +85,11 @@
     "calculate": "Calculate",
     "clear": "Clear",
     "presets": "Suggestions",
-    "edit": "Edit"
+    "edit": "Edit",
+    "lineItemsHint": "Fill in the table — totals use SUM(rows.qty × cost) etc.",
+    "addRow": "+ Add row",
+    "removeRow": "Remove row",
+    "rowLabel": "Row"
   },
   "builder": {
     "newTitle": "New calculator",
@@ -231,7 +235,21 @@
     "outputSnippetMargin": "Margin",
     "dragHandleAggregate": "Drag aggregate",
     "removeAggregate": "Remove aggregate",
-    "aggregateHint": "Add values separated by commas inside the function"
+    "aggregateHint": "Add values separated by commas inside the function",
+    "rowsLabel": "rows",
+    "dragHandleRowAggregate": "Drag row aggregate",
+    "removeRowAggregate": "Remove row aggregate",
+    "inputPattern_lineItems": "Line items table",
+    "inputPattern_lineItemsDesc": "Table with qty, cost and price — add rows at runtime",
+    "patternLabelLineItems": "Line items",
+    "patternLabelQty": "Qty",
+    "lineItemsColumnsHint": "Column schema for each row. Default values apply to new rows.",
+    "lineItemAutoTotalHint": "Auto-calculate: SUM(rows.qty × column)",
+    "addColumn": "+ Column",
+    "lineItemDefaultRows": "Default rows",
+    "lineItemMaxRows": "Max rows",
+    "fieldSummaryLineItems": "line items table",
+    "fieldSummaryLineColumns": "{count} columns"
   },
   "admin": {
     "title": "Admin panel",

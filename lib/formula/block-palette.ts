@@ -7,28 +7,32 @@ import type {
 } from "@/types/calculator";
 import { AGGREGATE_FUNCTIONS } from "@/types/calculator";
 import { isAutoCalculationId } from "@/lib/calculator/auto-calculations";
+import { isLineItemsField, rowAggregateLabel } from "@/lib/calculator/line-items";
 import type { FormulaTarget } from "@/lib/formula/formula-target";
 import type { FormulaSnippetPick } from "@/lib/formula/formula-snippets";
 
 export type PaletteBlock = {
   id: string;
   label: string;
-  category: "operand" | "operator" | "constant" | "group" | "snippet" | "aggregate";
+  category: "operand" | "operator" | "constant" | "group" | "snippet" | "aggregate" | "rowAggregate";
   color:
     | "quantity"
     | "property"
+    | "lineColumn"
     | "output"
     | "calculation"
     | "operator"
     | "constant"
     | "group"
     | "snippet"
-    | "aggregate";
+    | "aggregate"
+    | "rowAggregate";
   dragData:
     | { kind: "operand"; operand: BlockOperand }
     | { kind: "operator"; operator: FormulaOperator }
     | { kind: "group" }
     | { kind: "aggregate"; function: AggregateFunction }
+    | { kind: "rowAggregate"; fieldId: string; function: AggregateFunction }
     | { kind: "expression"; expression: BlockExpression };
   pick?: FormulaSnippetPick;
   meta?: {
@@ -43,11 +47,59 @@ export function buildPaletteBlocks(
   config: CalculatorConfig,
   target: FormulaTarget,
   quantityLabel: string,
+  rowsLabel = "rows",
 ): PaletteBlock[] {
   const blocks: PaletteBlock[] = [];
 
   for (const input of config.inputs) {
     const label = input.label.trim() || "…";
+
+    if (isLineItemsField(input)) {
+      for (const property of input.properties) {
+        blocks.push({
+          id: `lc-${input.id}-${property.id}`,
+          label: `${label} · ${property.label}`,
+          category: "operand",
+          color: "lineColumn",
+          meta: {
+            groupId: input.id,
+            groupLabel: label,
+            title: property.label,
+            hint: rowsLabel,
+          },
+          dragData: {
+            kind: "operand",
+            operand: {
+              kind: "lineColumn",
+              fieldId: input.id,
+              propertyId: property.id,
+            },
+          },
+        });
+      }
+
+      for (const fn of AGGREGATE_FUNCTIONS) {
+        blocks.push({
+          id: `rows-${fn}-${input.id}`,
+          label: rowAggregateLabel(fn, label, rowsLabel),
+          category: "rowAggregate",
+          color: "rowAggregate",
+          meta: {
+            groupId: input.id,
+            groupLabel: label,
+            title: `${fn} ${rowsLabel}`,
+            hint: label,
+          },
+          dragData: {
+            kind: "rowAggregate",
+            fieldId: input.id,
+            function: fn,
+          },
+        });
+      }
+      continue;
+    }
+
     blocks.push({
       id: `q-${input.id}`,
       label: `${label} · ${quantityLabel}`,
@@ -187,5 +239,9 @@ export const BLOCK_COLORS = {
     "bg-teal-500/15 text-teal-900 border-teal-400/50 dark:text-teal-100",
   aggregate:
     "bg-fuchsia-500/15 text-fuchsia-900 border-fuchsia-400/50 dark:text-fuchsia-100",
+  lineColumn:
+    "bg-cyan-500/15 text-cyan-900 border-cyan-400/50 dark:text-cyan-100",
+  rowAggregate:
+    "bg-indigo-500/15 text-indigo-900 border-indigo-400/50 dark:text-indigo-100",
   empty: "border-dashed border-border bg-card/50 text-muted-foreground",
 };

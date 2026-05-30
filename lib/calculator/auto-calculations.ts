@@ -11,6 +11,10 @@ import {
   isTimeField,
   isTimeServiceCalculationId,
 } from "@/lib/calculator/time-service";
+import {
+  buildLineItemAutoCalculation,
+  isLineItemsField,
+} from "@/lib/calculator/line-items";
 
 export function autoCalculationId(fieldId: string, propertyId: string) {
   const id = `calc_${fieldId}_${propertyId}`.replace(/__+/g, "_");
@@ -62,10 +66,22 @@ export function syncAutoCalculations(
     if (isTimeField(field) && field.timeAutoTotal !== false) {
       const calc = buildTimeServiceCalculation(field, totalLabel);
       desired.set(calc.id, calc);
+      continue;
+    }
+
+    if (isLineItemsField(field)) {
+      for (const property of field.properties) {
+        if (!property.autoTotal) {
+          continue;
+        }
+        const calc = buildLineItemAutoCalculation(field, property, totalLabel);
+        desired.set(calc.id, calc);
+      }
+      continue;
     }
 
     for (const property of field.properties) {
-      if (isTimeField(field) || !property.autoTotal) {
+      if (isTimeField(field) || isLineItemsField(field) || !property.autoTotal) {
         continue;
       }
       const calc = buildAutoCalculation(field, property, totalLabel);

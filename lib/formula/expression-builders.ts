@@ -78,6 +78,33 @@ export function calculationOperand(calculationId: string): BlockExpression {
   return operandExpression({ kind: "calculation", calculationId });
 }
 
+export function lineColumnOperand(
+  fieldId: string,
+  propertyId: string,
+): BlockExpression {
+  return operandExpression({ kind: "lineColumn", fieldId, propertyId });
+}
+
+export function lineColumnTimesColumn(
+  fieldId: string,
+  leftPropertyId: string,
+  rightPropertyId: string,
+): BlockExpression {
+  return operationExpression(
+    "*",
+    lineColumnOperand(fieldId, leftPropertyId),
+    lineColumnOperand(fieldId, rightPropertyId),
+  );
+}
+
+export function rowAggregateExpression(
+  fieldId: string,
+  fn: AggregateFunction,
+  inner: BlockExpression,
+): BlockExpression {
+  return { type: "rowAggregate", fieldId, function: fn, inner };
+}
+
 export function aggregateExpression(
   fn: AggregateFunction,
   operands: BlockExpression[],

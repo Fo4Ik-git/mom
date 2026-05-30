@@ -32,6 +32,7 @@ import {
   moveExpressionToSlot,
   removeAggregateAt,
   removeGroupAt,
+  removeRowAggregateAt,
   removeOperationAt,
   swapOperators,
   type PaletteDragData,
@@ -70,8 +71,9 @@ export function FormulaScratchEditor({
   const [snippetPick, setSnippetPick] = useState<FormulaSnippetPick | null>(null);
 
   const paletteBlocks = useMemo(
-    () => buildPaletteBlocks(config, formulaTarget, quantityLabel),
-    [config, formulaTarget, quantityLabel],
+    () =>
+      buildPaletteBlocks(config, formulaTarget, quantityLabel, t("rowsLabel")),
+    [config, formulaTarget, quantityLabel, t],
   );
 
   const snippetBlocks = useMemo(
@@ -418,6 +420,9 @@ export function FormulaScratchEditor({
             }
             onAggregateRemove={(path) =>
               onChange(removeAggregateAt(expression, path))
+            }
+            onRowAggregateRemove={(path) =>
+              onChange(removeRowAggregateAt(expression, path))
             }
             onSlotTap={handleSlotTap}
           />

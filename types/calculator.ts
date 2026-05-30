@@ -19,9 +19,16 @@ export const inputFieldSchema = z.object({
   properties: z.array(inputPropertySchema).min(1).max(12),
   defaultQuantity: z.number().optional(),
   presets: z.array(z.number()).optional(),
-  inputMode: z.enum(["standard", "time"]).optional(),
+  inputMode: z.enum(["standard", "time", "lineItems"]).optional(),
   timeUnit: z.enum(["hour", "minute"]).optional(),
   timeAutoTotal: z.boolean().optional(),
+  lineItemDefaultRowCount: z.number().int().min(1).max(50).optional(),
+  lineItemMinRows: z.number().int().min(1).max(50).optional(),
+  lineItemMaxRows: z.number().int().min(1).max(100).optional(),
+  defaultRows: z
+    .array(z.record(z.string(), z.number()))
+    .max(100)
+    .optional(),
 });
 
 export type FormulaOperator = "+" | "-" | "*" | "/";
@@ -51,6 +58,11 @@ export const blockOperandSchema = z.discriminatedUnion("kind", [
     fieldId: z.string(),
     propertyId: z.string(),
   }),
+  z.object({
+    kind: z.literal("lineColumn"),
+    fieldId: z.string(),
+    propertyId: z.string(),
+  }),
   z.object({ kind: z.literal("output"), outputId: z.string() }),
   z.object({ kind: z.literal("calculation"), calculationId: z.string() }),
   z.object({ kind: z.literal("number"), value: z.number() }),
@@ -75,6 +87,12 @@ export const blockExpressionSchema: z.ZodType<BlockExpression> = z.lazy(() =>
       function: z.enum(["SUM", "COUNT", "AVG", "MIN", "MAX"]),
       args: z.array(blockExpressionSchema).min(1).max(32),
     }),
+    z.object({
+      type: z.literal("rowAggregate"),
+      fieldId: z.string(),
+      function: z.enum(["SUM", "COUNT", "AVG", "MIN", "MAX"]),
+      inner: blockExpressionSchema,
+    }),
   ]),
 );
 
@@ -88,7 +106,16 @@ export type BlockExpression =
       right: BlockExpression;
     }
   | { type: "group"; inner: BlockExpression }
-  | { type: "aggregate"; function: AggregateFunction; args: BlockExpression[] };
+  | { type: "aggregate"; function: AggregateFunction; args: BlockExpression[] }
+  | {
+      type: "rowAggregate";
+      fieldId: string;
+      function: AggregateFunction;
+      inner: BlockExpression;
+    };
+
+export type LineItemRow = Record<string, number>;
+export type LineItemRowsState = Record<string, LineItemRow[]>;
 
 /** @deprecated Old two-dropdown format */
 export type FormulaExpression = {
@@ -198,6 +225,18 @@ export function emptyAggregateExpression(
   };
 }
 
+export function emptyRowAggregateExpression(
+  fieldId: string,
+  fn: AggregateFunction = "SUM",
+): BlockExpression {
+  return {
+    type: "rowAggregate",
+    fieldId,
+    function: fn,
+    inner: emptyBlockExpression(),
+  };
+}
+
 export function isArgPathSegment(segment: string): boolean {
   return /^\d+$/.test(segment);
 }
@@ -217,7 +256,8 @@ export function normalizeBlockExpression(data: unknown): BlockExpression {
     record.type === "operand" ||
     record.type === "operation" ||
     record.type === "group" ||
-    record.type === "aggregate"
+    record.type === "aggregate" ||
+    record.type === "rowAggregate"
   ) {
     return blockExpressionSchema.parse(data);
   }

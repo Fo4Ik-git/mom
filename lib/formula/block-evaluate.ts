@@ -4,12 +4,15 @@ import type {
   CalculatorConfig,
   CalculatorConstant,
   InputField,
+  LineItemRowsState,
 } from "@/types/calculator";
 import { filledAggregateArgs } from "@/lib/formula/aggregate-helpers";
-import { evaluateAllFormulaFields } from "@/lib/formula/field-graph";
+import { isLineItemsField } from "@/lib/calculator/line-items";
 
 export interface EvalContext {
   quantities: Record<string, number>;
+  lineItemRows: LineItemRowsState;
+  currentLineRow?: Record<string, number>;
   inputs: InputField[];
   constants: CalculatorConstant[];
   calculations: Record<string, number>;
@@ -22,6 +25,48 @@ function getPropertyValue(input: InputField, propertyId: string): number {
   return property?.value ?? 0;
 }
 
+function evaluateRowAggregateValues(
+  expression: Extract<BlockExpression, { type: "rowAggregate" }>,
+  context: EvalContext,
+): number[] {
+  const field = context.inputs.find((input) => input.id === expression.fieldId);
+  if (!field || !isLineItemsField(field)) {
+    return [];
+  }
+
+  const rows = context.lineItemRows[expression.fieldId] ?? [];
+  return rows.map((row) =>
+    evaluateBlockExpression(expression.inner, {
+      ...context,
+      currentLineRow: row,
+    }),
+  );
+}
+
+function applyAggregateFunction(
+  fn: Extract<BlockExpression, { type: "aggregate" }>["function"],
+  values: number[],
+): number {
+  if (values.length === 0) {
+    return 0;
+  }
+
+  switch (fn) {
+    case "SUM":
+      return values.reduce((sum, value) => sum + value, 0);
+    case "COUNT":
+      return values.length;
+    case "AVG":
+      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    case "MIN":
+      return Math.min(...values);
+    case "MAX":
+      return Math.max(...values);
+    default:
+      throw new Error("Invalid aggregate function");
+  }
+}
+
 function evaluateOperand(operand: BlockOperand, context: EvalContext): number {
   switch (operand.kind) {
     case "quantity":
@@ -30,6 +75,16 @@ function evaluateOperand(operand: BlockOperand, context: EvalContext): number {
       const input = context.inputs.find((f) => f.id === operand.fieldId);
       if (!input) {
         throw new Error(`Unknown field: ${operand.fieldId}`);
+      }
+      return getPropertyValue(input, operand.propertyId);
+    }
+    case "lineColumn": {
+      if (context.currentLineRow) {
+        return context.currentLineRow[operand.propertyId] ?? 0;
+      }
+      const input = context.inputs.find((f) => f.id === operand.fieldId);
+      if (!input) {
+        throw new Error(`Unknown line items field: ${operand.fieldId}`);
       }
       return getPropertyValue(input, operand.propertyId);
     }
@@ -83,25 +138,12 @@ export function evaluateBlockExpression(
     const values = filledAggregateArgs(expression.args).map((arg) =>
       evaluateBlockExpression(arg, context),
     );
+    return applyAggregateFunction(expression.function, values);
+  }
 
-    if (values.length === 0) {
-      return 0;
-    }
-
-    switch (expression.function) {
-      case "SUM":
-        return values.reduce((sum, value) => sum + value, 0);
-      case "COUNT":
-        return values.length;
-      case "AVG":
-        return values.reduce((sum, value) => sum + value, 0) / values.length;
-      case "MIN":
-        return Math.min(...values);
-      case "MAX":
-        return Math.max(...values);
-      default:
-        throw new Error("Invalid aggregate function");
-    }
+  if (expression.type === "rowAggregate") {
+    const values = evaluateRowAggregateValues(expression, context);
+    return applyAggregateFunction(expression.function, values);
   }
 
   const left = evaluateBlockExpression(expression.left, context);
@@ -125,11 +167,4 @@ export function evaluateBlockExpression(
     default:
       throw new Error("Invalid operator");
   }
-}
-
-export function calculateFromConfig(
-  config: CalculatorConfig,
-  quantities: Record<string, number>,
-): Record<string, number> {
-  return evaluateAllFormulaFields(config, quantities).outputs;
 }

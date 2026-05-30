@@ -10,6 +10,10 @@ import {
   type InputSectionId,
 } from "@/lib/calculator/input-sections";
 import {
+  isLineItemsField,
+  LINE_QTY_ID,
+} from "@/lib/calculator/line-items";
+import {
   TIME_DURATION_ID,
   TIME_RATE_ID,
   applyTimeUnit,
@@ -64,6 +68,18 @@ function fieldSummary(
     const parts = [t("fieldSummaryTime")];
     if (field.timeAutoTotal !== false) {
       parts.push(t("fieldSummaryAuto", { count: 1 }));
+    }
+    return parts.join(" · ");
+  }
+
+  if (isLineItemsField(field)) {
+    const parts = [
+      t("fieldSummaryLineItems"),
+      t("fieldSummaryLineColumns", { count: field.properties.length }),
+    ];
+    const autoCount = field.properties.filter((p) => p.autoTotal).length;
+    if (autoCount > 0) {
+      parts.push(t("fieldSummaryAuto", { count: autoCount }));
     }
     return parts.join(" · ");
   }
@@ -217,6 +233,92 @@ export function InputFieldCard({
           }
           t={t}
         />
+      ) : isLineItemsField(field) ? (
+        <>
+          <p className="text-xs text-muted-foreground">{t("lineItemsColumnsHint")}</p>
+          <div className="space-y-2">
+            {field.properties.map((property, index) => (
+              <div
+                key={property.id}
+                className="space-y-2 rounded-xl border border-border/70 bg-card p-3"
+              >
+                <VariableInputRow
+                  property={property}
+                  canRemove={
+                    field.properties.length > 1 && property.id !== LINE_QTY_ID
+                  }
+                  onUpdate={(patch) => updateProperty(index, patch)}
+                  onRemove={() =>
+                    onChange({
+                      ...field,
+                      properties: field.properties
+                        .filter((_, i) => i !== index)
+                        .map((prop) =>
+                          prop.id === property.id
+                            ? { ...prop, autoTotal: false }
+                            : prop,
+                        ),
+                    })
+                  }
+                  onLabelBlur={(label) => syncPropertyIdFromLabel(index, label)}
+                  t={t}
+                />
+                <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(property.autoTotal)}
+                    onChange={(e) =>
+                      updateProperty(index, { autoTotal: e.target.checked })
+                    }
+                    className="mt-0.5 size-3.5 accent-accent"
+                  />
+                  <span>{t("lineItemAutoTotalHint")}</span>
+                </label>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              onChange({
+                ...field,
+                properties: [
+                  ...field.properties,
+                  { id: randomPropId(), label: t("newVariable"), value: 0 },
+                ],
+              })
+            }
+            className="text-sm font-medium text-accent"
+          >
+            {t("addColumn")}
+          </button>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">
+                {t("lineItemDefaultRows")}
+              </span>
+              <NumericInput
+                value={field.lineItemDefaultRowCount ?? 1}
+                onChange={(value) =>
+                  onChange({ ...field, lineItemDefaultRowCount: Math.max(1, value) })
+                }
+                className="h-10 w-full rounded-lg border border-border bg-input px-3 text-sm"
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">
+                {t("lineItemMaxRows")}
+              </span>
+              <NumericInput
+                value={field.lineItemMaxRows ?? 100}
+                onChange={(value) =>
+                  onChange({ ...field, lineItemMaxRows: Math.max(1, value) })
+                }
+                className="h-10 w-full rounded-lg border border-border bg-input px-3 text-sm"
+              />
+            </label>
+          </div>
+        </>
       ) : (
         <>
           <p className="text-xs text-muted-foreground">{t("inputVariablesHint")}</p>
@@ -279,6 +381,7 @@ export function InputFieldCard({
         </>
       )}
 
+      {!isLineItemsField(field) && (
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block space-y-1.5">
           <span className="text-xs font-medium text-muted-foreground">
@@ -304,6 +407,7 @@ export function InputFieldCard({
           />
         </label>
       </div>
+      )}
     </BuilderCollapsible>
   );
 }

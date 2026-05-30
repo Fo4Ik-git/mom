@@ -23,7 +23,7 @@ export function flattenExpression(
   expression: BlockExpression,
   path: SlotPath[] = [],
 ): FlatToken[] {
-  if (expression.type === "aggregate") {
+  if (expression.type === "aggregate" || expression.type === "rowAggregate") {
     return [];
   }
 
@@ -61,6 +61,9 @@ export function flattenExpression(
 /** Left-associative chain: no operation on the right branch. */
 export function isReorderableChain(expression: BlockExpression): boolean {
   if (expression.type === "aggregate") {
+    return false;
+  }
+  if (expression.type === "rowAggregate") {
     return false;
   }
   if (expression.type === "empty" || expression.type === "operand") {

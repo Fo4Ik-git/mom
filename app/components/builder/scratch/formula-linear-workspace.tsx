@@ -24,6 +24,7 @@ import {
   showContinuationInsideGroup,
 } from "@/lib/formula/block-tree";
 import { AggregateBracket } from "@/app/components/builder/scratch/aggregate-bracket";
+import { RowAggregateBracket } from "@/app/components/builder/scratch/row-aggregate-bracket";
 import { DragHandle } from "@/app/components/builder/scratch/drag-handle";
 import { BlockSlot } from "@/app/components/builder/scratch/block-slot";
 import { GroupBracket } from "@/app/components/builder/scratch/group-bracket";
@@ -41,12 +42,17 @@ interface FormulaLinearWorkspaceProps {
   onOperationRemove: (path: SlotPath[]) => void;
   onGroupRemove: (path: SlotPath[]) => void;
   onAggregateRemove: (path: SlotPath[]) => void;
+  onRowAggregateRemove: (path: SlotPath[]) => void;
   onSlotTap: (path: SlotPath[]) => void;
   activeSlotPath?: SlotPath[] | null;
 }
 
 function hasGroups(expression: BlockExpression): boolean {
-  if (expression.type === "group" || expression.type === "aggregate") {
+  if (
+    expression.type === "group" ||
+    expression.type === "aggregate" ||
+    expression.type === "rowAggregate"
+  ) {
     return true;
   }
   if (expression.type === "operation") {
@@ -223,9 +229,42 @@ function ExpressionNode({
   onOperationRemove,
   onGroupRemove,
   onAggregateRemove,
+  onRowAggregateRemove,
   onSlotTap,
   activeSlotPath = null,
 }: ExpressionNodeProps) {
+  if (expression.type === "rowAggregate") {
+    const table = config.inputs.find((input) => input.id === expression.fieldId);
+    const tableLabel = table?.label.trim() || "…";
+    const aggPath = path;
+
+    return (
+      <RowAggregateBracket
+        outputKey={outputKey}
+        path={aggPath}
+        fn={expression.function}
+        tableLabel={tableLabel}
+        onRemove={() => onRowAggregateRemove(aggPath)}
+      >
+        <ExpressionNode
+          expression={expression.inner}
+          path={[...aggPath, "inner"]}
+          outputKey={outputKey}
+          config={config}
+          formulaTarget={formulaTarget}
+          quantityLabel={quantityLabel}
+          onSlotClear={onSlotClear}
+          onOperationRemove={onOperationRemove}
+          onGroupRemove={onGroupRemove}
+          onAggregateRemove={onAggregateRemove}
+          onRowAggregateRemove={onRowAggregateRemove}
+          onSlotTap={onSlotTap}
+          activeSlotPath={activeSlotPath}
+        />
+      </RowAggregateBracket>
+    );
+  }
+
   if (expression.type === "aggregate") {
     const aggPath = path;
     const args = normalizeAggregateArgs(expression.args);
@@ -258,6 +297,7 @@ function ExpressionNode({
               onOperationRemove={onOperationRemove}
               onGroupRemove={onGroupRemove}
               onAggregateRemove={onAggregateRemove}
+              onRowAggregateRemove={onRowAggregateRemove}
               onSlotTap={onSlotTap}
               activeSlotPath={activeSlotPath}
             />
@@ -286,6 +326,7 @@ function ExpressionNode({
           onOperationRemove={onOperationRemove}
           onGroupRemove={onGroupRemove}
           onAggregateRemove={onAggregateRemove}
+          onRowAggregateRemove={onRowAggregateRemove}
           onSlotTap={onSlotTap}
           activeSlotPath={activeSlotPath}
         />
@@ -319,7 +360,9 @@ function ExpressionNode({
           ? "quantity"
           : expression.operand.kind === "property"
             ? "property"
-            : expression.operand.kind === "output"
+            : expression.operand.kind === "lineColumn"
+              ? "lineColumn"
+              : expression.operand.kind === "output"
               ? "output"
               : expression.operand.kind === "constant"
                 ? "constant"
@@ -359,6 +402,7 @@ function ExpressionNode({
         onOperationRemove={onOperationRemove}
         onGroupRemove={onGroupRemove}
         onAggregateRemove={onAggregateRemove}
+        onRowAggregateRemove={onRowAggregateRemove}
         onSlotTap={onSlotTap}
         activeSlotPath={activeSlotPath}
       />
@@ -387,6 +431,7 @@ function ExpressionNode({
         onOperationRemove={onOperationRemove}
         onGroupRemove={onGroupRemove}
         onAggregateRemove={onAggregateRemove}
+        onRowAggregateRemove={onRowAggregateRemove}
         onSlotTap={onSlotTap}
         activeSlotPath={activeSlotPath}
       />
@@ -398,6 +443,7 @@ export function FormulaLinearWorkspace({
   nested = false,
   onGroupRemove,
   onAggregateRemove,
+  onRowAggregateRemove,
   ...props
 }: FormulaLinearWorkspaceProps) {
   const { expression, outputKey } = props;
@@ -431,6 +477,7 @@ export function FormulaLinearWorkspace({
         {...props}
         onGroupRemove={onGroupRemove}
         onAggregateRemove={onAggregateRemove}
+        onRowAggregateRemove={onRowAggregateRemove}
       />
       {showContinuationAfter(expression) && (
         <ContinuationSlot

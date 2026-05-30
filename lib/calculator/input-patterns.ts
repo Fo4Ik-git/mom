@@ -4,11 +4,21 @@ import type {
   InputField,
 } from "@/types/calculator";
 import {
+  createLineItemsField,
+  isLineItemsField,
+  type LineItemsLabels,
+} from "@/lib/calculator/line-items";
+import {
   createTimeServiceField,
   type TimeServiceLabels,
 } from "@/lib/calculator/time-service";
 
-export type InputPatternId = "blank" | "costPrice" | "timeService" | "consumables";
+export type InputPatternId =
+  | "blank"
+  | "costPrice"
+  | "timeService"
+  | "consumables"
+  | "lineItems";
 
 export interface InputPatternLabels {
   cost: string;
@@ -16,6 +26,8 @@ export interface InputPatternLabels {
   unitPrice: string;
   service: string;
   consumable: string;
+  lineItems: string;
+  qty: string;
   time: TimeServiceLabels;
 }
 
@@ -72,6 +84,16 @@ export function createInputFromPattern(
           defaultQuantity: 1,
           presets: [150, 200, 250, 400, 500],
         },
+      };
+    }
+    case "lineItems": {
+      return {
+        input: createLineItemsField(fieldId, labels.lineItems, {
+          qty: labels.qty,
+          cost: labels.cost,
+          price: labels.price,
+          lineItems: labels.lineItems,
+        }),
       };
     }
     case "blank":
@@ -135,6 +157,8 @@ function defaultPatternNamePrefix(
       return labels.service;
     case "consumables":
       return labels.consumable;
+    case "lineItems":
+      return labels.lineItems;
     case "costPrice":
     case "blank":
     default:
@@ -145,6 +169,7 @@ function defaultPatternNamePrefix(
 export const INPUT_PATTERN_IDS: InputPatternId[] = [
   "blank",
   "costPrice",
+  "lineItems",
   "timeService",
   "consumables",
 ];

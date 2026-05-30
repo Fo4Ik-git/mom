@@ -1,5 +1,7 @@
 import type { BlockExpression, BlockOperand, CalculatorConfig } from "@/types/calculator";
+import type { LineItemRowsState } from "@/types/calculator";
 import { evaluateBlockExpression } from "@/lib/formula/block-evaluate";
+import { buildInitialLineItemRowsState } from "@/lib/calculator/line-items";
 
 export type FormulaFieldKind = "calculation" | "output";
 
@@ -63,6 +65,10 @@ export function collectFieldDependencies(
       for (const arg of node.args) {
         walk(arg);
       }
+      return;
+    }
+    if (node.type === "rowAggregate") {
+      walk(node.inner);
       return;
     }
     if (node.type === "operation") {
@@ -248,6 +254,7 @@ export function evaluateAllFormulaFields(
   config: CalculatorConfig,
   quantities: Record<string, number>,
   onWarning?: (field: FormulaFieldNode, message: string) => void,
+  lineItemRows?: LineItemRowsState,
 ): {
   calculations: Record<string, number>;
   outputs: Record<string, number>;
@@ -255,12 +262,15 @@ export function evaluateAllFormulaFields(
   const calculations: Record<string, number> = {};
   const outputs: Record<string, number> = {};
   const constants = config.constants ?? [];
+  const rows =
+    lineItemRows ?? buildInitialLineItemRowsState(config.inputs);
   const order = getFormulaEvaluationOrder(config);
 
   for (const field of order) {
     try {
       const value = evaluateBlockExpression(field.expression, {
         quantities,
+        lineItemRows: rows,
         inputs: config.inputs,
         constants,
         calculations,

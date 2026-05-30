@@ -4,6 +4,7 @@ import type {
   CalculatorConfig,
 } from "@/types/calculator";
 import { filledAggregateArgs } from "@/lib/formula/aggregate-helpers";
+import { isLineItemsField } from "@/lib/calculator/line-items";
 import type { FormulaTarget } from "@/lib/formula/formula-target";
 import { getInputById, getPropertyLabel } from "@/lib/formula/operand-labels";
 
@@ -31,6 +32,16 @@ export function formatBlockOperand(
         return "?";
       }
       return `${input.label} · ${getPropertyLabel(input, operand.propertyId)}`;
+    }
+    case "lineColumn": {
+      const input = getInputById(config, operand.fieldId);
+      if (!input) {
+        return "?";
+      }
+      const column = getPropertyLabel(input, operand.propertyId);
+      return isLineItemsField(input)
+        ? `${column} (row)`
+        : `${input.label} · ${column}`;
     }
     case "calculation": {
       if (operand.calculationId === target.fieldId) {
@@ -96,6 +107,18 @@ export function formatBlockExpression(
     );
     const inner = parts.length > 0 ? parts.join(", ") : "…";
     return `${expression.function}(${inner})`;
+  }
+
+  if (expression.type === "rowAggregate") {
+    const input = getInputById(config, expression.fieldId);
+    const table = input?.label.trim() || "…";
+    const inner = formatBlockExpression(
+      expression.inner,
+      config,
+      target,
+      quantityLabel,
+    );
+    return `${expression.function} rows(${table}: ${inner})`;
   }
 
   const left = formatBlockExpression(

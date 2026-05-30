@@ -157,9 +157,14 @@ export function BlockPaletteContent({
     [constants, query],
   );
 
+  const rowAggregates = blocks.filter((b) => b.category === "rowAggregate");
   const filteredActions = useMemo(
-    () => filterPaletteBlocks([...operators, ...groups, ...aggregates], query),
-    [operators, groups, aggregates, query],
+    () =>
+      filterPaletteBlocks(
+        [...operators, ...groups, ...aggregates, ...rowAggregates],
+        query,
+      ),
+    [operators, groups, aggregates, rowAggregates, query],
   );
 
   const tabCounts = {

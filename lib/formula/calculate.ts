@@ -1,4 +1,4 @@
-import type { CalculatorConfig } from "@/types/calculator";
+import type { CalculatorConfig, LineItemRowsState } from "@/types/calculator";
 import { evaluateAllFormulaFields } from "@/lib/formula/field-graph";
 
 export interface CalculationWarning {
@@ -15,16 +15,22 @@ export interface CalculationResult {
 export function calculateFromConfigWithDiagnostics(
   config: CalculatorConfig,
   quantities: Record<string, number>,
+  lineItemRows?: LineItemRowsState,
 ): CalculationResult {
   const warnings: CalculationWarning[] = [];
 
-  const { outputs } = evaluateAllFormulaFields(config, quantities, (field, message) => {
-    warnings.push({
-      outputId: field.id,
-      outputLabel: field.label.trim() || field.id,
-      message,
-    });
-  });
+  const { outputs } = evaluateAllFormulaFields(
+    config,
+    quantities,
+    (field, message) => {
+      warnings.push({
+        outputId: field.id,
+        outputLabel: field.label.trim() || field.id,
+        message,
+      });
+    },
+    lineItemRows,
+  );
 
   return { values: outputs, warnings };
 }
@@ -32,6 +38,8 @@ export function calculateFromConfigWithDiagnostics(
 export function calculateFromConfig(
   config: CalculatorConfig,
   quantities: Record<string, number>,
+  lineItemRows?: LineItemRowsState,
 ): Record<string, number> {
-  return calculateFromConfigWithDiagnostics(config, quantities).values;
+  return calculateFromConfigWithDiagnostics(config, quantities, lineItemRows)
+    .values;
 }

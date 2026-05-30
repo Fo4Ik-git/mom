@@ -56,6 +56,8 @@ function patternLabels(t: (key: string) => string) {
     unitPrice: t("patternLabelUnitPrice"),
     service: t("patternLabelService"),
     consumable: t("patternLabelConsumable"),
+    lineItems: t("patternLabelLineItems"),
+    qty: t("patternLabelQty"),
   };
 }
 

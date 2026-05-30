@@ -7,6 +7,7 @@ import type {
 import {
   emptyAggregateExpression,
   emptyBlockExpression,
+  emptyRowAggregateExpression,
   isArgPathSegment,
 } from "@/types/calculator";
 import {
@@ -225,6 +226,12 @@ export type PaletteDragData =
   | { source: "palette"; kind: "number"; value: number }
   | { source: "palette"; kind: "group" }
   | { source: "palette"; kind: "aggregate"; function: AggregateFunction }
+  | {
+      source: "palette";
+      kind: "rowAggregate";
+      fieldId: string;
+      function: AggregateFunction;
+    }
   | { source: "palette"; kind: "expression"; expression: BlockExpression };
 
 export function isExpressionFilled(expression: BlockExpression): boolean {
@@ -233,6 +240,9 @@ export function isExpressionFilled(expression: BlockExpression): boolean {
   }
   if (expression.type === "aggregate") {
     return expression.args.some(isExpressionFilled);
+  }
+  if (expression.type === "rowAggregate") {
+    return isExpressionFilled(expression.inner);
   }
   return expression.type !== "empty";
 }
@@ -260,6 +270,13 @@ export function getSlotExpression(
         continue;
       }
       return emptyBlockExpression();
+    }
+    if (current.type === "rowAggregate") {
+      if (slot !== "inner") {
+        return emptyBlockExpression();
+      }
+      current = current.inner;
+      continue;
     }
     if (current.type !== "operation") {
       return emptyBlockExpression();
@@ -310,6 +327,16 @@ export function setSlotExpression(
     return root;
   }
 
+  if (root.type === "rowAggregate") {
+    if (path[0] !== "inner") {
+      return root;
+    }
+    return {
+      ...root,
+      inner: setSlotExpression(root.inner, path.slice(1), value),
+    };
+  }
+
   if (root.type !== "operation") {
     const operation: BlockExpression = {
       type: "operation",
@@ -351,6 +378,14 @@ export function applyPaletteToSlot(
 
   if (item.source === "palette" && item.kind === "aggregate") {
     return setSlotExpression(root, path, emptyAggregateExpression(item.function));
+  }
+
+  if (item.source === "palette" && item.kind === "rowAggregate") {
+    return setSlotExpression(
+      root,
+      path,
+      emptyRowAggregateExpression(item.fieldId, item.function),
+    );
   }
 
   if (item.source === "palette" && item.kind === "operator") {
@@ -464,6 +499,28 @@ export function removeAggregateAt(
   return setSlotExpression(root, aggregatePath, replacement);
 }
 
+export function removeRowAggregateAt(
+  root: BlockExpression,
+  aggregatePath: SlotPath[],
+): BlockExpression {
+  const node =
+    aggregatePath.length === 0
+      ? root
+      : getSlotExpression(root, aggregatePath);
+
+  if (node.type !== "rowAggregate") {
+    return root;
+  }
+
+  const replacement = isExpressionFilled(node.inner) ? node.inner : emptyBlockExpression();
+
+  if (aggregatePath.length === 0) {
+    return replacement;
+  }
+
+  return setSlotExpression(root, aggregatePath, replacement);
+}
+
 /** Remove an operation node; keeps a filled child if any, otherwise empty. */
 export function removeOperationAt(
   root: BlockExpression,
@@ -568,7 +625,7 @@ export function swapOperators(
 export type WorkspaceDragData =
   | { source: "workspace"; kind: "slot"; path: SlotPath[] }
   | { source: "workspace"; kind: "group"; path: SlotPath[] }
-  | { source: "workspace"; kind: "aggregate"; path: SlotPath[] }
+  | { source: "workspace"; kind: "aggregate"; path: SlotPath[]; function: AggregateFunction }
   | {
       source: "workspace";
       kind: "operator";
