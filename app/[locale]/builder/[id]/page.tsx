@@ -1,7 +1,8 @@
 import { CalculatorBuilder } from "@/app/components/builder/calculator-builder";
 import { PageShell } from "@/app/components/layout/page-shell";
+import { NavButton } from "@/app/components/ui/nav-button";
 import { auth } from "@/auth";
-import { Link, redirect } from "@/i18n/navigation";
+import { redirect } from "@/i18n/navigation";
 import {
   canEditCalculator,
   getCalculatorAccess,
@@ -63,12 +64,13 @@ export default async function EditBuilderPage({
             </p>
           )}
         </div>
-        <Link
+        <NavButton
           href={calculatorPublicPath(access.calculator.id)}
-          className="text-sm font-medium text-accent underline"
+          variant="outline"
+          className="h-9 px-3 text-sm"
         >
           {t("openCalculator")}
-        </Link>
+        </NavButton>
       </div>
       <CalculatorBuilder
         calculatorId={access.calculator.id}

@@ -2,7 +2,8 @@
 
 import { Button } from "@/app/components/ui/button";
 import { Card } from "@/app/components/ui/card";
-import { Link } from "@/i18n/navigation";
+import { NavButton } from "@/app/components/ui/nav-button";
+import { useRouter } from "@/i18n/navigation";
 import { formatAccessDate, getDaysUntilExpiry } from "@/lib/access/access-display";
 import { appFetch } from "@/lib/api/api-client";
 import { calculatorPublicPath } from "@/lib/calculator/paths";
@@ -20,6 +21,8 @@ interface CalculatorSummary {
   accessKind?: string;
 }
 
+const cardActionClass = "h-8 px-3 text-xs";
+
 interface Quota {
   current: number;
   max: number | null;
@@ -35,6 +38,7 @@ export function Dashboard() {
   const ts = useTranslations("sharing");
   const tl = useTranslations("limits");
   const locale = useLocale();
+  const router = useRouter();
   const [calculators, setCalculators] = useState<CalculatorSummary[]>([]);
   const [quota, setQuota] = useState<Quota | null>(null);
   const [loading, setLoading] = useState(true);
@@ -162,11 +166,12 @@ export function Dashboard() {
         </div>
       )}
       <div className="flex flex-wrap gap-3">
-        <Link href={quota?.accessActive !== false ? "/builder" : "#"}>
-          <Button disabled={quota?.accessActive === false || quota?.canCreate === false}>
-            {t("createNew")}
-          </Button>
-        </Link>
+        <Button
+          disabled={quota?.accessActive === false || quota?.canCreate === false}
+          onClick={() => router.push("/builder")}
+        >
+          {t("createNew")}
+        </Button>
       </div>
 
       {calculators.length === 0 ? (
@@ -185,30 +190,35 @@ export function Dashboard() {
                     </span>
                   )}
                 </p>
-                <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-                  <Link
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <NavButton
                     href={calculatorPublicPath(calculator.id)}
-                    className="font-medium text-accent underline"
+                    variant="outline"
+                    className={cardActionClass}
                   >
                     {tc("open")}
-                  </Link>
+                  </NavButton>
                   {calculator.canEdit !== false && (
-                    <Link
+                    <NavButton
                       href={`/builder/${calculator.id}`}
-                      className="text-muted-foreground underline"
+                      variant="outline"
+                      className={cardActionClass}
                     >
                       {tc("edit")}
-                    </Link>
+                    </NavButton>
                   )}
                   {calculator.isOwner !== false && (
-                    <button
+                    <Button
                       type="button"
-                      onClick={() => removeCalculator(calculator.id, calculator.name)}
+                      variant="destructive"
+                      className={cardActionClass}
+                      onClick={() =>
+                        removeCalculator(calculator.id, calculator.name)
+                      }
                       disabled={deletingId === calculator.id}
-                      className="text-destructive hover:underline disabled:opacity-50"
                     >
                       {deletingId === calculator.id ? tc("loading") : tc("delete")}
-                    </button>
+                    </Button>
                   )}
                 </div>
               </Card>
