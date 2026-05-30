@@ -5,18 +5,17 @@ import type {
   InputProperty,
 } from "@/types/calculator";
 import { emptyBlockExpression } from "@/types/calculator";
-import { autoCalculationId } from "@/lib/calculator/config/auto-calculations";
+import { collectTotalOperands } from "@/lib/formula/core/collect-total-operands";
 import {
-  isTimeField,
-  timeServiceCalculationId,
-} from "@/lib/calculator/fields/time-service";
+  costLike,
+  priceLike,
+} from "@/lib/formula/core/property-matchers";
 import {
-  calculationMinusCalculation,
-  marginFromCalculationSums,
+  operationExpression,
   propertyMinusProperty,
   propertyTimesConstant,
   quantityTimesProperty,
-  sumCalculationOperands,
+  sumExpressions,
 } from "@/lib/formula/core/expression-builders";
 import type { PaletteBlock } from "@/lib/formula/blocks/block-palette";
 
@@ -38,20 +37,6 @@ export type SnippetBlock = PaletteBlock & {
   pick?: FormulaSnippetPick;
 };
 
-function costLike(property: InputProperty) {
-  return (
-    /собів|собест|cost|себест/i.test(property.label) ||
-    property.id.includes("cost")
-  );
-}
-
-function priceLike(property: InputProperty) {
-  return (
-    /ціна|price|варт|rate|тариф|стоим/i.test(property.label) ||
-    property.id.includes("price")
-  );
-}
-
 function findCostPrice(field: InputField) {
   const cost = field.properties.find(costLike);
   const price = field.properties.find(priceLike);
@@ -69,40 +54,6 @@ function snippetMeta(field: InputField, title: string, hint: string) {
     title,
     hint,
   };
-}
-
-function existingCalculationIds(config: CalculatorConfig) {
-  return new Set((config.calculations ?? []).map((calc) => calc.id));
-}
-
-function collectAutoTotalCalculationIds(
-  config: CalculatorConfig,
-  match: (property: InputProperty) => boolean,
-) {
-  const calcIds = existingCalculationIds(config);
-  const ids: string[] = [];
-
-  for (const input of config.inputs) {
-    if (isTimeField(input) && input.timeAutoTotal !== false) {
-      const timeId = timeServiceCalculationId(input.id);
-      if (calcIds.has(timeId)) {
-        ids.push(timeId);
-      }
-      continue;
-    }
-
-    for (const property of input.properties) {
-      if (!property.autoTotal || !match(property)) {
-        continue;
-      }
-      const id = autoCalculationId(input.id, property.id);
-      if (calcIds.has(id)) {
-        ids.push(id);
-      }
-    }
-  }
-
-  return ids;
 }
 
 export function buildFormulaSnippets(
@@ -123,10 +74,10 @@ export function buildFormulaSnippets(
 ): SnippetBlock[] {
   const snippets: SnippetBlock[] = [];
 
-  const costCalcIds = collectAutoTotalCalculationIds(config, costLike);
-  const priceCalcIds = collectAutoTotalCalculationIds(config, priceLike);
+  const costOperands = collectTotalOperands(config, costLike);
+  const priceOperands = collectTotalOperands(config, priceLike);
 
-  if (labels.sumAllCost && costCalcIds.length > 0) {
+  if (labels.sumAllCost && costOperands.length > 0) {
     snippets.push({
       id: "snip-global-sum-cost",
       label: labels.sumAllCost,
@@ -135,12 +86,12 @@ export function buildFormulaSnippets(
       meta: { groupId: "global", groupLabel: labels.sumAllCost, title: labels.sumAllCost },
       dragData: {
         kind: "expression",
-        expression: sumCalculationOperands(costCalcIds),
+        expression: sumExpressions(costOperands),
       },
     });
   }
 
-  if (labels.sumAllPrice && priceCalcIds.length > 0) {
+  if (labels.sumAllPrice && priceOperands.length > 0) {
     snippets.push({
       id: "snip-global-sum-price",
       label: labels.sumAllPrice,
@@ -149,16 +100,17 @@ export function buildFormulaSnippets(
       meta: { groupId: "global", groupLabel: labels.sumAllPrice, title: labels.sumAllPrice },
       dragData: {
         kind: "expression",
-        expression: sumCalculationOperands(priceCalcIds),
+        expression: sumExpressions(priceOperands),
       },
     });
   }
 
-  if (labels.globalMargin && costCalcIds.length > 0 && priceCalcIds.length > 0) {
-    const marginExpression =
-      costCalcIds.length === 1 && priceCalcIds.length === 1
-        ? calculationMinusCalculation(priceCalcIds[0], costCalcIds[0])
-        : marginFromCalculationSums(priceCalcIds, costCalcIds);
+  if (labels.globalMargin && costOperands.length > 0 && priceOperands.length > 0) {
+    const marginExpression = operationExpression(
+      "-",
+      sumExpressions(priceOperands),
+      sumExpressions(costOperands),
+    );
 
     snippets.push({
       id: "snip-global-margin",

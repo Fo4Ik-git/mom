@@ -20,6 +20,7 @@ services:
       DATABASE_URL: file:/app/db/dev.db
       AUTH_TRUST_HOST: "true"
       NODE_ENV: production
+      LOG_DIR: /app/logs
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:

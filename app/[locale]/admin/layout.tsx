@@ -26,7 +26,7 @@ export default async function AdminLayout({
     { href: "/admin/users", label: t("users") },
     { href: "/admin/calculators", label: t("calculators") },
     { href: "/admin/keys", label: t("accessKeys") },
-    { href: "/admin/logs", label: t("logsNav") },
+    { href: "/admin/audit", label: t("logsNav") },
     { href: "/admin/settings", label: t("settings") },
   ];
 

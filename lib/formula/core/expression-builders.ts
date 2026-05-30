@@ -131,6 +131,13 @@ export function sumCalculationOperands(calculationIds: string[]): BlockExpressio
   );
 }
 
+export function sumExpressions(operands: BlockExpression[]): BlockExpression {
+  if (operands.length === 0) {
+    return { type: "empty" };
+  }
+  return aggregateExpression("SUM", operands);
+}
+
 export function calculationMinusCalculation(
   leftCalculationId: string,
   rightCalculationId: string,

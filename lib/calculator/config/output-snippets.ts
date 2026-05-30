@@ -1,64 +1,18 @@
-import { autoCalculationId } from "@/lib/calculator/config/auto-calculations";
+import { collectTotalOperands } from "@/lib/formula/core/collect-total-operands";
 import {
-  isTimeField,
-  timeServiceCalculationId,
-} from "@/lib/calculator/fields/time-service";
+  costLike,
+  priceLike,
+} from "@/lib/formula/core/property-matchers";
 import {
-  calculationMinusCalculation,
-  marginFromCalculationSums,
-  sumCalculationOperands,
+  operationExpression,
+  sumExpressions,
 } from "@/lib/formula/core/expression-builders";
 import type {
   BlockExpression,
   CalculatorConfig,
-  InputProperty,
   OutputField,
 } from "@/types/calculator";
 import { emptyBlockExpression } from "@/types/calculator";
-
-function costLike(property: InputProperty) {
-  return (
-    /собів|собест|cost|себест/i.test(property.label) ||
-    property.id.includes("cost")
-  );
-}
-
-function priceLike(property: InputProperty) {
-  return (
-    /ціна|price|варт|rate|тариф|стоим/i.test(property.label) ||
-    property.id.includes("price")
-  );
-}
-
-function collectAutoTotalCalculationIds(
-  config: CalculatorConfig,
-  match: (property: InputProperty) => boolean,
-) {
-  const calcIds = new Set((config.calculations ?? []).map((calc) => calc.id));
-  const ids: string[] = [];
-
-  for (const input of config.inputs) {
-    if (isTimeField(input) && input.timeAutoTotal !== false) {
-      const timeId = timeServiceCalculationId(input.id);
-      if (calcIds.has(timeId)) {
-        ids.push(timeId);
-      }
-      continue;
-    }
-
-    for (const property of input.properties) {
-      if (!property.autoTotal || !match(property)) {
-        continue;
-      }
-      const id = autoCalculationId(input.id, property.id);
-      if (calcIds.has(id)) {
-        ids.push(id);
-      }
-    }
-  }
-
-  return ids;
-}
 
 function randomId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 8)}`;
@@ -71,35 +25,36 @@ export function buildOutputFromSnippet(
   snippetId: OutputSnippetId,
   labels: { sumCost: string; sumPrice: string; margin: string },
 ): OutputField | null {
-  const costIds = collectAutoTotalCalculationIds(config, costLike);
-  const priceIds = collectAutoTotalCalculationIds(config, priceLike);
+  const costOperands = collectTotalOperands(config, costLike);
+  const priceOperands = collectTotalOperands(config, priceLike);
 
   let expression: BlockExpression = emptyBlockExpression();
   let label = "";
 
   switch (snippetId) {
     case "sumCost":
-      if (costIds.length === 0) {
+      if (costOperands.length === 0) {
         return null;
       }
-      expression = sumCalculationOperands(costIds);
+      expression = sumExpressions(costOperands);
       label = labels.sumCost;
       break;
     case "sumPrice":
-      if (priceIds.length === 0) {
+      if (priceOperands.length === 0) {
         return null;
       }
-      expression = sumCalculationOperands(priceIds);
+      expression = sumExpressions(priceOperands);
       label = labels.sumPrice;
       break;
     case "margin":
-      if (costIds.length === 0 || priceIds.length === 0) {
+      if (costOperands.length === 0 || priceOperands.length === 0) {
         return null;
       }
-      expression =
-        costIds.length === 1 && priceIds.length === 1
-          ? calculationMinusCalculation(priceIds[0], costIds[0])
-          : marginFromCalculationSums(priceIds, costIds);
+      expression = operationExpression(
+        "-",
+        sumExpressions(priceOperands),
+        sumExpressions(costOperands),
+      );
       label = labels.margin;
       break;
     default:

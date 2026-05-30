@@ -14,6 +14,7 @@ import type { InputField, InputProperty } from "@/types/calculator";
 import { parseBlockBody, readQuotedString } from "@/lib/calculator/schema/patterns/block-body";
 
 import { INPUT_SECTION_IDS } from "@/lib/calculator/config/input-sections";
+import { defaultPropertyAutoTotal } from "@/lib/formula/core/property-matchers";
 
 export const inputEntity: ConfigEntityDefinition = {
   keyword: "input",
@@ -138,12 +139,21 @@ export const inputEntity: ConfigEntityDefinition = {
       return structured;
     }
 
-    let properties: InputProperty[] = structured.properties.map((property) => ({
-      id: property.id,
-      label: readStringField(property.fields, "label"),
-      value: readNumberField(property.fields, "value") ?? 0,
-      ...(property.fields.get("auto_total") === true ? { autoTotal: true } : {}),
-    }));
+    let properties: InputProperty[] = structured.properties.map((property) => {
+      const parsed: InputProperty = {
+        id: property.id,
+        label: readStringField(property.fields, "label"),
+        value: readNumberField(property.fields, "value") ?? 0,
+      };
+      if (property.fields.get("auto_total") === true) {
+        parsed.autoTotal = true;
+      } else if (property.fields.get("auto_total") === false) {
+        parsed.autoTotal = false;
+      } else if (defaultPropertyAutoTotal(parsed)) {
+        parsed.autoTotal = true;
+      }
+      return parsed;
+    });
 
     if (properties.length === 0) {
       const legacy = parseLegacyInputProperties(body);

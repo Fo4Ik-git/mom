@@ -7,8 +7,8 @@ import {
 
 describe("http-log-policy", () => {
   it("skips log viewer for request logging", () => {
-    expect(shouldLogHttpRequest("GET", "/api/admin/logs")).toBe(false);
-    expect(shouldLogHttpRequest("POST", "/api/admin/logs")).toBe(false);
+    expect(shouldLogHttpRequest("GET", "/api/admin/audit")).toBe(false);
+    expect(shouldLogHttpRequest("POST", "/api/admin/audit")).toBe(false);
   });
 
   it("logs GET calculators list", () => {
@@ -40,6 +40,6 @@ describe("http-log-policy", () => {
     expect(resolveAuditAction("PATCH", "/api/admin/users/u1")).toBe(
       "admin.user.update",
     );
-    expect(resolveAuditAction("GET", "/api/admin/logs")).toBe("admin.logs.read");
+    expect(resolveAuditAction("GET", "/api/admin/audit")).toBe("admin.audit.read");
   });
 });

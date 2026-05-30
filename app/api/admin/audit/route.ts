@@ -58,6 +58,6 @@ export const GET = withApiRoute(async function GET(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
-    return handleAdminApiError(error, "admin/logs");
+    return handleAdminApiError(error, "admin/audit");
   }
 });

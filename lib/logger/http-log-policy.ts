@@ -1,5 +1,6 @@
 /** Paths that must not produce HTTP audit lines (e.g. log viewer itself). */
 const SKIP_AUDIT_PATHS = new Set([
+  "/api/admin/audit",
   "/api/admin/logs",
   "/api/auth/session",
 ]);
@@ -72,7 +73,9 @@ export function resolveAuditAction(method: string, pathname: string): string {
   }
 
   if (area === "admin") {
-    if (rest[0] === "logs") return "admin.logs.read";
+    if (rest[0] === "audit" || rest[0] === "logs") {
+      return "admin.audit.read";
+    }
     if (rest[0] === "stats") return "admin.stats.read";
     if (rest[0] === "settings") return m === "PATCH" ? "admin.settings.update" : "admin.settings.read";
     if (rest[0] === "access-keys") {

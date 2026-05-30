@@ -1,4 +1,5 @@
 import type { Product } from "@/app/types/product";
+import { QuantityInput } from "@/app/components/calculator/quantity-input";
 
 interface ProductItemProps {
   product: Product;
@@ -26,14 +27,11 @@ export function ProductItem({
       >
         {product.name}
       </label>
-      <input
+      <QuantityInput
         id={inputId}
-        type="number"
-        min={0}
-        step="any"
         value={value}
         list={listId}
-        onChange={(event) => onChange(Number(event.target.value) || 0)}
+        onChange={onChange}
         className="block h-11 w-full rounded-xl border border-border bg-input px-3.5 text-sm text-foreground shadow-sm transition placeholder:text-muted-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring/30"
       />
       {product.presets && (

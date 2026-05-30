@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { LineItemsTable } from "@/app/components/calculator/line-items-table";
+import { QuantityInput } from "@/app/components/calculator/quantity-input";
 import { isTimeField, timeFieldPreview } from "@/lib/calculator/fields/time-service";
 import {
   buildInitialLineItemRowsState,
@@ -151,17 +152,14 @@ export function DynamicCalculator({ config }: DynamicCalculatorProps) {
                     : t("quantityLabel")}
                 </span>
 
-                <input
+                <QuantityInput
                   id={`qty-${input.id}`}
-                  type="number"
-                  min={0}
-                  step="any"
                   value={quantities[input.id] ?? 0}
                   list={input.presets ? `presets-${input.id}` : undefined}
-                  onChange={(e) =>
+                  onChange={(next) =>
                     setQuantities((current) => ({
                       ...current,
-                      [input.id]: Number(e.target.value) || 0,
+                      [input.id]: next,
                     }))
                   }
                   className="block h-12 w-full rounded-xl border border-border bg-input px-3.5 text-base shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring/30"

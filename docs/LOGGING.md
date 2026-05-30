@@ -26,7 +26,7 @@ One JSON object per line (easy to `grep`, `jq`, or ship later).
 - `response` — `{ body }` with the JSON/text returned to the client (passwords and tokens are `[redacted]`)
 - resource ids (`calculator_id`, `target_user_id`, …) and handler `changes` / `share` / `transfer` blocks
 
-**Not logged:** GET/HEAD requests, `/api/admin/logs` (the log viewer), `/api/auth/session` polling. Startup `logger.started` is `debug` only.
+**Not logged:** `/api/admin/audit` (the log viewer), `/api/auth/session` polling. Startup `logger.started` is `debug` only.
 
 ## Retention
 
@@ -74,7 +74,7 @@ Pass `x-trace-id` from the browser or another service to correlate logs across c
 
 ## Admin UI
 
-Admins can browse and search logs at **`/admin/logs`** (same auth as the rest of the admin panel). Filters: file (daily), free-text search, `trace_id`, log level. Click a row to expand full JSON; use **Filter by trace** to correlate one request.
+Admins can browse and search logs at **`/admin/audit`** (locale prefix, e.g. `/uk/admin/audit`). The old path `/admin/logs` redirects here — some reverse proxies block URLs containing `/logs`. Filters: file (daily), free-text search, `trace_id`, log level. Click a row to expand full JSON; use **Filter by trace** to correlate one request.
 
 ## Debugging on the server
 

@@ -135,7 +135,7 @@ export function AdminLogsViewer() {
   const [copiedTrace, setCopiedTrace] = useState<string | null>(null);
 
   const loadFiles = useCallback(async () => {
-    const res = await appFetch("/api/admin/logs");
+    const res = await appFetch("/api/admin/audit");
     const data = await res.json();
     if (!res.ok) {
       throw new Error(adminApiErrorMessage(data, t));
@@ -165,11 +165,11 @@ export function AdminLogsViewer() {
         params.set("level", level);
       }
       if (actionsOnly) {
-        params.set("event", "audit.action");
+        params.set("event", "audit.request");
       }
 
       try {
-        const res = await appFetch(`/api/admin/logs?${params}`);
+        const res = await appFetch(`/api/admin/audit?${params}`);
         const data = (await res.json()) as LogsResponse & { error?: string };
         if (!res.ok) {
           setError(adminApiErrorMessage(data, t));

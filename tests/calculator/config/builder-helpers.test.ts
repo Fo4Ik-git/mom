@@ -49,9 +49,19 @@ describe("builder field clone and output snippets", () => {
     expect(margin?.expression.type).toBe("operation");
   });
 
-  it("buildOutputFromSnippet returns null when no matching auto totals", () => {
+  it("buildOutputFromSnippet returns null when no cost-like properties", () => {
+    const config = {
+      ...emptyCalculatorConfig,
+      inputs: [
+        {
+          ...emptyCalculatorConfig.inputs[0]!,
+          properties: [{ id: "var_weight", label: "Weight", value: 0 }],
+        },
+      ],
+      calculations: [],
+    };
     expect(
-      buildOutputFromSnippet(emptyCalculatorConfig, "sumCost", {
+      buildOutputFromSnippet(config, "sumCost", {
         sumCost: "C",
         sumPrice: "P",
         margin: "M",
