@@ -54,6 +54,8 @@ export async function PATCH(
       adminNotes?: string | null;
       passwordHash?: string;
       email?: string;
+      issueBanDismissedAt?: null;
+      issueExpiredDismissedFor?: null;
     } = {};
 
     if (body.role !== undefined) {
@@ -63,8 +65,10 @@ export async function PATCH(
       data.banned = body.banned;
       if (body.banned) {
         data.banReason = body.banReason ?? null;
+        data.issueBanDismissedAt = null;
       } else {
         data.banReason = null;
+        data.issueBanDismissedAt = null;
       }
     } else if (body.banReason !== undefined) {
       data.banReason = body.banReason;
@@ -79,6 +83,7 @@ export async function PATCH(
       data.accessExpiresAt = body.accessExpiresAt
         ? new Date(body.accessExpiresAt)
         : null;
+      data.issueExpiredDismissedFor = null;
     }
     if (body.adminNotes !== undefined) {
       data.adminNotes = body.adminNotes;

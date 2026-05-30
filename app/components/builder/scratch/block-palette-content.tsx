@@ -38,10 +38,12 @@ function PaletteItemRow({
   block,
   onTap,
   compact = false,
+  centered = false,
 }: {
   block: PaletteBlock;
   onTap: () => void;
   compact?: boolean;
+  centered?: boolean;
 }) {
   const title = block.meta?.title ?? block.label;
   const hint = block.meta?.hint;
@@ -50,14 +52,22 @@ function PaletteItemRow({
     <button
       type="button"
       onClick={onTap}
-      className={`flex w-full touch-manipulation items-start gap-2 rounded-xl border px-3 py-2 text-left shadow-sm active:scale-[0.99] ${BLOCK_COLORS[block.color]} ${compact ? "min-h-[40px]" : "min-h-[44px]"}`}
+      className={`flex w-full touch-manipulation rounded-xl border px-3 py-2 shadow-sm active:scale-[0.99] ${BLOCK_COLORS[block.color]} ${compact ? "min-h-[40px]" : "min-h-[44px]"} ${
+        centered
+          ? "flex-col items-center justify-center text-center"
+          : "items-start gap-2 text-left"
+      }`}
     >
-      <span className="min-w-0 flex-1">
+      <span className={centered ? "min-w-0 w-full" : "min-w-0 flex-1"}>
         <span className="block truncate text-sm font-medium leading-snug">
           {title}
         </span>
         {hint && (
-          <span className="mt-0.5 block truncate text-[11px] font-normal opacity-75">
+          <span
+            className={`mt-0.5 block truncate font-normal opacity-75 ${
+              centered ? "text-[10px]" : "text-[11px]"
+            }`}
+          >
             {hint}
           </span>
         )}
@@ -177,6 +187,27 @@ export function BlockPaletteContent({
       ]),
     actions: filteredActions.length,
   };
+
+  function renderActionItem(block: PaletteBlock) {
+    if (dragEnabled) {
+      return (
+        <DraggableBlock
+          key={block.id}
+          block={block}
+          centered
+          onTap={() => onBlockTap(block)}
+        />
+      );
+    }
+    return (
+      <PaletteItemRow
+        key={block.id}
+        block={block}
+        centered
+        onTap={() => onBlockTap(block)}
+      />
+    );
+  }
 
   function renderTapItem(block: PaletteBlock) {
     if (dragEnabled) {
@@ -397,7 +428,7 @@ export function BlockPaletteContent({
               {t("paletteEmptyActions")}
             </p>
           ) : (
-            filteredActions.map(renderTapItem)
+            filteredActions.map(renderActionItem)
           )}
         </div>
       )}

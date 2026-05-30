@@ -249,7 +249,8 @@
     "lineItemDefaultRows": "Default rows",
     "lineItemMaxRows": "Max rows",
     "fieldSummaryLineItems": "line items table",
-    "fieldSummaryLineColumns": "{count} columns"
+    "fieldSummaryLineColumns": "{count} columns",
+    "paletteResizeHandle": "Resize palette panel"
   },
   "admin": {
     "title": "Admin panel",
@@ -383,6 +384,18 @@
     "kpiCalcs": "Calculators",
     "kpiPublic": "Public",
     "kpiIssues": "Issues",
+    "issuesModalTitle": "Account issues",
+    "issuesModalSummary": "{count, plural, one {# user needs attention} other {# users need attention}}",
+    "issuesModalEmpty": "No blocked users or expired access",
+    "issuesModalAllClear": "Everything looks good — no banned users or expired access.",
+    "issuesModalClose": "Close",
+    "issuesModalManageUsers": "Open users",
+    "issuesSectionBanned": "Banned ({count})",
+    "issuesSectionExpired": "Expired access ({count})",
+    "issuesDismiss": "Dismiss",
+    "issuesDismissAll": "Dismiss all",
+    "issuesDismissHint": "Hide from dashboard until status changes",
+    "issuesDismissing": "Dismissing…",
     "chartActivity": "Activity",
     "chartRoles": "Roles",
     "chartQuota": "Quota usage",

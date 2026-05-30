@@ -1,5 +1,9 @@
 import { Role } from "@prisma/client";
 import { db } from "@/lib/db";
+import {
+  isBanIssueVisible,
+  isExpiredAccessIssueVisible,
+} from "@/lib/admin-issues";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { isAccessActive } from "@/lib/user-limits";
 
@@ -23,6 +27,20 @@ export interface TopUserRow {
   role: Role;
   calculatorsCount: number;
   accessActive: boolean;
+}
+
+export type AdminIssueKind = "banned" | "expired";
+
+export interface AdminIssueRow {
+  id: string;
+  email: string;
+  name: string | null;
+  role: Role;
+  kind: AdminIssueKind;
+  banReason: string | null;
+  accessExpiresAt: string | null;
+  adminNotes: string | null;
+  calculatorsCount: number;
 }
 
 export interface AdminAnalytics {
@@ -56,6 +74,7 @@ export interface AdminAnalytics {
   };
   quotaHistogram: NamedValue[];
   topUsers: TopUserRow[];
+  issues: AdminIssueRow[];
 }
 
 function rangeToMs(range: AnalyticsRange): number {
@@ -213,7 +232,11 @@ export async function getAdminAnalytics(
         name: true,
         role: true,
         banned: true,
+        banReason: true,
+        adminNotes: true,
         accessExpiresAt: true,
+        issueBanDismissedAt: true,
+        issueExpiredDismissedFor: true,
         createdAt: true,
         _count: {
           select: {
@@ -264,6 +287,42 @@ export async function getAdminAnalytics(
       accessActive: !u.banned && isAccessActive(u),
     }));
 
+  const issues: AdminIssueRow[] = [];
+  for (const user of allUsers) {
+    const expired = isExpiredAccessIssueVisible(user, now);
+
+    if (isBanIssueVisible(user)) {
+      issues.push({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        kind: "banned",
+        banReason: user.banReason,
+        accessExpiresAt: user.accessExpiresAt?.toISOString() ?? null,
+        adminNotes: user.adminNotes,
+        calculatorsCount: user._count.calculators,
+      });
+      continue;
+    }
+
+    if (expired) {
+      issues.push({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        kind: "expired",
+        banReason: null,
+        accessExpiresAt: user.accessExpiresAt!.toISOString(),
+        adminNotes: user.adminNotes,
+        calculatorsCount: user._count.calculators,
+      });
+    }
+  }
+
+  issues.sort((a, b) => a.email.localeCompare(b.email));
+
   return {
     range,
     generatedAt: now.toISOString(),
@@ -311,5 +370,6 @@ export async function getAdminAnalytics(
       .map(([key, value]) => ({ key, value }))
       .sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true })),
     topUsers,
+    issues,
   };
 }

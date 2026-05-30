@@ -90,6 +90,10 @@ model User {
   maxCalculators    Int?
   /// When set and in the past, user cannot use builder (admins exempt)
   accessExpiresAt   DateTime?
+  /// Admin dismissed ban alert while user remains banned
+  issueBanDismissedAt DateTime?
+  /// accessExpiresAt value when admin dismissed expired-access alert
+  issueExpiredDismissedFor DateTime?
   adminNotes        String?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt

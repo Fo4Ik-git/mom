@@ -249,7 +249,8 @@
     "lineItemDefaultRows": "Рядків за замовч.",
     "lineItemMaxRows": "Макс. рядків",
     "fieldSummaryLineItems": "таблиця позицій",
-    "fieldSummaryLineColumns": "{count} кол."
+    "fieldSummaryLineColumns": "{count} кол.",
+    "paletteResizeHandle": "Змінити ширину панелі"
   },
   "admin": {
     "title": "Адмін-панель",
@@ -383,6 +384,18 @@
     "kpiCalcs": "Калькулятори",
     "kpiPublic": "Публічні",
     "kpiIssues": "Проблеми",
+    "issuesModalTitle": "Проблемні акаунти",
+    "issuesModalSummary": "{count, plural, one {# користувач потребує уваги} few {# користувачі потребують уваги} many {# користувачів потребують уваги} other {# користувача потребують уваги}}",
+    "issuesModalEmpty": "Немає заблокованих або прострочених",
+    "issuesModalAllClear": "Усе добре — немає заблокованих і простроченого доступу.",
+    "issuesModalClose": "Закрити",
+    "issuesModalManageUsers": "Відкрити користувачів",
+    "issuesSectionBanned": "Заблоковані ({count})",
+    "issuesSectionExpired": "Прострочений доступ ({count})",
+    "issuesDismiss": "Прибрати",
+    "issuesDismissAll": "Прибрати всі",
+    "issuesDismissHint": "Сховати з огляду, поки статус не зміниться",
+    "issuesDismissing": "Прибираємо…",
     "chartActivity": "Активність",
     "chartRoles": "Ролі",
     "chartQuota": "Ліміти",
