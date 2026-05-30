@@ -20,6 +20,10 @@ import { calculatorConfigSchema } from "@/types/calculator";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiRoute } from "@/lib/api/with-api-route";
+import {
+  apiErrorResponse,
+  mapUserAccessError,
+} from "@/lib/errors";
 import { setAuditDetail } from "@/lib/logger/audit";
 
 const createSchema = z.object({
@@ -71,12 +75,10 @@ export const GET = withApiRoute(async function GET() {
     return NextResponse.json({ calculators });
   } catch (error) {
     if (error instanceof UserAccessError) {
-      return NextResponse.json(
-        { error: error.code, message: error.message },
-        { status: 403 },
-      );
+      const mapped = mapUserAccessError(error);
+      return NextResponse.json(mapped.body, { status: mapped.status });
     }
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiErrorResponse("AUTH", "UNAUTHORIZED", 401);
   }
 }
 );
@@ -115,27 +117,31 @@ export const POST = withApiRoute(async function POST(request: Request) {
     );
   } catch (error) {
     if (error instanceof CalculatorValidationError) {
-      return NextResponse.json(validationErrorResponse(error.issues), {
-        status: 400,
-      });
+      return NextResponse.json(
+        validationErrorResponse(error.issues, "CALCULATOR_BUILDER"),
+        { status: 400 },
+      );
     }
     if (error instanceof z.ZodError) {
       const issues = formatZodIssues(error);
-      return NextResponse.json(validationErrorResponse(issues), { status: 400 });
-    }
-    if (error instanceof UserAccessError) {
       return NextResponse.json(
-        { error: error.code, message: error.message },
-        { status: 403 },
+        validationErrorResponse(issues, "CALCULATOR_BUILDER"),
+        { status: 400 },
       );
     }
+    if (error instanceof UserAccessError) {
+      const mapped = mapUserAccessError(error);
+      return NextResponse.json(mapped.body, { status: mapped.status });
+    }
     if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiErrorResponse("AUTH", "UNAUTHORIZED", 401);
     }
     if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return apiErrorResponse("CALCULATOR", "CREATE_FAILED", 400, {
+        message: error.message,
+      });
     }
-    return NextResponse.json({ error: "Ошибка создания" }, { status: 500 });
+    return apiErrorResponse("CALCULATOR", "CREATE_FAILED", 500);
   }
 }
 );

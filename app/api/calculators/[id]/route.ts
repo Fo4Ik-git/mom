@@ -20,6 +20,7 @@ import { calculatorConfigSchema } from "@/types/calculator";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiRoute } from "@/lib/api/with-api-route";
+import { apiErrorResponse } from "@/lib/errors";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -71,7 +72,7 @@ export const PATCH = withApiRoute(async function PATCH(
     );
 
     if (!access || !canEditCalculator(access)) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+      return apiErrorResponse("CALCULATOR", "NOT_FOUND", 404);
     }
 
     const body = updateSchema.parse(await request.json());
@@ -97,21 +98,27 @@ export const PATCH = withApiRoute(async function PATCH(
     });
   } catch (error) {
     if (error instanceof CalculatorValidationError) {
-      return NextResponse.json(validationErrorResponse(error.issues), {
-        status: 400,
-      });
+      return NextResponse.json(
+        validationErrorResponse(error.issues, "CALCULATOR_BUILDER"),
+        { status: 400 },
+      );
     }
     if (error instanceof z.ZodError) {
       const issues = formatZodIssues(error);
-      return NextResponse.json(validationErrorResponse(issues), { status: 400 });
+      return NextResponse.json(
+        validationErrorResponse(issues, "CALCULATOR_BUILDER"),
+        { status: 400 },
+      );
     }
     if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiErrorResponse("AUTH", "UNAUTHORIZED", 401);
     }
     if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return apiErrorResponse("CALCULATOR", "UPDATE_FAILED", 400, {
+        message: error.message,
+      });
     }
-    return NextResponse.json({ error: "Ошибка обновления" }, { status: 500 });
+    return apiErrorResponse("CALCULATOR_BUILDER", "SAVE_FAILED", 500);
   }
 }
 );
@@ -130,13 +137,16 @@ export const DELETE = withApiRoute(async function DELETE(
     );
 
     if (!access || !canDeleteCalculator(access)) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+      return apiErrorResponse("CALCULATOR", "NOT_FOUND", 404);
     }
 
     await db.calculator.delete({ where: { id } });
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return apiErrorResponse("AUTH", "UNAUTHORIZED", 401);
+    }
+    return apiErrorResponse("CALCULATOR", "DELETE_FAILED", 500);
   }
 }
 );

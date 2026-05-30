@@ -20,7 +20,7 @@ describe("platform slug", () => {
 });
 
 describe("validation errors", () => {
-  it("formatZodIssues produces Ukrainian location messages", () => {
+  it("formatZodIssues produces English location messages", () => {
     const schema = z.object({
       name: z.string().min(1),
       inputs: z.array(z.object({ label: z.string().min(1) })).min(1),
@@ -31,12 +31,17 @@ describe("validation errors", () => {
     }
     const issues = formatZodIssues(result.error);
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues.some((msg) => msg.includes("Назва"))).toBe(true);
+    expect(issues.some((msg) => msg.includes("Calculator name"))).toBe(true);
   });
 
   it("validationErrorResponse single vs multi issue", () => {
-    expect(validationErrorResponse(["One error"]).error).toBe("One error");
-    expect(validationErrorResponse(["A", "B"]).error).toContain("2");
-    expect(validationErrorResponse(["A", "B"]).issues).toHaveLength(2);
+    const single = validationErrorResponse(["One error"]);
+    expect(single.error).toBe("One error");
+    expect(single.status.module).toBe("Calculator");
+    expect(single.status.code).toBe(2);
+
+    const multi = validationErrorResponse(["A", "B"]);
+    expect(multi.error).toContain("2");
+    expect(multi.issues).toHaveLength(2);
   });
 });

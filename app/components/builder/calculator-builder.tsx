@@ -34,6 +34,13 @@ import { emptyBlockExpression, slugifyId } from "@/types/calculator";
 import { CalculatorSharesPanel } from "@/app/components/builder/calculator-shares-panel";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import {
+  formatApiErrorForToast,
+  formatApiStatusLine,
+  getApiStatusBlock,
+  isApiErrorPayload,
+} from "@/lib/errors/format-client-error";
+import { toast } from "sonner";
 
 interface CalculatorBuilderProps {
   calculatorId?: string;
@@ -150,6 +157,10 @@ export function CalculatorBuilder({
   });
   const [error, setError] = useState<string | null>(null);
   const [errorIssues, setErrorIssues] = useState<string[]>([]);
+  const [errorMeta, setErrorMeta] = useState<{
+    module?: string;
+    code?: number;
+  } | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [codeSheetOpen, setCodeSheetOpen] = useState(false);
@@ -174,6 +185,7 @@ export function CalculatorBuilder({
     setSaving(true);
     setError(null);
     setErrorIssues([]);
+    setErrorMeta(null);
 
     const payload = { name, description, config, isPublic };
     const saveUrl = calculatorId ? `${apiBase}/${calculatorId}` : apiBase;
@@ -186,20 +198,45 @@ export function CalculatorBuilder({
     setSaving(false);
 
     if (!response.ok) {
+      const payload = isApiErrorPayload(data) ? data : null;
+      const issues = Array.isArray(data.issues) ? (data.issues as string[]) : [];
       const message =
-        response.status === 404
+        payload?.error ??
+        (response.status === 404
           ? t("saveForbidden")
-          : data.error ?? t("saveError");
+          : typeof data.error === "string"
+            ? data.error
+            : t("saveError"));
       setError(message);
-      setErrorIssues(Array.isArray(data.issues) ? data.issues : []);
+      setErrorIssues(issues);
+      const status = getApiStatusBlock(payload);
+      if (status) {
+        setErrorMeta({
+          module: status.module,
+          code: status.code,
+        });
+      }
+
+      const toastText = formatApiErrorForToast(data, t("saveError"));
+      toast.error(toastText.title, {
+        description: toastText.description,
+      });
       return;
     }
 
+    const successStatus = getApiStatusBlock(data);
+    const successMeta =
+      successStatus ? formatApiStatusLine(successStatus) : undefined;
+    toast.success(t("saveSuccess"), {
+      ...(successMeta ? { description: successMeta } : {}),
+    });
+
     const savedId = data.calculator?.id ?? calculatorId;
-    if (savedId) {
+    if (savedId && savedId !== calculatorId) {
       router.push(`/builder/${savedId}`);
+    } else {
+      router.refresh();
     }
-    router.refresh();
   }
 
   async function handleDelete() {
@@ -677,6 +714,11 @@ export function CalculatorBuilder({
           {error && (
             <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               <p className="font-medium">{error}</p>
+              {errorMeta?.module != null && errorMeta.code != null && (
+                <p className="mt-2 font-mono text-xs text-destructive/90">
+                  {errorMeta.module} · #{errorMeta.code}
+                </p>
+              )}
               {errorIssues.length > 0 && (
                 <ul className="mt-2 list-disc space-y-1 pl-5">
                   {errorIssues.map((issue) => (

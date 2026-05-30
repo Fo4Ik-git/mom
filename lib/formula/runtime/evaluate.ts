@@ -75,7 +75,7 @@ export function validateConfigFormulas(config: CalculatorConfig): FormulaError[]
   } catch (error) {
     errors.push({
       message:
-        error instanceof Error ? error.message : "Помилка у формулах калькулятора",
+        error instanceof Error ? error.message : "Calculator formula error",
     });
   }
 

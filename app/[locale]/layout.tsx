@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { AccountGate } from "@/app/components/account/account-gate";
 import { ThemeProvider } from "@/app/components/theme-provider";
+import { Toaster } from "@/app/components/ui/sonner";
 import { Providers } from "@/app/providers";
 import { routing } from "@/i18n/routing";
 
@@ -47,6 +48,7 @@ export default async function LocaleLayout({
           <div className="app-mesh flex min-h-full flex-col">
             <AccountGate>{children}</AccountGate>
           </div>
+          <Toaster />
         </Providers>
       </ThemeProvider>
     </NextIntlClientProvider>

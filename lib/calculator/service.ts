@@ -16,7 +16,7 @@ export class CalculatorValidationError extends Error {
     super(
       issues.length === 1
         ? issues[0]
-        : `Знайдено ${issues.length} помилок у калькуляторі`,
+        : `Found ${issues.length} errors in the calculator`,
     );
     this.name = "CalculatorValidationError";
     this.issues = issues;

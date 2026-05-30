@@ -159,7 +159,8 @@ function parseLogLine(
         : typeof row.path === "string" ? row.path
         : undefined,
       status:
-        typeof http?.status === "number" ? http.status
+        typeof http?.status_code === "number" ? http.status_code
+        : typeof http?.status === "number" ? http.status
         : typeof row.status === "number" ? row.status
         : undefined,
       duration_ms:

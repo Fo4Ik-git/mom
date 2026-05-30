@@ -176,13 +176,14 @@ export const PATCH = withApiRoute(async function PATCH(
     });
   } catch (error) {
     if (error instanceof CalculatorValidationError) {
-      return NextResponse.json(validationErrorResponse(error.issues), {
-        status: 400,
-      });
+      return NextResponse.json(
+        validationErrorResponse(error.issues, "CALCULATOR_BUILDER"),
+        { status: 400 },
+      );
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        validationErrorResponse(formatZodIssues(error)),
+        validationErrorResponse(formatZodIssues(error), "CALCULATOR_BUILDER"),
         { status: 400 },
       );
     }

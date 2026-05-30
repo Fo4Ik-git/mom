@@ -8,6 +8,18 @@ const SKIP_AUDIT_PREFIXES = ["/api/auth/csrf"];
 
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
+/** Log every API request (including GET) except noisy paths. */
+export function shouldLogHttpRequest(method: string, pathname: string): boolean {
+  if (SKIP_AUDIT_PATHS.has(pathname)) {
+    return false;
+  }
+  if (SKIP_AUDIT_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    return false;
+  }
+  return true;
+}
+
+/** @deprecated Use shouldLogHttpRequest — mutations-only logging. */
 export function shouldAuditHttpRequest(method: string, pathname: string): boolean {
   const upper = method.toUpperCase();
   if (READ_METHODS.has(upper)) {

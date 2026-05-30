@@ -2,6 +2,14 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import {
+  API_STATUS_KEY,
+  API_SUCCESS,
+  getApiStatusBlock,
+  hasApiErrorShape,
+  hasApiStatusEnvelope,
+  type ApiStatusBlock,
+} from "@/lib/errors/api-status";
+import {
   bindRequestContextFromHeaders,
   generateTraceId,
   getRequestContext,
@@ -10,8 +18,12 @@ import {
 import {
   extractAuditResourceIds,
   resolveAuditAction,
-  shouldAuditHttpRequest,
+  shouldLogHttpRequest,
 } from "@/lib/logger/http-log-policy";
+import {
+  captureRequestLog,
+  captureResponseLog,
+} from "@/lib/logger/http-payload-log";
 import { getLogger } from "@/lib/logger/index";
 import { serializeError } from "@/lib/logger/serialize";
 
@@ -36,7 +48,7 @@ function attachTraceHeader(response: Response, traceId: string): Response {
   });
 }
 
-function emitAudit(
+function emitRequestLog(
   level: "info" | "warn" | "error",
   fields: Record<string, unknown>,
   message: string,
@@ -51,8 +63,94 @@ function emitAudit(
   }
 }
 
+async function readJsonBody(response: Response): Promise<unknown | null> {
+  const type = response.headers.get("content-type") ?? "";
+  if (!type.includes("application/json")) {
+    return null;
+  }
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function statusBlockFromPayload(
+  payload: unknown,
+  httpStatus: number,
+): ApiStatusBlock {
+  const block = getApiStatusBlock(payload);
+  if (block) {
+    return { module: block.module, code: block.code };
+  }
+
+  if (httpStatus >= 400) {
+    return { module: "Platform", code: httpStatus };
+  }
+
+  return API_SUCCESS;
+}
+
+function isFailedRequest(payload: unknown, httpStatus: number): boolean {
+  return httpStatus >= 400 || hasApiErrorShape(payload);
+}
+
+function buildHttpLog(
+  meta: { method: string; path: string; query?: string },
+  httpStatus: number,
+  durationMs: number,
+  statusBlock: ApiStatusBlock,
+) {
+  return {
+    method: meta.method,
+    path: meta.path,
+    status_code: httpStatus,
+    duration_ms: durationMs,
+    ...(meta.query ? { query: meta.query } : {}),
+    [API_STATUS_KEY]: statusBlock,
+  };
+}
+
+/** Adds General / code 0 in a `status` block on successful JSON responses. */
+async function enrichJsonResponse(response: Response): Promise<Response> {
+  if (response.status === 204 || response.status === 304) {
+    return response;
+  }
+
+  const type = response.headers.get("content-type") ?? "";
+  if (!type.includes("application/json")) {
+    return response;
+  }
+
+  const payload = await readJsonBody(response.clone());
+  if (payload === null || typeof payload !== "object") {
+    return response;
+  }
+
+  if (hasApiStatusEnvelope(payload)) {
+    return response;
+  }
+
+  if (response.status >= 400) {
+    return response;
+  }
+
+  const headers = new Headers(response.headers);
+  return NextResponse.json(
+    {
+      ...(payload as Record<string, unknown>),
+      [API_STATUS_KEY]: { ...API_SUCCESS },
+    },
+    {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    },
+  );
+}
+
 /**
- * Wraps App Router handlers with trace_id and audit logs for mutations.
+ * Wraps App Router handlers with trace_id, response status fields, and request logs.
  */
 export function withApiRoute<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -62,7 +160,7 @@ export function withApiRoute<
     const meta = requestMeta(request);
     const baseContext = bindRequestContextFromHeaders(request.headers);
     const traceId = baseContext.traceId || generateTraceId();
-    const audit = shouldAuditHttpRequest(meta.method, meta.path);
+    const logRequest = shouldLogHttpRequest(meta.method, meta.path);
     const action = resolveAuditAction(meta.method, meta.path);
     const resourceIds = extractAuditResourceIds(meta.path);
 
@@ -74,32 +172,36 @@ export function withApiRoute<
       },
       async () => {
         const started = Date.now();
+        const requestLog =
+          logRequest ? await captureRequestLog(request) : undefined;
 
         try {
-          const response = await handler(request, context);
+          const raw = await handler(request, context);
+          const response = await enrichJsonResponse(raw);
           const durationMs = Date.now() - started;
 
-          if (audit) {
+          if (logRequest) {
             const reqCtx = getRequestContext();
-            const failed = response.status >= 400;
-            emitAudit(
+            const payload = await readJsonBody(response.clone());
+            const statusBlock = statusBlockFromPayload(payload, response.status);
+            const failed = isFailedRequest(payload, response.status);
+            const responseLog = await captureResponseLog(response);
+
+            emitRequestLog(
               response.status >= 500 ? "error" : failed ? "warn" : "info",
               {
-                event: "audit.action",
+                event: "audit.request",
                 action,
-                outcome: failed ? "failed" : "ok",
                 ...resourceIds,
                 ...(reqCtx?.auditDetail ?? {}),
-                http: {
-                  method: meta.method,
-                  path: meta.path,
-                  status: response.status,
-                  duration_ms: durationMs,
-                  ...(meta.query ? { query: meta.query } : {}),
-                },
+                http: buildHttpLog(meta, response.status, durationMs, statusBlock),
+                ...(requestLog ? { request: requestLog } : {}),
+                ...(responseLog ? { response: responseLog } : {}),
                 ...(reqCtx?.user ? { user: reqCtx.user } : {}),
               },
-              failed ? `${action} (${response.status})` : action,
+              failed
+                ? `${action} (${statusBlock.module} #${statusBlock.code})`
+                : `${action} (General #0)`,
             );
           }
 
@@ -107,21 +209,18 @@ export function withApiRoute<
         } catch (error) {
           const durationMs = Date.now() - started;
 
-          if (audit) {
+          if (logRequest) {
             const reqCtx = getRequestContext();
-            emitAudit(
+            const statusBlock = { module: "Platform", code: 500 };
+            emitRequestLog(
               "error",
               {
-                event: "audit.action",
+                event: "audit.request",
                 action,
                 ...resourceIds,
                 ...(reqCtx?.auditDetail ?? {}),
-                http: {
-                  method: meta.method,
-                  path: meta.path,
-                  status: 500,
-                  duration_ms: durationMs,
-                },
+                http: buildHttpLog(meta, 500, durationMs, statusBlock),
+                ...(requestLog ? { request: requestLog } : {}),
                 ...(reqCtx?.user ? { user: reqCtx.user } : {}),
                 err: serializeError(error),
               },

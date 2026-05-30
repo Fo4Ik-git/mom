@@ -21,7 +21,9 @@ One JSON object per line (easy to `grep`, `jq`, or ship later).
 
 - `action` — what happened (`calculator.create`, `admin.user.update`, …), not raw `GET /api/...`
 - `user` — `{ id, email, name, role }` when the caller was logged in
-- `http` — `{ method, path, status, duration_ms }`
+- `http` — `{ method, path, status_code, duration_ms, status: { module, code } }`
+- `request` — sent data: `{ query }` for GET (and other reads), `{ body }` for POST/PATCH/PUT/DELETE (JSON or text)
+- `response` — `{ body }` with the JSON/text returned to the client (passwords and tokens are `[redacted]`)
 - resource ids (`calculator_id`, `target_user_id`, …) and handler `changes` / `share` / `transfer` blocks
 
 **Not logged:** GET/HEAD requests, `/api/admin/logs` (the log viewer), `/api/auth/session` polling. Startup `logger.started` is `debug` only.

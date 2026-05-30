@@ -2,13 +2,21 @@ import { describe, expect, it } from "vitest";
 import {
   resolveAuditAction,
   shouldAuditHttpRequest,
+  shouldLogHttpRequest,
 } from "@/lib/logger/http-log-policy";
 
 describe("http-log-policy", () => {
-  it("skips log viewer and GET requests", () => {
-    expect(shouldAuditHttpRequest("GET", "/api/admin/logs")).toBe(false);
+  it("skips log viewer for request logging", () => {
+    expect(shouldLogHttpRequest("GET", "/api/admin/logs")).toBe(false);
+    expect(shouldLogHttpRequest("POST", "/api/admin/logs")).toBe(false);
+  });
+
+  it("logs GET calculators list", () => {
+    expect(shouldLogHttpRequest("GET", "/api/calculators")).toBe(true);
+  });
+
+  it("skips mutations-only audit for GET", () => {
     expect(shouldAuditHttpRequest("GET", "/api/calculators")).toBe(false);
-    expect(shouldAuditHttpRequest("POST", "/api/admin/logs")).toBe(false);
   });
 
   it("audits mutations", () => {

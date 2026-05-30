@@ -55,14 +55,14 @@ export async function getCalculatorAccess(
     return null;
   }
 
+  if (calculator.userId === userId) {
+    return { calculator, kind: "owner", shareRole: null };
+  }
+
   const role = await resolveUserRole(userId, userRole);
 
   if (role === Role.ADMIN) {
     return { calculator, kind: "admin", shareRole: null };
-  }
-
-  if (calculator.userId === userId) {
-    return { calculator, kind: "owner", shareRole: null };
   }
 
   const share = await db.calculatorShare.findUnique({
