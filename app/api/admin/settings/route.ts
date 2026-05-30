@@ -16,6 +16,7 @@ import { setAuditDetail } from "@/lib/logger/audit";
 const updateSchema = z.object({
   defaultMaxCalculators: z.number().int().min(0).max(1000),
   defaultAccessDays: z.number().int().min(0).max(3650),
+  defaultReferrerBonusDays: z.number().int().min(0).max(3650).optional(),
   supportEmail: z.string().email().nullable().optional(),
   supportTelegram: z.string().max(80).nullable().optional(),
   accessExpiryCheckInterval: z
@@ -41,6 +42,7 @@ export const GET = withApiRoute(async function GET() {
     return NextResponse.json({
       defaultMaxCalculators: settings.defaultMaxCalculators,
       defaultAccessDays: settings.defaultAccessDays,
+      defaultReferrerBonusDays: settings.defaultReferrerBonusDays,
       supportEmail: settings.supportEmail,
       supportTelegram: settings.supportTelegram,
       updatedAt: settings.updatedAt.toISOString(),
@@ -62,6 +64,9 @@ export const PATCH = withApiRoute(async function PATCH(request: Request) {
       changes: {
         default_max_calculators: body.defaultMaxCalculators,
         default_access_days: body.defaultAccessDays,
+        ...(body.defaultReferrerBonusDays !== undefined ?
+          { default_referrer_bonus_days: body.defaultReferrerBonusDays }
+        : {}),
         ...(body.supportEmail !== undefined ?
           { support_email: body.supportEmail }
         : {}),
@@ -76,6 +81,7 @@ export const PATCH = withApiRoute(async function PATCH(request: Request) {
     return NextResponse.json({
       defaultMaxCalculators: settings.defaultMaxCalculators,
       defaultAccessDays: settings.defaultAccessDays,
+      defaultReferrerBonusDays: settings.defaultReferrerBonusDays,
       supportEmail: settings.supportEmail,
       supportTelegram: settings.supportTelegram,
       updatedAt: settings.updatedAt.toISOString(),

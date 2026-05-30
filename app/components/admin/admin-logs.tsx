@@ -7,6 +7,8 @@ import { Button } from "@/app/components/ui/button";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
 import { appFetch } from "@/lib/api/api-client";
 import { adminApiErrorMessage } from "@/lib/admin/admin-api-error";
+import { LOG_PAGE_SIZES, type LogPageSize } from "@/lib/logger/log-pagination";
+import { tableRange, type TablePagination } from "@/lib/ui/table-pagination";
 
 type LogFileMeta = {
   name: string;
@@ -45,6 +47,7 @@ type LogsResponse = {
   truncated: boolean;
   scannedBytes: number;
   fileSizeBytes: number;
+  pagination: TablePagination;
 };
 
 const LEVELS = ["", "error", "warn", "info", "debug"] as const;
@@ -128,6 +131,14 @@ export function AdminLogsViewer() {
   const [truncated, setTruncated] = useState(false);
   const [fileSizeBytes, setFileSizeBytes] = useState(0);
   const [matchedCount, setMatchedCount] = useState(0);
+  const [pagination, setPagination] = useState<TablePagination>({
+    page: 1,
+    pageSize: 50,
+    total: 0,
+    totalPages: 1,
+  });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<LogPageSize>(50);
   const [expandedLine, setExpandedLine] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
@@ -147,7 +158,10 @@ export function AdminLogsViewer() {
   }, [t]);
 
   const fetchEntries = useCallback(
-    async (file: string, opts?: { silent?: boolean }) => {
+    async (
+      file: string,
+      opts?: { silent?: boolean; page?: number; pageSize?: LogPageSize },
+    ) => {
       if (!file) {
         return;
       }
@@ -156,7 +170,13 @@ export function AdminLogsViewer() {
       }
       setError(null);
 
-      const params = new URLSearchParams({ file, limit: "200" });
+      const requestPage = opts?.page ?? page;
+      const requestPageSize = opts?.pageSize ?? pageSize;
+      const params = new URLSearchParams({
+        file,
+        page: String(requestPage),
+        pageSize: String(requestPageSize),
+      });
       const q = query.trim();
       if (q) {
         params.set("q", q);
@@ -179,6 +199,11 @@ export function AdminLogsViewer() {
         setTruncated(Boolean(data.truncated));
         setFileSizeBytes(data.fileSizeBytes ?? 0);
         setMatchedCount(data.matchedCount ?? 0);
+        if (data.pagination) {
+          setPagination(data.pagination);
+          setPage(data.pagination.page);
+          setPageSize(data.pagination.pageSize as LogPageSize);
+        }
       } catch {
         setError(t("logsLoadFailed"));
       } finally {
@@ -186,7 +211,7 @@ export function AdminLogsViewer() {
         setLoading(false);
       }
     },
-    [query, level, actionsOnly, t],
+    [query, level, actionsOnly, page, pageSize, t],
   );
 
   useEffect(() => {
@@ -198,10 +223,27 @@ export function AdminLogsViewer() {
       return;
     }
     const timer = window.setTimeout(() => {
-      void fetchEntries(selectedFile);
+      void fetchEntries(selectedFile, { page });
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [selectedFile, fetchEntries]);
+  }, [selectedFile, fetchEntries, page]);
+
+  function handlePageSizeChange(next: LogPageSize) {
+    setPageSize(next);
+    setPage(1);
+    if (selectedFile) {
+      void fetchEntries(selectedFile, { page: 1, pageSize: next });
+    }
+  }
+
+  function handlePageChange(next: number) {
+    setPage(next);
+    if (selectedFile) {
+      void fetchEntries(selectedFile, { page: next });
+    }
+  }
+
+  const listRange = tableRange(pagination);
 
   const activeFileMeta = useMemo(
     () => files.find((f) => f.name === selectedFile),
@@ -222,6 +264,7 @@ export function AdminLogsViewer() {
     if (!value) {
       return;
     }
+    setPage(1);
     setQuery(value);
   }
 
@@ -242,7 +285,10 @@ export function AdminLogsViewer() {
             <span className="text-muted-foreground">{t("logsFile")}</span>
             <select
               value={selectedFile}
-              onChange={(e) => setSelectedFile(e.target.value)}
+              onChange={(e) => {
+                setPage(1);
+                setSelectedFile(e.target.value);
+              }}
               className="rounded-lg border border-border bg-background px-3 py-2"
               disabled={files.length === 0}
             >
@@ -263,7 +309,10 @@ export function AdminLogsViewer() {
             <input
               type="search"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setPage(1);
+                setQuery(e.target.value);
+              }}
               placeholder={t("logsSearchPlaceholder")}
               className="rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs"
             />
@@ -279,7 +328,10 @@ export function AdminLogsViewer() {
             <button
               key={value || "all"}
               type="button"
-              onClick={() => setLevel(value)}
+              onClick={() => {
+                setPage(1);
+                setLevel(value);
+              }}
               className={`rounded-full px-3 py-1 text-xs font-medium transition ${
                 level === value
                   ? "bg-accent text-accent-foreground"
@@ -293,7 +345,10 @@ export function AdminLogsViewer() {
             <input
               type="checkbox"
               checked={actionsOnly}
-              onChange={(e) => setActionsOnly(e.target.checked)}
+              onChange={(e) => {
+                setPage(1);
+                setActionsOnly(e.target.checked);
+              }}
               className="size-4 rounded border-border"
             />
             {t("logsActionsOnly")}
@@ -326,6 +381,7 @@ export function AdminLogsViewer() {
         ) : entries.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">{t("logsEmpty")}</p>
         ) : (
+          <>
           <ul className="divide-y divide-border">
             {entries.map((entry) => {
               const expanded = expandedLine === entry.lineNumber;
@@ -449,6 +505,68 @@ export function AdminLogsViewer() {
               );
             })}
           </ul>
+          <div className="flex flex-col gap-3 border-t border-border p-4">
+            <p className="text-sm text-muted-foreground">
+              {pagination.total > 0
+                ? t("usersShowing", {
+                    from: listRange.from,
+                    to: listRange.to,
+                    total: pagination.total,
+                  })
+                : t("logsEmpty")}
+              {" · "}
+              {t("usersPage", {
+                page: pagination.page,
+                pages: pagination.totalPages,
+              })}
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
+                <span className="text-muted-foreground">{t("usersPageSize")}</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) =>
+                    handlePageSizeChange(Number(e.target.value) as LogPageSize)
+                  }
+                  className="h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:h-10 sm:w-32 sm:text-sm"
+                  disabled={searching}
+                >
+                  {LOG_PAGE_SIZES.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 flex-1 sm:flex-none"
+                  disabled={searching || pagination.page <= 1}
+                  onClick={() => handlePageChange(Math.max(1, pagination.page - 1))}
+                >
+                  {t("usersPrev")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 flex-1 sm:flex-none"
+                  disabled={
+                    searching || pagination.page >= pagination.totalPages
+                  }
+                  onClick={() =>
+                    handlePageChange(
+                      Math.min(pagination.totalPages, pagination.page + 1),
+                    )
+                  }
+                >
+                  {t("usersNext")}
+                </Button>
+              </div>
+            </div>
+          </div>
+          </>
         )}
       </Card>
     </div>

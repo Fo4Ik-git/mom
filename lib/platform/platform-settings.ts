@@ -11,6 +11,7 @@ export async function getPlatformSettings() {
       id: SETTINGS_ID,
       defaultMaxCalculators: 5,
       defaultAccessDays: 30,
+      defaultReferrerBonusDays: 0,
       accessExpiryCheckInterval: DEFAULT_ACCESS_EXPIRY_CHECK_INTERVAL,
     },
     update: {},
@@ -20,6 +21,7 @@ export async function getPlatformSettings() {
 export async function updatePlatformSettings(data: {
   defaultMaxCalculators: number;
   defaultAccessDays: number;
+  defaultReferrerBonusDays?: number;
   supportEmail?: string | null;
   supportTelegram?: string | null;
   accessExpiryCheckInterval?: AccessExpiryCheckInterval;

@@ -18,7 +18,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { AdminAnalytics, AdminIssueRow, AnalyticsRange } from "@/lib/admin/admin-analytics";
+import type {
+  AdminAnalytics,
+  AdminIssueRow,
+  AnalyticsRange,
+  ReferralSignupRow,
+} from "@/lib/admin/admin-analytics";
+import { formatAccessDateShort } from "@/lib/access/access-dates";
 import { formatAccessDate } from "@/lib/access/access-display";
 import { Link } from "@/i18n/navigation";
 import { appFetch } from "@/lib/api/api-client";
@@ -99,21 +105,85 @@ function Panel({
   height = 240,
   children,
   className = "",
+  content = false,
 }: {
   title: string;
   height?: number;
-  children: ReactElement;
+  children: ReactNode;
   className?: string;
+  /** Plain content (metrics, empty states) — not wrapped in a chart container. */
+  content?: boolean;
 }) {
   return (
     <section
-      className={`rounded-2xl border border-border/80 bg-card p-4 shadow-sm ${className}`}
+      className={`flex flex-col rounded-2xl border border-border/80 bg-card p-4 shadow-sm ${className}`}
     >
-      <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+      <h3 className="mb-3 shrink-0 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
         {title}
       </h3>
-      <SizedChart height={height}>{children}</SizedChart>
+      {content ? (
+        <div className="min-h-0 flex-1">{children}</div>
+      ) : (
+        <SizedChart height={height}>{children as ReactElement}</SizedChart>
+      )}
     </section>
+  );
+}
+
+function ReferralSummaryMetrics({
+  periodCount,
+  totalCount,
+  referrerCount,
+  t,
+}: {
+  periodCount: number;
+  totalCount: number;
+  referrerCount: number;
+  t: ReturnType<typeof useTranslations<"admin">>;
+}) {
+  const items = [
+    {
+      id: "period",
+      value: periodCount,
+      label: t("referralsStatPeriod"),
+      accent: true,
+    },
+    {
+      id: "total",
+      value: totalCount,
+      label: t("referralsStatAllTime"),
+      accent: false,
+    },
+    {
+      id: "referrers",
+      value: referrerCount,
+      label: t("referralsStatReferrers"),
+      accent: false,
+    },
+  ];
+
+  return (
+    <div className="grid h-full min-h-[180px] grid-cols-1 gap-2 sm:grid-cols-3">
+      {items.map((item) => (
+        <div
+          key={item.id}
+          className="flex min-w-0 flex-col justify-center rounded-xl border border-border/60 bg-muted/15 px-3 py-4"
+        >
+          <span
+            className={`truncate text-3xl font-bold tabular-nums leading-none ${
+              item.accent
+                ? "text-green-700 dark:text-green-400"
+                : "text-foreground"
+            }`}
+          >
+            {item.value}
+          </span>
+          <span className="mt-2 line-clamp-2 text-[11px] leading-snug text-muted-foreground">
+            {item.label}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -378,6 +448,80 @@ function IssuesDetailsModal({
   );
 }
 
+function ReferralSignupsTable({
+  rows,
+  locale,
+  t,
+  tc,
+}: {
+  rows: ReferralSignupRow[];
+  locale: string;
+  t: ReturnType<typeof useTranslations<"admin">>;
+  tc: ReturnType<typeof useTranslations<"common">>;
+}) {
+  return (
+    <section className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+      <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        {t("referralsSignupsTitle")}
+      </h3>
+      <p className="mb-4 text-xs text-muted-foreground">{t("referralsSignupsHint")}</p>
+      {rows.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          {t("referralsNoSignupsInRange")}
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-border/60 text-xs text-muted-foreground">
+                <th className="px-3 py-2 font-medium">{t("referralsColSignedUp")}</th>
+                <th className="px-3 py-2 font-medium">{tc("email")}</th>
+                <th className="px-3 py-2 font-medium">{t("referralsColReferrer")}</th>
+                <th className="px-3 py-2 font-medium">{t("accessKeyCode")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr
+                  key={`${row.id}-${row.signedUpAt}`}
+                  className="border-b border-border/40 last:border-0"
+                >
+                  <td className="px-3 py-2.5 whitespace-nowrap text-xs text-muted-foreground">
+                    {formatAccessDateShort(row.signedUpAt, locale)}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <span className="font-medium">{row.userEmail}</span>
+                    {row.userName && (
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        {row.userName}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-muted-foreground">
+                    {row.referrerEmail ? (
+                      <>
+                        <span className="text-foreground">{row.referrerEmail}</span>
+                        {row.referrerName && (
+                          <span className="mt-0.5 block text-xs">{row.referrerName}</span>
+                        )}
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 font-mono text-xs tracking-wide">
+                    {row.inviteCode}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function DonutChartContent({
   data,
   center,
@@ -436,6 +580,7 @@ function DonutChartContent({
 
 export function AdminAnalyticsDashboard() {
   const t = useTranslations("admin");
+  const tc = useTranslations("common");
   const locale = useLocale();
   const uid = useId().replace(/:/g, "");
   const [range, setRange] = useState<AnalyticsRange>("7d");
@@ -559,12 +704,22 @@ export function AdminAnalyticsDashboard() {
     label: point.label,
     users: point.value,
     calcs: growth.calculators[i]?.value ?? 0,
+    referrals: data.referrals.growth[i]?.value ?? 0,
   }));
 
   const topUsersChart = data.topUsers.slice(0, 6).map((u) => ({
     name: u.email.split("@")[0],
     value: u.calculatorsCount,
   }));
+
+  const topReferrersChart = data.referrals.topReferrers
+    .filter((r) => r.invitesInRange > 0 || r.invitesTotal > 0)
+    .slice(0, 6)
+    .map((r) => ({
+      name: r.referrerEmail.split("@")[0],
+      value: r.invitesInRange,
+      total: r.invitesTotal,
+    }));
 
   const quotaChart = data.quotaHistogram.map((d) => ({
     name: d.key,
@@ -628,6 +783,12 @@ export function AdminAnalyticsDashboard() {
         />
         <StatPill value={summary.publicCalculators} label={t("kpiPublic")} />
         <StatPill
+          value={summary.referralSignupsTotal}
+          label={t("kpiReferralTotal")}
+          delta={summary.referralSignupsInRange}
+          color={COLORS.green}
+        />
+        <StatPill
           value={issueCount}
           label={t("kpiIssues")}
           color={issueCount > 0 ? COLORS.rose : undefined}
@@ -645,6 +806,10 @@ export function AdminAnalyticsDashboard() {
               <linearGradient id={`${uid}-c`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={COLORS.blue} stopOpacity={0.25} />
                 <stop offset="100%" stopColor={COLORS.blue} stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id={`${uid}-r`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={COLORS.green} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={COLORS.green} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid stroke="var(--border)" strokeDasharray="4 4" vertical={false} />
@@ -678,8 +843,71 @@ export function AdminAnalyticsDashboard() {
               fill={`url(#${uid}-c)`}
               strokeWidth={2}
             />
+            <Area
+              type="monotone"
+              dataKey="referrals"
+              name={t("kpiReferralSignups")}
+              stroke={COLORS.green}
+              fill={`url(#${uid}-r)`}
+              strokeWidth={2}
+            />
         </AreaChart>
       </Panel>
+
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+        {topReferrersChart.length === 0 ? (
+          <Panel title={t("chartTopReferrers")} content>
+            <div className="flex min-h-[180px] items-center justify-center px-2 text-center">
+              <p className="text-sm text-muted-foreground">{t("referralsNoData")}</p>
+            </div>
+          </Panel>
+        ) : (
+          <Panel title={t("chartTopReferrers")} height={220}>
+            <BarChart
+              data={topReferrersChart}
+              layout="vertical"
+              margin={{ top: 0, right: 12, left: 4, bottom: 0 }}
+            >
+              <CartesianGrid stroke="var(--border)" strokeDasharray="4 4" horizontal={false} />
+              <XAxis type="number" allowDecimals={false} hide />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={72}
+                tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar
+                dataKey="value"
+                name={t("kpiReferralSignups")}
+                fill={COLORS.green}
+                radius={[0, 6, 6, 0]}
+                barSize={14}
+              />
+            </BarChart>
+          </Panel>
+        )}
+
+        <Panel title={t("referralsSummaryTitle")} content className="h-full">
+          <ReferralSummaryMetrics
+            periodCount={summary.referralSignupsInRange}
+            totalCount={summary.referralSignupsTotal}
+            referrerCount={
+              data.referrals.topReferrers.filter((r) => r.invitesTotal > 0).length
+            }
+            t={t}
+          />
+        </Panel>
+      </div>
+
+      <ReferralSignupsTable
+        rows={data.referrals.recentSignups}
+        locale={locale}
+        t={t}
+        tc={tc}
+      />
 
       <div className="grid gap-4 md:grid-cols-3">
         <Panel title={t("chartUserStatus")} height={220}>
@@ -766,6 +994,10 @@ export function AdminAnalyticsDashboard() {
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-full" style={{ background: COLORS.blue }} />
           {t("kpiCalcs")}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full" style={{ background: COLORS.green }} />
+          {t("kpiReferralSignups")}
         </span>
       </div>
     </div>

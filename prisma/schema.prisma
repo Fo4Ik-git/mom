@@ -39,6 +39,8 @@ model PlatformSettings {
   defaultMaxCalculators Int      @default(5)
   /// Default access period for new users (via invite key or admin create without date)
   defaultAccessDays     Int      @default(30)
+  /// Days added to referrer access when someone signs up via their link; 0 = disabled
+  defaultReferrerBonusDays Int   @default(0)
   supportEmail          String?
   supportTelegram       String?
   /// Auto-ban users with expired access (manual run or scheduled)
@@ -57,6 +59,8 @@ model AccessKey {
   expiresAt      DateTime?
   /// Override access duration in days; null = PlatformSettings.defaultAccessDays; 0 = unlimited access
   accessDays     Int?
+  /// Days added to referrer per signup; null = platform default; 0 = no bonus
+  referrerBonusDays Int?
   active         Boolean         @default(true)
   referrerUserId String?
   referrerUser   User?           @relation("ReferralKeys", fields: [referrerUserId], references: [id], onDelete: SetNull)

@@ -2,11 +2,8 @@ import { NextResponse } from "next/server";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
 import { withApiRoute } from "@/lib/api/with-api-route";
-import {
-  listLogFileMeta,
-  readLogs,
-  type LogLevel,
-} from "@/lib/logger/read-logs";
+import { parseLogPage, parseLogPageSize } from "@/lib/logger/log-pagination";
+import { listLogFileMeta, readLogs, type LogLevel } from "@/lib/logger/read-logs";
 
 const LEVELS = new Set<LogLevel>([
   "fatal",
@@ -42,14 +39,25 @@ export const GET = withApiRoute(async function GET(request: Request) {
       });
     }
 
-    const limit = Number.parseInt(searchParams.get("limit") ?? "100", 10);
+    const page = parseLogPage(
+      Number.parseInt(searchParams.get("page") ?? "1", 10),
+    );
+    const pageSize = parseLogPageSize(
+      Number.parseInt(
+        searchParams.get("pageSize") ??
+          searchParams.get("limit") ??
+          String(50),
+        10,
+      ),
+    );
     const result = readLogs({
       file,
       q: searchParams.get("q") ?? undefined,
       level: parseLevel(searchParams.get("level")),
       traceId: searchParams.get("trace_id") ?? undefined,
       event: searchParams.get("event") ?? undefined,
-      limit: Number.isFinite(limit) ? limit : 100,
+      page,
+      pageSize,
     });
 
     if (!result) {

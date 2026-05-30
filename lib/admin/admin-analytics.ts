@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { AccessKeyKind, Role } from "@prisma/client";
 import { db } from "@/lib/platform/db";
 import {
   isBanIssueVisible,
@@ -43,6 +43,24 @@ export interface AdminIssueRow {
   calculatorsCount: number;
 }
 
+export interface ReferralSignupRow {
+  id: string;
+  userEmail: string;
+  userName: string | null;
+  signedUpAt: string;
+  inviteCode: string;
+  referrerEmail: string | null;
+  referrerName: string | null;
+}
+
+export interface ReferrerLeaderRow {
+  referrerId: string;
+  referrerEmail: string;
+  referrerName: string | null;
+  invitesInRange: number;
+  invitesTotal: number;
+}
+
 export interface AdminAnalytics {
   range: AnalyticsRange;
   generatedAt: string;
@@ -58,6 +76,8 @@ export interface AdminAnalytics {
     privateCalculators: number;
     newUsersInRange: number;
     newCalculatorsInRange: number;
+    referralSignupsInRange: number;
+    referralSignupsTotal: number;
     defaultMaxCalculators: number;
   };
   growth: {
@@ -75,6 +95,11 @@ export interface AdminAnalytics {
   quotaHistogram: NamedValue[];
   topUsers: TopUserRow[];
   issues: AdminIssueRow[];
+  referrals: {
+    growth: TimePoint[];
+    topReferrers: ReferrerLeaderRow[];
+    recentSignups: ReferralSignupRow[];
+  };
 }
 
 function rangeToMs(range: AnalyticsRange): number {
@@ -323,6 +348,84 @@ export async function getAdminAnalytics(
 
   issues.sort((a, b) => a.email.localeCompare(b.email));
 
+  const [redemptionsInRange, referralSignupsTotal, referralKeys] =
+    await Promise.all([
+      db.accessKeyRedemption.findMany({
+        where: {
+          createdAt: { gte: since },
+          accessKey: { kind: AccessKeyKind.REFERRAL },
+        },
+        include: {
+          user: { select: { id: true, email: true, name: true } },
+          accessKey: {
+            select: {
+              code: true,
+              referrerUser: { select: { id: true, email: true, name: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      db.accessKeyRedemption.count({
+        where: { accessKey: { kind: AccessKeyKind.REFERRAL } },
+      }),
+      db.accessKey.findMany({
+        where: {
+          kind: AccessKeyKind.REFERRAL,
+          referrerUserId: { not: null },
+        },
+        select: {
+          referrerUserId: true,
+          usedCount: true,
+          referrerUser: { select: { id: true, email: true, name: true } },
+        },
+      }),
+    ]);
+
+  const referralCounts = countInBuckets(
+    redemptionsInRange.map((r) => ({ createdAt: r.createdAt })),
+    buckets,
+    step,
+  );
+  const referralGrowth = toSeries(buckets, referralCounts);
+
+  const referrerInRange = new Map<string, number>();
+  for (const row of redemptionsInRange) {
+    const referrerId = row.accessKey.referrerUser?.id;
+    if (!referrerId) {
+      continue;
+    }
+    referrerInRange.set(referrerId, (referrerInRange.get(referrerId) ?? 0) + 1);
+  }
+
+  const topReferrers: ReferrerLeaderRow[] = referralKeys
+    .filter((key) => key.referrerUserId && key.referrerUser)
+    .map((key) => ({
+      referrerId: key.referrerUserId!,
+      referrerEmail: key.referrerUser!.email,
+      referrerName: key.referrerUser!.name,
+      invitesInRange: referrerInRange.get(key.referrerUserId!) ?? 0,
+      invitesTotal: key.usedCount,
+    }))
+    .sort(
+      (a, b) =>
+        b.invitesInRange - a.invitesInRange ||
+        b.invitesTotal - a.invitesTotal,
+    )
+    .slice(0, 10);
+
+  const recentSignups: ReferralSignupRow[] = redemptionsInRange
+    .slice(0, 40)
+    .map((row) => ({
+      id: row.user.id,
+      userEmail: row.user.email,
+      userName: row.user.name,
+      signedUpAt: row.createdAt.toISOString(),
+      inviteCode: row.accessKey.code,
+      referrerEmail: row.accessKey.referrerUser?.email ?? null,
+      referrerName: row.accessKey.referrerUser?.name ?? null,
+    }));
+
   return {
     range,
     generatedAt: now.toISOString(),
@@ -338,6 +441,8 @@ export async function getAdminAnalytics(
       privateCalculators,
       newUsersInRange: usersInRange.length,
       newCalculatorsInRange: calculatorsInRange.length,
+      referralSignupsInRange: redemptionsInRange.length,
+      referralSignupsTotal,
       defaultMaxCalculators: platform.defaultMaxCalculators,
     },
     growth: {
@@ -371,5 +476,10 @@ export async function getAdminAnalytics(
       .sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true })),
     topUsers,
     issues,
+    referrals: {
+      growth: referralGrowth,
+      topReferrers,
+      recentSignups,
+    },
   };
 }

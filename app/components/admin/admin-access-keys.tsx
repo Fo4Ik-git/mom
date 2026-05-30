@@ -19,6 +19,7 @@ import {
   buildTablePagination,
   tableQueryParams,
 } from "@/lib/ui/table-pagination";
+import { AdminUserSelect } from "@/app/components/admin/admin-user-select";
 import { signupAbsoluteUrl } from "@/lib/auth/signup-url";
 
 const tableActionClass = "h-8 px-3 text-xs";
@@ -32,6 +33,7 @@ export interface AccessKeyRow {
   usedCount: number;
   expiresAt: string | null;
   accessDays: number | null;
+  referrerBonusDays: number | null;
   active: boolean;
   referrerEmail: string | null;
   createdAt: string;
@@ -43,6 +45,7 @@ type AccessKeyEdit = {
   maxUses: string;
   expiresAt: string;
   accessDays: string;
+  referrerBonusDays: string;
 };
 
 function extendDateInput(dateInput: string, months: number): string {
@@ -117,6 +120,14 @@ function AccessKeyManagePanel({
       </div>
 
       <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
+        {keyRow.referrerEmail && (
+          <p className="text-sm text-muted-foreground sm:col-span-2">
+            {t("accessKeyReferrer")}:{" "}
+            <span className="font-medium text-foreground">
+              {keyRow.referrerEmail}
+            </span>
+          </p>
+        )}
         <label className="block space-y-1 sm:col-span-2">
           <span className="text-sm text-muted-foreground">{t("accessKeyLabel")}</span>
           <input
@@ -226,6 +237,33 @@ function AccessKeyManagePanel({
           </Button>
         </label>
 
+        <label className="block space-y-1 sm:col-span-2">
+          <span className="text-sm text-muted-foreground">
+            {t("accessKeyReferrerBonusDays")}
+          </span>
+          <input
+            type="number"
+            min={0}
+            value={edit.referrerBonusDays}
+            onChange={(e) =>
+              onEditChange({ referrerBonusDays: e.target.value })
+            }
+            placeholder={t("accessKeyReferrerBonusDaysDefault")}
+            className={inputClass}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-2 h-9 text-xs"
+            onClick={() => onEditChange({ referrerBonusDays: "" })}
+          >
+            {t("accessKeyReferrerBonusDaysDefault")}
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            {t("accessKeyReferrerBonusDaysHint")}
+          </p>
+        </label>
+
         <div className="sm:col-span-2">
           <Button
             type="button"
@@ -248,6 +286,8 @@ function editFromKey(key: AccessKeyRow): AccessKeyEdit {
     maxUses: key.maxUses != null ? String(key.maxUses) : "",
     expiresAt: formatDateInputLocal(key.expiresAt),
     accessDays: key.accessDays != null ? String(key.accessDays) : "",
+    referrerBonusDays:
+      key.referrerBonusDays != null ? String(key.referrerBonusDays) : "",
   };
 }
 
@@ -264,10 +304,12 @@ export function AdminAccessKeys() {
 
   const [form, setForm] = useState({
     label: "",
+    code: "",
+    referrerUserId: "",
     maxUses: "",
     expiresAt: "",
     accessDays: "",
-    kind: "REGISTRATION" as "REGISTRATION" | "REFERRAL",
+    referrerBonusDays: "",
   });
 
   const fetchPage = useCallback(
@@ -332,7 +374,7 @@ export function AdminAccessKeys() {
   const tableLabels = useMemo(
     () => ({
       loading: tc("loading"),
-      noResults: t("accessKeyEmpty"),
+      noResults: t("referralsEmpty"),
       refresh: t("refresh"),
       formatShowing: (from: number, to: number, total: number) =>
         t("usersShowing", { from, to, total }),
@@ -388,6 +430,10 @@ export function AdminAccessKeys() {
         : null,
       accessDays:
         edit.accessDays === "" ? null : Number(edit.accessDays),
+      referrerBonusDays:
+        edit.referrerBonusDays === ""
+          ? null
+          : Number(edit.referrerBonusDays),
     });
     setSavingId(null);
     if (ok) {
@@ -406,31 +452,57 @@ export function AdminAccessKeys() {
 
   async function createKey(event: React.FormEvent) {
     event.preventDefault();
+
+    if (!form.referrerUserId) {
+      setLoadError(t("accessKeyReferrerRequired"));
+      return;
+    }
+
+    const codeTrimmed = form.code.trim();
+    if (codeTrimmed.length > 0 && codeTrimmed.length < 4) {
+      setLoadError(t("userReferralCodeTooShort"));
+      return;
+    }
+
     setCreating(true);
     const res = await appFetch("/api/admin/access-keys", {
       method: "POST",
       body: JSON.stringify({
         label: form.label || undefined,
-        kind: form.kind,
+        code: codeTrimmed || undefined,
+        referrerUserId: form.referrerUserId,
         maxUses: form.maxUses ? Number(form.maxUses) : null,
         expiresAt: form.expiresAt
           ? new Date(`${form.expiresAt}T23:59:59`).toISOString()
           : null,
         accessDays: form.accessDays ? Number(form.accessDays) : null,
+        referrerBonusDays: form.referrerBonusDays
+          ? Number(form.referrerBonusDays)
+          : null,
       }),
     });
     setCreating(false);
     if (!res.ok) {
       const data = await res.json();
-      setLoadError(adminApiErrorMessage(data, t));
+      const message =
+        data.error === "referral_user_required"
+          ? t("accessKeyReferrerRequired")
+          : data.error === "code_exists"
+            ? t("userReferralCodeExists")
+            : data.error === "invalid_code"
+              ? t("userReferralCodeTooShort")
+              : adminApiErrorMessage(data, t);
+      setLoadError(message);
       return;
     }
     setForm({
       label: "",
+      code: "",
+      referrerUserId: "",
       maxUses: "",
       expiresAt: "",
       accessDays: "",
-      kind: "REGISTRATION",
+      referrerBonusDays: "",
     });
     await refresh();
   }
@@ -524,15 +596,6 @@ export function AdminAccessKeys() {
         header: t("accessKeyExpires"),
         cellClassName: "text-xs text-muted-foreground",
         cell: (key) => expiresLabel(key),
-      },
-      {
-        id: "kind",
-        header: t("accessKeyKind"),
-        cellClassName: "text-xs",
-        cell: (key) =>
-          key.kind === "REFERRAL"
-            ? t("accessKeyKindReferral")
-            : t("accessKeyKindRegistration"),
       },
       {
         id: "status",
@@ -637,33 +700,51 @@ export function AdminAccessKeys() {
       <AdminErrorAlert message={loadError} />
 
       <Card>
-        <CardTitle className="mb-4">{t("accessKeyCreate")}</CardTitle>
+        <CardTitle className="mb-1">{t("referralsTitle")}</CardTitle>
+        <p className="mb-4 text-sm text-muted-foreground">{t("referralsCreateHint")}</p>
         <form onSubmit={createKey} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <label className="space-y-1 sm:col-span-2 lg:col-span-3">
+            <span className="text-sm text-muted-foreground">
+              {t("accessKeyReferrerUser")}
+            </span>
+            <AdminUserSelect
+              value={form.referrerUserId}
+              onChange={(userId) =>
+                setForm((f) => ({ ...f, referrerUserId: userId }))
+              }
+            />
+          </label>
           <label className="space-y-1 sm:col-span-2">
-            <span className="text-sm text-muted-foreground">{t("accessKeyLabel")}</span>
+            <span className="text-sm text-muted-foreground">
+              {t("accessKeyCode")}
+            </span>
+            <input
+              value={form.code}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  code: e.target.value.toUpperCase(),
+                }))
+              }
+              placeholder={t("userReferralCodePlaceholder")}
+              className={`${inputClass} font-mono tracking-wide`}
+              autoComplete="off"
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="text-sm text-muted-foreground">
+              {t("accessKeyLabel")}
+            </span>
             <input
               value={form.label}
-              onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, label: e.target.value }))
+              }
               placeholder={t("accessKeyLabelPlaceholder")}
               className={inputClass}
             />
           </label>
-          <label className="space-y-1">
-            <span className="text-sm text-muted-foreground">{t("accessKeyKind")}</span>
-            <select
-              value={form.kind}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  kind: e.target.value as "REGISTRATION" | "REFERRAL",
-                }))
-              }
-              className={inputClass}
-            >
-              <option value="REGISTRATION">{t("accessKeyKindRegistration")}</option>
-              <option value="REFERRAL">{t("accessKeyKindReferral")}</option>
-            </select>
-          </label>
+
           <label className="space-y-1">
             <span className="text-sm text-muted-foreground">{t("accessKeyMaxUses")}</span>
             <input
@@ -695,16 +776,34 @@ export function AdminAccessKeys() {
               className={inputClass}
             />
           </label>
+          <label className="space-y-1 sm:col-span-2">
+            <span className="text-sm text-muted-foreground">
+              {t("accessKeyReferrerBonusDays")}
+            </span>
+            <input
+              type="number"
+              min={0}
+              value={form.referrerBonusDays}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, referrerBonusDays: e.target.value }))
+              }
+              placeholder={t("accessKeyReferrerBonusDaysDefault")}
+              className={inputClass}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t("accessKeyReferrerBonusDaysHint")}
+            </p>
+          </label>
           <div className="flex items-end sm:col-span-2 lg:col-span-3">
             <Button type="submit" disabled={creating}>
-              {creating ? t("accessKeyCreating") : t("accessKeyCreateBtn")}
+              {creating ? t("accessKeyCreating") : t("accessKeyCreateReferralBtn")}
             </Button>
           </div>
         </form>
       </Card>
 
       <DataTable<AccessKeyRow>
-        title={t("accessKeys")}
+        title={t("referralsListTitle")}
         columns={columns}
         rows={keys}
         rowKey={(key) => key.id}

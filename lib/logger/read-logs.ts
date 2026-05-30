@@ -8,10 +8,23 @@ import {
   matchesLogSearch,
   mergeLogSearchQuery,
 } from "@/lib/logger/log-search";
+import {
+  buildLogPagination,
+  parseLogPage,
+  parseLogPageSize,
+} from "@/lib/logger/log-pagination";
+import type { TablePagination } from "@/lib/ui/table-pagination";
+
+export {
+  LOG_PAGE_SIZES,
+  DEFAULT_LOG_PAGE_SIZE,
+  parseLogPage,
+  parseLogPageSize,
+  type LogPageSize,
+} from "@/lib/logger/log-pagination";
 
 const LOG_FILE_RE = /^app-\d{4}-\d{2}-\d{2}\.jsonl$/;
 const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
-const MAX_LIMIT = 500;
 
 export type LogLevel = "fatal" | "error" | "warn" | "info" | "debug" | "trace";
 
@@ -51,7 +64,10 @@ export type ReadLogsOptions = {
   level?: LogLevel;
   traceId?: string;
   event?: string;
+  /** @deprecated Use page + pageSize */
   limit?: number;
+  page?: number;
+  pageSize?: number;
   maxBytes?: number;
 };
 
@@ -62,6 +78,7 @@ export type ReadLogsResult = {
   truncated: boolean;
   scannedBytes: number;
   fileSizeBytes: number;
+  pagination: TablePagination;
 };
 
 export function isValidLogFileName(name: string): boolean {
@@ -247,7 +264,9 @@ export function readLogs(options: ReadLogsOptions): ReadLogsResult | null {
     return null;
   }
 
-  const limit = Math.min(Math.max(options.limit ?? 100, 1), MAX_LIMIT);
+  const pageSize = parseLogPageSize(options.pageSize ?? options.limit);
+  const page = parseLogPage(options.page);
+  const skip = (page - 1) * pageSize;
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
   const filters = {
     q: mergeLogSearchQuery(options.q, options.traceId),
@@ -284,12 +303,18 @@ export function readLogs(options: ReadLogsOptions): ReadLogsResult | null {
     if (!matchesFilters(parsed.entry, parsed.searchBlob, filters)) {
       continue;
     }
+    const matchIndex = matchedCount;
     matchedCount++;
-    entries.push(parsed.entry);
-    if (entries.length >= limit) {
-      break;
+    if (matchIndex < skip) {
+      continue;
     }
+    if (entries.length >= pageSize) {
+      continue;
+    }
+    entries.push(parsed.entry);
   }
+
+  const pagination = buildLogPagination(page, pageSize, matchedCount);
 
   return {
     file: options.file,
@@ -298,5 +323,6 @@ export function readLogs(options: ReadLogsOptions): ReadLogsResult | null {
     truncated,
     scannedBytes,
     fileSizeBytes,
+    pagination,
   };
 }

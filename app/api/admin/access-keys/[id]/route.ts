@@ -12,6 +12,7 @@ const patchSchema = z.object({
   usedCount: z.number().int().min(0).max(100_000).optional(),
   expiresAt: z.string().datetime().nullable().optional(),
   accessDays: z.number().int().min(0).max(3650).nullable().optional(),
+  referrerBonusDays: z.number().int().min(0).max(3650).nullable().optional(),
   active: z.boolean().optional(),
   kind: z.nativeEnum(AccessKeyKind).optional(),
 });
@@ -36,6 +37,7 @@ export const PATCH = withApiRoute(async function PATCH(
       usedCount?: number;
       expiresAt?: Date | null;
       accessDays?: number | null;
+      referrerBonusDays?: number | null;
       active?: boolean;
       kind?: AccessKeyKind;
     } = {};
@@ -62,6 +64,9 @@ export const PATCH = withApiRoute(async function PATCH(
     }
     if (body.accessDays !== undefined) {
       data.accessDays = body.accessDays;
+    }
+    if (body.referrerBonusDays !== undefined) {
+      data.referrerBonusDays = body.referrerBonusDays;
     }
     if (body.active !== undefined) {
       data.active = body.active;

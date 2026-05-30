@@ -81,6 +81,18 @@ export const GET = withApiRoute(async function GET(request: Request) {
   try {
     await requireAdmin();
     const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId")?.trim();
+    if (userId) {
+      const user = await db.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, name: true },
+      });
+      return NextResponse.json({
+        users: user ? [user] : [],
+        pagination: buildTablePagination(1, 1, user ? 1 : 0),
+      });
+    }
+
     const q = (searchParams.get("q") ?? "").trim();
     const page = parseTablePage(searchParams.get("page"));
     const pageSize = parseTablePageSize(searchParams.get("pageSize"));

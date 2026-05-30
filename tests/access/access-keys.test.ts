@@ -10,7 +10,8 @@ function makeKey(overrides: Partial<AccessKey> = {}): AccessKey {
     id: "key1",
     code: "TESTCODE12",
     label: "Test",
-    kind: AccessKeyKind.REGISTRATION,
+    kind: AccessKeyKind.REFERRAL,
+    referrerUserId: "u1",
     active: true,
     maxUses: null,
     usedCount: 0,
@@ -43,9 +44,7 @@ describe("access keys", () => {
       validateAccessKeyRecord(makeKey({ maxUses: 1, usedCount: 1 })),
     ).toBe(false);
     expect(
-      validateAccessKeyRecord(makeKey({ kind: AccessKeyKind.REGISTRATION }), {
-        kinds: [AccessKeyKind.REFERRAL],
-      }),
+      validateAccessKeyRecord(makeKey({ kind: AccessKeyKind.REGISTRATION })),
     ).toBe(false);
   });
 });

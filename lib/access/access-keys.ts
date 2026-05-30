@@ -1,6 +1,7 @@
 import { AccessKeyKind, Prisma, type AccessKey } from "@prisma/client";
 import { randomBytes } from "crypto";
 import { normalizeAccessKeyCode } from "@/lib/access/access-key-code";
+import { applyReferrerSignupReward } from "@/lib/access/referrer-reward";
 import { db } from "@/lib/platform/db";
 import { getPlatformSettings } from "@/lib/platform/platform-settings";
 
@@ -31,7 +32,7 @@ export function generateAccessKeyCode(): string {
 }
 
 function isSignupKind(kind: AccessKeyKind): boolean {
-  return kind === AccessKeyKind.REGISTRATION || kind === AccessKeyKind.REFERRAL;
+  return kind === AccessKeyKind.REFERRAL;
 }
 
 export function validateAccessKeyRecord(
@@ -175,6 +176,20 @@ export async function registerUserWithAccessKey(params: {
       data: { usedCount: { increment: 1 } },
     });
 
+    await applyReferrerSignupReward(
+      key,
+      (data) =>
+        tx.user.update({
+          where: { id: key.referrerUserId! },
+          data,
+        }),
+      () =>
+        tx.user.findUnique({
+          where: { id: key.referrerUserId! },
+          select: { role: true, accessExpiresAt: true },
+        }),
+    );
+
     return user;
   });
 }
@@ -185,6 +200,7 @@ export type AccessKeyCreateInput = {
   maxUses?: number | null;
   expiresAt?: Date | null;
   accessDays?: number | null;
+  referrerBonusDays?: number | null;
   active?: boolean;
   referrerUserId?: string | null;
   code?: string;
@@ -199,11 +215,12 @@ export async function createAccessKey(
       return await db.accessKey.create({
         data: {
           code,
-          kind: input.kind ?? AccessKeyKind.REGISTRATION,
+          kind: input.kind ?? AccessKeyKind.REFERRAL,
           label: input.label ?? null,
           maxUses: input.maxUses ?? null,
           expiresAt: input.expiresAt ?? null,
           accessDays: input.accessDays ?? null,
+          referrerBonusDays: input.referrerBonusDays ?? null,
           active: input.active ?? true,
           referrerUserId: input.referrerUserId ?? null,
         },

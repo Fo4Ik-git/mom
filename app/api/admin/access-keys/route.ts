@@ -1,4 +1,4 @@
-import { AccessKeyKind } from "@prisma/client";
+import { AccessKeyKind, Prisma, Role } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildAdminAccessKeysSearchWhere } from "@/lib/admin/admin-access-keys-list";
@@ -14,13 +14,13 @@ import { requireAdmin } from "@/lib/auth/auth-session";
 import { withApiRoute } from "@/lib/api/with-api-route";
 
 const createSchema = z.object({
-  kind: z.nativeEnum(AccessKeyKind).optional(),
   label: z.string().max(120).optional(),
   maxUses: z.number().int().min(1).max(100_000).nullable().optional(),
   expiresAt: z.string().datetime().nullable().optional(),
   accessDays: z.number().int().min(0).max(3650).nullable().optional(),
+  referrerBonusDays: z.number().int().min(0).max(3650).nullable().optional(),
   active: z.boolean().optional(),
-  referrerUserId: z.string().cuid().nullable().optional(),
+  referrerUserId: z.string().cuid(),
   code: z.string().min(4).max(32).optional(),
 });
 
@@ -31,7 +31,11 @@ export const GET = withApiRoute(async function GET(request: Request) {
     const q = (searchParams.get("q") ?? "").trim();
     const page = parseTablePage(searchParams.get("page"));
     const pageSize = parseTablePageSize(searchParams.get("pageSize"));
-    const where = buildAdminAccessKeysSearchWhere(q);
+    const searchWhere = buildAdminAccessKeysSearchWhere(q);
+    const where = {
+      kind: AccessKeyKind.REFERRAL,
+      ...(searchWhere ?? {}),
+    };
     const skip = (page - 1) * pageSize;
 
     const [total, keys] = await Promise.all([
@@ -61,6 +65,7 @@ export const GET = withApiRoute(async function GET(request: Request) {
         redemptionCount: key._count.redemptions,
         expiresAt: key.expiresAt?.toISOString() ?? null,
         accessDays: key.accessDays,
+        referrerBonusDays: key.referrerBonusDays,
         active: key.active,
         referrerUserId: key.referrerUserId,
         referrerEmail: key.referrerUser?.email ?? null,
@@ -79,13 +84,38 @@ export const POST = withApiRoute(async function POST(request: Request) {
     await requireAdmin();
     const body = createSchema.parse(await request.json());
 
+    const code = body.code ? normalizeAccessKeyCode(body.code) : "";
+    if (code.length > 0 && code.length < 4) {
+      return NextResponse.json({ error: "invalid_code" }, { status: 400 });
+    }
+    await db.accessKey.deleteMany({
+      where: {
+        referrerUserId: body.referrerUserId,
+        kind: AccessKeyKind.REFERRAL,
+      },
+    });
+
+    const referrer = await db.user.findUnique({
+      where: { id: body.referrerUserId },
+      select: { role: true },
+    });
+    if (!referrer) {
+      return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+    const adminReferrer = referrer.role === Role.ADMIN;
+
     const key = await createAccessKey({
-      kind: body.kind,
+      kind: AccessKeyKind.REFERRAL,
       label: body.label,
-      maxUses: body.maxUses,
-      expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
+      maxUses: adminReferrer ? null : (body.maxUses ?? null),
+      expiresAt: adminReferrer
+        ? null
+        : body.expiresAt
+          ? new Date(body.expiresAt)
+          : null,
       accessDays: body.accessDays,
-      active: body.active,
+      referrerBonusDays: body.referrerBonusDays,
+      active: body.active ?? true,
       referrerUserId: body.referrerUserId,
       code: body.code ? normalizeAccessKeyCode(body.code) : undefined,
     });
@@ -110,6 +140,12 @@ export const POST = withApiRoute(async function POST(request: Request) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "invalid_data" }, { status: 400 });
+    }
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return NextResponse.json({ error: "code_exists" }, { status: 409 });
     }
     return handleAdminApiError(error, "admin/access-keys POST");
   }

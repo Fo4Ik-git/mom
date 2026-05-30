@@ -18,6 +18,7 @@ export function AdminPlatformSettings() {
   const tc = useTranslations("common");
   const [defaultMax, setDefaultMax] = useState(5);
   const [defaultAccessDays, setDefaultAccessDays] = useState(30);
+  const [defaultReferrerBonusDays, setDefaultReferrerBonusDays] = useState(0);
   const [supportEmail, setSupportEmail] = useState("");
   const [supportTelegram, setSupportTelegram] = useState("");
   const [accessExpiryInterval, setAccessExpiryInterval] =
@@ -79,6 +80,9 @@ export function AdminPlatformSettings() {
         if (typeof data.defaultAccessDays === "number") {
           setDefaultAccessDays(data.defaultAccessDays);
         }
+        if (typeof data.defaultReferrerBonusDays === "number") {
+          setDefaultReferrerBonusDays(data.defaultReferrerBonusDays);
+        }
         setSupportEmail(data.supportEmail ?? "");
         setSupportTelegram(data.supportTelegram ?? "");
         if (data.accessExpiryCheckInterval) {
@@ -100,6 +104,7 @@ export function AdminPlatformSettings() {
       body: JSON.stringify({
         defaultMaxCalculators: defaultMax,
         defaultAccessDays,
+        defaultReferrerBonusDays,
         supportEmail: supportEmail.trim() || null,
         supportTelegram: supportTelegram.trim() || null,
         accessExpiryCheckInterval: accessExpiryInterval,
@@ -222,6 +227,24 @@ export function AdminPlatformSettings() {
             />
             <span className="text-xs text-muted-foreground">
               {t("defaultAccessDaysHint")}
+            </span>
+          </label>
+          <label className="space-y-1.5">
+            <span className="text-sm text-muted-foreground">
+              {t("defaultReferrerBonusDays")}
+            </span>
+            <input
+              type="number"
+              min={0}
+              max={3650}
+              value={defaultReferrerBonusDays}
+              onChange={(e) =>
+                setDefaultReferrerBonusDays(Number(e.target.value) || 0)
+              }
+              className="block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm"
+            />
+            <span className="text-xs text-muted-foreground">
+              {t("defaultReferrerBonusDaysHint")}
             </span>
           </label>
           <div className="flex items-center gap-3 pt-1">

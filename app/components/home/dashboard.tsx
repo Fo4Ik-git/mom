@@ -1,5 +1,6 @@
 "use client";
 
+import { ReferralCard } from "@/app/components/home/referral-card";
 import { Button } from "@/app/components/ui/button";
 import { Card } from "@/app/components/ui/card";
 import { NavButton } from "@/app/components/ui/nav-button";
@@ -114,6 +115,8 @@ export function Dashboard() {
           {deleteError}
         </p>
       )}
+
+      <ReferralCard />
 
       {quota && (
         <div className="grid gap-3 sm:grid-cols-2">

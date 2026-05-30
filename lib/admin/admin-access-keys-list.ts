@@ -14,6 +14,7 @@ export function buildAdminAccessKeysSearchWhere(
     OR: [
       { code: { contains: codeTerm } },
       { label: { contains: term } },
+      { referrerUser: { email: { contains: term } } },
     ],
   };
 }
