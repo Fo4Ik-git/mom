@@ -11,19 +11,19 @@ import {
 import {
   ADMIN_USERS_PAGE_SIZES,
   type AdminUsersPageSize,
-} from "@/lib/admin-users-list";
+} from "@/lib/admin/admin-users-list";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardTitle } from "@/app/components/ui/card";
 import { PasswordInput } from "@/app/components/ui/password-input";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
-import { appFetch } from "@/lib/api-client";
-import { adminApiErrorMessage } from "@/lib/admin-api-error";
+import { appFetch } from "@/lib/api/api-client";
+import { adminApiErrorMessage } from "@/lib/admin/admin-api-error";
 import {
   accessExpiresAtFromDateInput,
   formatAccessDateShort,
   formatDateInputLocal,
-} from "@/lib/access-dates";
-import { BAN_REASON_CODES } from "@/lib/ban-reasons";
+} from "@/lib/access/access-dates";
+import { BAN_REASON_CODES } from "@/lib/access/ban-reasons";
 
 interface UserRow {
   id: string;

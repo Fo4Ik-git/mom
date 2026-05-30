@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
-import { findCalculatorByRouteParam } from "@/lib/calculator-route";
-import { toCalculatorResponse } from "@/lib/calculator-service";
+import { findCalculatorByRouteParam } from "@/lib/calculator/route";
+import { toCalculatorResponse } from "@/lib/calculator/service";
 import { NextResponse } from "next/server";
 
 export async function GET(

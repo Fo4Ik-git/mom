@@ -18,11 +18,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { AdminAnalytics, AdminIssueRow, AnalyticsRange } from "@/lib/admin-analytics";
-import { formatAccessDate } from "@/lib/access-display";
+import type { AdminAnalytics, AdminIssueRow, AnalyticsRange } from "@/lib/admin/admin-analytics";
+import { formatAccessDate } from "@/lib/access/access-display";
 import { Link } from "@/i18n/navigation";
-import { appFetch } from "@/lib/api-client";
-import { adminApiErrorMessage } from "@/lib/admin-api-error";
+import { appFetch } from "@/lib/api/api-client";
+import { adminApiErrorMessage } from "@/lib/admin/admin-api-error";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
 
 const RANGES: AnalyticsRange[] = ["24h", "7d", "30d", "90d"];

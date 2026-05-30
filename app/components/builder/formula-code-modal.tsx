@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { FormulaCodeEditor } from "@/app/components/builder/formula-code-editor";
-import { formatFormulaCodeBlock } from "@/lib/formula/code-format";
+import { formatFormulaCodeBlock } from "@/lib/formula/code/code-format";
 import {
   normalizeParsedExpression,
   tryParseFormulaCode,
-} from "@/lib/formula/code-parse";
-import type { FormulaTarget } from "@/lib/formula/formula-target";
+} from "@/lib/formula/code/code-parse";
+import type { FormulaTarget } from "@/lib/formula/core/formula-target";
 import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
 
 interface FormulaCodeModalProps {

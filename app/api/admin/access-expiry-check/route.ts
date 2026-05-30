@@ -3,9 +3,9 @@ import { z } from "zod";
 import {
   runAccessExpiryCheck,
   runScheduledAccessExpiryCheckIfDue,
-} from "@/lib/access-expiry-check";
-import { handleAdminApiError } from "@/lib/admin-api-response";
-import { requireAdmin } from "@/lib/auth-session";
+} from "@/lib/access/access-expiry-check";
+import { handleAdminApiError } from "@/lib/admin/admin-api-response";
+import { requireAdmin } from "@/lib/auth/auth-session";
 
 const bodySchema = z.object({
   scheduled: z.boolean().optional(),

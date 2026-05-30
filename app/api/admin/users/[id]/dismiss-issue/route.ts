@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { handleAdminApiError } from "@/lib/admin-api-response";
-import { requireAdmin } from "@/lib/auth-session";
+import { db } from "@/lib/platform/db";
+import { handleAdminApiError } from "@/lib/admin/admin-api-response";
+import { requireAdmin } from "@/lib/auth/auth-session";
 import {
   isBanIssueVisible,
   isExpiredAccessIssueVisible,
-} from "@/lib/admin-issues";
+} from "@/lib/admin/admin-issues";
 
 const bodySchema = z.object({
   kind: z.enum(["banned", "expired"]),

@@ -1,10 +1,10 @@
 import { AccessKeyKind } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createAccessKey, normalizeAccessKeyCode } from "@/lib/access-keys";
-import { handleAdminApiError } from "@/lib/admin-api-response";
-import { db } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth-session";
+import { createAccessKey, normalizeAccessKeyCode } from "@/lib/access/access-keys";
+import { handleAdminApiError } from "@/lib/admin/admin-api-response";
+import { db } from "@/lib/platform/db";
+import { requireAdmin } from "@/lib/auth/auth-session";
 
 const createSchema = z.object({
   kind: z.nativeEnum(AccessKeyKind).optional(),

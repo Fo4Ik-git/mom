@@ -4,7 +4,7 @@ import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslations } from "next-intl";
 import type { FormulaOperator } from "@/types/calculator";
-import type { SlotPath, WorkspaceDragData } from "@/lib/formula/block-tree";
+import type { SlotPath, WorkspaceDragData } from "@/lib/formula/blocks/block-tree";
 import { DragHandle } from "@/app/components/builder/scratch/drag-handle";
 
 function operatorSymbol(operator: FormulaOperator): string {

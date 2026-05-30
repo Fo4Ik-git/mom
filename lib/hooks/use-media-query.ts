@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { detectTouchBuilderUi } from "@/lib/detect-touch-device";
+import { detectTouchBuilderUi } from "@/lib/hooks/detect-touch-device";
 
 export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false);

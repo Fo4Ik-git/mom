@@ -1,4 +1,4 @@
-import { isAutoCalculationId } from "@/lib/calculator/auto-calculations";
+import { isAutoCalculationId } from "@/lib/calculator/config/auto-calculations";
 import { formatDeclaration } from "@/lib/calculator/script/format";
 import {
   SCRIPT_FILE_AUTO_CALCULATIONS,

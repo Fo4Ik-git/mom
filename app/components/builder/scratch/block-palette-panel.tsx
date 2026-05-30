@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import type { CalculatorConfig } from "@/types/calculator";
-import type { PaletteBlock } from "@/lib/formula/block-palette";
+import type { PaletteBlock } from "@/lib/formula/blocks/block-palette";
 import { BlockPaletteContent } from "@/app/components/builder/scratch/block-palette-content";
 
 interface BlockPalettePanelProps {

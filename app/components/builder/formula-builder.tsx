@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { FormulaScratchEditor } from "@/app/components/builder/scratch/formula-scratch-editor";
 import { FormulaCodeModal } from "@/app/components/builder/formula-code-modal";
-import type { FormulaTarget } from "@/lib/formula/formula-target";
+import type { FormulaTarget } from "@/lib/formula/core/formula-target";
 import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
 
 interface FormulaBuilderProps {

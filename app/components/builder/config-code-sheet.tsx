@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { FormulaCodeEditor } from "@/app/components/builder/formula-code-editor";
-import { finalizeConfig } from "@/lib/calculator/config-sync";
+import { finalizeConfig } from "@/lib/calculator/config/sync";
 import { formatScriptProject } from "@/lib/calculator/script/format-project";
 import { parseScriptProject } from "@/lib/calculator/script/parse-project";
 import {

@@ -1,15 +1,15 @@
-import { requireAuth } from "@/lib/auth-session";
+import { requireAuth } from "@/lib/auth/auth-session";
 import {
     CalculatorValidationError,
     serializeConfig,
     toCalculatorResponse,
     validateCalculatorConfig,
-} from "@/lib/calculator-service";
-import { db } from "@/lib/db";
+} from "@/lib/calculator/service";
+import { db } from "@/lib/platform/db";
 import {
     formatZodIssues,
     validationErrorResponse,
-} from "@/lib/validation-errors";
+} from "@/lib/platform/validation-errors";
 import { calculatorConfigSchema } from "@/types/calculator";
 import { NextResponse } from "next/server";
 import { z } from "zod";

@@ -3,13 +3,13 @@ import { z } from "zod";
 import {
   ACCESS_EXPIRY_CHECK_INTERVALS,
   isAccessExpiryCheckInterval,
-} from "@/lib/access-expiry-interval";
+} from "@/lib/access/access-expiry-interval";
 import {
   getPlatformSettings,
   updatePlatformSettings,
-} from "@/lib/platform-settings";
-import { handleAdminApiError } from "@/lib/admin-api-response";
-import { requireAdmin } from "@/lib/auth-session";
+} from "@/lib/platform/platform-settings";
+import { handleAdminApiError } from "@/lib/admin/admin-api-response";
+import { requireAdmin } from "@/lib/auth/auth-session";
 
 const updateSchema = z.object({
   defaultMaxCalculators: z.number().int().min(0).max(1000),

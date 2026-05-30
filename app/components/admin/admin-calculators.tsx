@@ -3,8 +3,8 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
-import { appFetch } from "@/lib/api-client";
-import { adminApiErrorMessage } from "@/lib/admin-api-error";
+import { appFetch } from "@/lib/api/api-client";
+import { adminApiErrorMessage } from "@/lib/admin/admin-api-error";
 
 interface CalculatorRow {
   id: string;

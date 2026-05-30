@@ -1,11 +1,11 @@
-import { isAutoCalculationId } from "@/lib/calculator/auto-calculations";
-import { isLineItemsField, rowAggregateLabel } from "@/lib/calculator/line-items";
-import type { PaletteBlock } from "@/lib/formula/block-palette-types";
+import { isAutoCalculationId } from "@/lib/calculator/config/auto-calculations";
+import { isLineItemsField, rowAggregateLabel } from "@/lib/calculator/fields/line-items";
+import type { PaletteBlock } from "@/lib/formula/blocks/block-palette-types";
 import type {
   FormulaDisplayContext,
   FormulaPaletteContext,
 } from "@/lib/formula/nodes/_definition";
-import { getInputById, getPropertyLabel } from "@/lib/formula/operand-labels";
+import { getInputById, getPropertyLabel } from "@/lib/formula/core/operand-labels";
 import type { BlockOperand } from "@/types/calculator";
 
 export function buildReferencePaletteItems(

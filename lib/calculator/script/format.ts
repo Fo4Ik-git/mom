@@ -1,4 +1,4 @@
-import { isAutoCalculationId } from "@/lib/calculator/auto-calculations";
+import { isAutoCalculationId } from "@/lib/calculator/config/auto-calculations";
 import type { ScriptDeclaration, ScriptFormatContext } from "@/lib/calculator/schema/_definition";
 import { constantEntity } from "@/lib/calculator/schema/entities/constant.entity";
 import { calculationEntity } from "@/lib/calculator/schema/entities/calculation.entity";

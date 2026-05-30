@@ -1,7 +1,7 @@
 import { setRequestLocale } from "next-intl/server";
 import { SignUpForm } from "@/app/components/auth/signup-form";
 import { PageShell } from "@/app/components/layout/page-shell";
-import { normalizeAccessKeyCode } from "@/lib/access-key-code";
+import { normalizeAccessKeyCode } from "@/lib/access/access-key-code";
 
 export default async function SignUpPage({
   params,

@@ -4,10 +4,10 @@ import type {
   BlockOperand,
   CalculatorConfig,
 } from "@/types/calculator";
-import type { FormulaTarget } from "@/lib/formula/formula-target";
-import type { EvalContext } from "@/lib/formula/block-evaluate";
-import type { PaletteBlock } from "@/lib/formula/block-palette-types";
-import type { FormulaCompletionItem } from "@/lib/formula/formula-code-completions";
+import type { FormulaTarget } from "@/lib/formula/core/formula-target";
+import type { EvalContext } from "@/lib/formula/runtime/block-evaluate";
+import type { PaletteBlock } from "@/lib/formula/blocks/block-palette-types";
+import type { FormulaCompletionItem } from "@/lib/formula/code/formula-code-completions";
 
 export type ExpressionEvaluator = (
   expression: BlockExpression,
@@ -53,6 +53,36 @@ export interface FormulaCodeParseContext {
   parseExpressionWithRowField: (rowFieldId: string) => BlockExpression;
   parseArgumentList: () => BlockExpression[];
   fail: (message: string, offset: number) => never;
+}
+
+export interface FormulaPrimitiveDefinition {
+  /** Stable id, e.g. "plus", "sum", "avg-rows" */
+  id: string;
+  /** AST discriminator this primitive writes */
+  astType: BlockExpression["type"];
+  /** Whether this file owns the given AST node */
+  matchNode: (node: BlockExpression) => boolean;
+  /** Infix operator in code (e.g. "+") */
+  infix?: { symbol: string; precedence: number };
+  /** Function call keyword in code (e.g. "SUM", "SUM_ROWS") */
+  call?: { keyword: string };
+  evaluate: (
+    node: BlockExpression,
+    context: EvalContext,
+    evaluateChild: ExpressionEvaluator,
+  ) => number;
+  formatCode?: (node: BlockExpression, ctx: FormulaCodeFormatContext) => string;
+  formatLabel?: (node: BlockExpression, ctx: FormulaDisplayContext) => string;
+  parseCodeCall?: (
+    keyword: string,
+    ctx: FormulaCodeParseContext,
+  ) => BlockExpression | null;
+  paletteItems?: (ctx: FormulaPaletteContext) => PaletteBlock[];
+  completions?: (
+    config: CalculatorConfig,
+    target: FormulaTarget,
+  ) => FormulaCompletionItem[];
+  dependencies?: (node: BlockExpression, config: CalculatorConfig) => string[];
 }
 
 export interface FormulaNodeDefinition<

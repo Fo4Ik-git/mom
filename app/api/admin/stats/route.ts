@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import {
   getAdminAnalytics,
   type AnalyticsRange,
-} from "@/lib/admin-analytics";
-import { handleAdminApiError } from "@/lib/admin-api-response";
-import { requireAdmin } from "@/lib/auth-session";
+} from "@/lib/admin/admin-analytics";
+import { handleAdminApiError } from "@/lib/admin/admin-api-response";
+import { requireAdmin } from "@/lib/auth/auth-session";
 
 const RANGES = new Set<AnalyticsRange>(["24h", "7d", "30d", "90d"]);
 

@@ -20,9 +20,9 @@ import type {
 import {
   buildFormulaCompletions,
   filterCompletions,
-} from "@/lib/formula/formula-code-completions";
-import { tryParseFormulaCode } from "@/lib/formula/code-parse";
-import type { FormulaTarget } from "@/lib/formula/formula-target";
+} from "@/lib/formula/code/formula-code-completions";
+import { tryParseFormulaCode } from "@/lib/formula/code/code-parse";
+import type { FormulaTarget } from "@/lib/formula/core/formula-target";
 import type { CalculatorConfig } from "@/types/calculator";
 
 function lineOffset(source: string, lineNumber: number): number {

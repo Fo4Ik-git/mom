@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { BanReason, Role } from "@prisma/client";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { handleAdminApiError } from "@/lib/admin-api-response";
-import { requireAdmin } from "@/lib/auth-session";
-import { hashPassword } from "@/lib/password";
+import { db } from "@/lib/platform/db";
+import { handleAdminApiError } from "@/lib/admin/admin-api-response";
+import { requireAdmin } from "@/lib/auth/auth-session";
+import { hashPassword } from "@/lib/auth/password";
 import {
   countUserCalculators,
   getEffectiveMaxCalculators,
   isAccessActive,
-} from "@/lib/user-limits";
+} from "@/lib/access/user-limits";
 
 const updateSchema = z.object({
   role: z.nativeEnum(Role).optional(),

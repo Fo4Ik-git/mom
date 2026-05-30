@@ -1,8 +1,8 @@
 "use client";
 
 import type { FormulaOperand } from "@/types/calculator";
-import type { OperandOption } from "@/lib/formula/operand-labels";
-import { operandToOptionValue, optionValueToOperand } from "@/lib/formula/operand-labels";
+import type { OperandOption } from "@/lib/formula/core/operand-labels";
+import { operandToOptionValue, optionValueToOperand } from "@/lib/formula/core/operand-labels";
 
 interface OperandSelectProps {
   label: string;

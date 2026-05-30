@@ -3,9 +3,9 @@ import { auth } from "@/auth";
 import { redirect } from "@/i18n/navigation";
 import { CalculatorBuilder } from "@/app/components/builder/calculator-builder";
 import { PageShell } from "@/app/components/layout/page-shell";
-import { emptyCalculatorConfig } from "@/lib/calculator/defaults";
-import { db } from "@/lib/db";
-import { isAccessActive } from "@/lib/user-limits";
+import { emptyCalculatorConfig } from "@/lib/calculator/config/defaults";
+import { db } from "@/lib/platform/db";
+import { isAccessActive } from "@/lib/access/user-limits";
 
 export default async function NewBuilderPage({
   params,

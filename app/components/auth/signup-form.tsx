@@ -8,8 +8,8 @@ import { Button } from "@/app/components/ui/button";
 import { FormField } from "@/app/components/ui/form-field";
 import { PasswordInput } from "@/app/components/ui/password-input";
 import { Link, useRouter } from "@/i18n/navigation";
-import { appFetch } from "@/lib/api-client";
-import { normalizeAccessKeyCode } from "@/lib/access-key-code";
+import { appFetch } from "@/lib/api/api-client";
+import { normalizeAccessKeyCode } from "@/lib/access/access-key-code";
 
 type KeyCheckState =
   | "idle"

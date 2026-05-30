@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { AccessKeyError, registerUserWithAccessKey } from "@/lib/access-keys";
-import { hashPassword } from "@/lib/password";
-import { isAllowedFrontendRequest } from "@/lib/api-security";
+import { db } from "@/lib/platform/db";
+import { AccessKeyError, registerUserWithAccessKey } from "@/lib/access/access-keys";
+import { hashPassword } from "@/lib/auth/password";
+import { isAllowedFrontendRequest } from "@/lib/api/api-security";
 
 const signupSchema = z.object({
   name: z.string().min(1).max(80).optional(),

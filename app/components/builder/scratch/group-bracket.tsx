@@ -3,7 +3,7 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslations } from "next-intl";
-import type { SlotPath } from "@/lib/formula/block-tree";
+import type { SlotPath } from "@/lib/formula/blocks/block-tree";
 import { DragHandle } from "@/app/components/builder/scratch/drag-handle";
 
 interface GroupBracketProps {

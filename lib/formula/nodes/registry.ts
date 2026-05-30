@@ -1,7 +1,7 @@
 import type { BlockExpression, BlockOperand } from "@/types/calculator";
-import type { FormulaTarget } from "@/lib/formula/formula-target";
-import type { EvalContext } from "@/lib/formula/block-evaluate";
-import type { PaletteBlock } from "@/lib/formula/block-palette-types";
+import type { FormulaTarget } from "@/lib/formula/core/formula-target";
+import type { EvalContext } from "@/lib/formula/runtime/block-evaluate";
+import type { PaletteBlock } from "@/lib/formula/blocks/block-palette-types";
 import type {
   ExpressionEvaluator,
   FormulaCodeFormatContext,
@@ -9,35 +9,50 @@ import type {
   FormulaDisplayContext,
   FormulaNodeDefinition,
   FormulaPaletteContext,
+  FormulaPrimitiveDefinition,
 } from "@/lib/formula/nodes/_definition";
 import { formatOperandCode } from "@/lib/formula/nodes/reference-code";
-import { aggregateNode } from "@/lib/formula/nodes/aggregate.node";
 import { emptyNode } from "@/lib/formula/nodes/empty.node";
 import { groupNode } from "@/lib/formula/nodes/group.node";
 import { operandNode } from "@/lib/formula/nodes/operand.node";
-import { operationNode } from "@/lib/formula/nodes/operation.node";
-import { rowAggregateNode } from "@/lib/formula/nodes/row-aggregate.node";
+import { ALL_PRIMITIVES } from "@/lib/formula/nodes/primitives";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const nodes = new Map<BlockExpression["type"], FormulaNodeDefinition<any>>();
+const structuralNodes = new Map<BlockExpression["type"], FormulaNodeDefinition<any>>();
 
-function register(definition: FormulaNodeDefinition<any>) {
-  nodes.set(definition.type, definition);
+function registerStructural(definition: FormulaNodeDefinition<any>) {
+  structuralNodes.set(definition.type, definition);
 }
 
-register(emptyNode);
-register(operandNode);
-register(groupNode);
-register(operationNode);
-register(aggregateNode);
-register(rowAggregateNode);
+registerStructural(emptyNode);
+registerStructural(groupNode);
+registerStructural(operandNode);
+
+function findPrimitive(node: BlockExpression): FormulaPrimitiveDefinition | undefined {
+  return ALL_PRIMITIVES.find((primitive) => primitive.matchNode(node));
+}
 
 export function getFormulaNode(type: BlockExpression["type"]) {
-  return nodes.get(type);
+  return structuralNodes.get(type);
 }
 
 export function getAllFormulaNodes() {
-  return [...nodes.values()];
+  return [...structuralNodes.values()];
+}
+
+export function getAllFormulaPrimitives() {
+  return ALL_PRIMITIVES;
+}
+
+export function getInfixPrecedence(symbol: string): number | null {
+  const primitive = ALL_PRIMITIVES.find((item) => item.infix?.symbol === symbol);
+  return primitive?.infix?.precedence ?? null;
+}
+
+export function getRegisteredInfixSymbols(): string[] {
+  return ALL_PRIMITIVES.filter((item) => item.infix).map(
+    (item) => item.infix!.symbol,
+  );
 }
 
 export function evaluateExpressionViaRegistry(
@@ -51,12 +66,17 @@ export function evaluateExpressionViaRegistry(
     return emptyNode.evaluate(expression, context, evaluateChild);
   }
 
-  const definition = nodes.get(expression.type);
-  if (!definition) {
-    throw new Error(`Unknown expression type: ${expression.type}`);
+  const primitive = findPrimitive(expression);
+  if (primitive) {
+    return primitive.evaluate(expression, context, evaluateChild);
   }
 
-  return definition.evaluate(expression, context, evaluateChild);
+  const structural = structuralNodes.get(expression.type);
+  if (structural) {
+    return structural.evaluate(expression as never, context, evaluateChild);
+  }
+
+  throw new Error(`Unknown expression type: ${expression.type}`);
 }
 
 function formatOperandRef(
@@ -66,13 +86,6 @@ function formatOperandRef(
 ): string {
   return formatOperandCode(operand, target, rowFieldId);
 }
-
-const PREC: Record<string, number> = {
-  "+": 1,
-  "-": 1,
-  "*": 2,
-  "/": 2,
-};
 
 function formatChildDefault(
   expression: BlockExpression,
@@ -96,9 +109,14 @@ function formatChildDefault(
       formatOperandRef(operand, target, rowFieldId ?? options?.rowFieldId),
   };
 
-  const definition = nodes.get(expression.type);
-  if (definition?.formatCode) {
-    return definition.formatCode(expression, ctx);
+  const primitive = findPrimitive(expression);
+  if (primitive?.formatCode) {
+    return primitive.formatCode(expression, ctx);
+  }
+
+  const structural = structuralNodes.get(expression.type);
+  if (structural?.formatCode) {
+    return structural.formatCode(expression as never, ctx);
   }
 
   return "?";
@@ -112,29 +130,6 @@ export function formatExpressionViaRegistry(
   if (expression.type === "empty") {
     return "";
   }
-
-  if (expression.type === "operation") {
-    const prec = PREC[expression.operator] ?? 0;
-    const leftStr = formatChildDefault(expression.left, target, {
-      rowFieldId: options?.rowFieldId,
-      parentPrec: prec,
-    });
-    const rightStr = formatChildDefault(expression.right, target, {
-      rowFieldId: options?.rowFieldId,
-      parentPrec: prec,
-      isRightOperand: true,
-    });
-    let result = `${leftStr} ${expression.operator} ${rightStr}`;
-    if (
-      expression.right.type === "operation" &&
-      (PREC[expression.right.operator] ?? 0) <= prec &&
-      (expression.operator === "-" || expression.operator === "/")
-    ) {
-      result = `${leftStr} ${expression.operator} (${rightStr})`;
-    }
-    return result;
-  }
-
   return formatChildDefault(expression, target, options);
 }
 
@@ -142,8 +137,8 @@ export function parseCodeCallViaRegistry(
   keyword: string,
   ctx: FormulaCodeParseContext,
 ): BlockExpression | null {
-  for (const node of nodes.values()) {
-    const parsed = node.parseCodeCall?.(keyword, ctx);
+  for (const primitive of ALL_PRIMITIVES) {
+    const parsed = primitive.parseCodeCall?.(keyword, ctx);
     if (parsed) {
       return parsed;
     }
@@ -155,20 +150,37 @@ export function mergeNodeCompletions(
   config: Parameters<NonNullable<FormulaNodeDefinition["completions"]>>[0],
   target: FormulaTarget,
 ) {
-  const merged = new Map<string, ReturnType<NonNullable<FormulaNodeDefinition["completions"]>>[0]>();
-  for (const node of nodes.values()) {
-    for (const item of node.completions?.(config, target) ?? []) {
+  const merged = new Map<
+    string,
+    ReturnType<NonNullable<FormulaNodeDefinition["completions"]>>[0]
+  >();
+
+  for (const structural of structuralNodes.values()) {
+    for (const item of structural.completions?.(config, target) ?? []) {
       merged.set(item.label, item);
     }
   }
+
+  for (const primitive of ALL_PRIMITIVES) {
+    for (const item of primitive.completions?.(config, target) ?? []) {
+      merged.set(item.label, item);
+    }
+  }
+
   return [...merged.values()];
 }
 
 export function mergePaletteItems(ctx: FormulaPaletteContext): PaletteBlock[] {
   const blocks: PaletteBlock[] = [];
-  for (const node of nodes.values()) {
-    blocks.push(...(node.paletteItems?.(ctx) ?? []));
+
+  for (const structural of structuralNodes.values()) {
+    blocks.push(...(structural.paletteItems?.(ctx) ?? []));
   }
+
+  for (const primitive of ALL_PRIMITIVES) {
+    blocks.push(...(primitive.paletteItems?.(ctx) ?? []));
+  }
+
   return blocks;
 }
 
@@ -185,9 +197,14 @@ export function formatExpressionLabelViaRegistry(
     return emptyNode.formatLabel?.(expression, fullCtx) ?? "…";
   }
 
-  const definition = nodes.get(expression.type);
-  if (definition?.formatLabel) {
-    return definition.formatLabel(expression, fullCtx);
+  const primitive = findPrimitive(expression);
+  if (primitive?.formatLabel) {
+    return primitive.formatLabel(expression, fullCtx);
+  }
+
+  const structural = structuralNodes.get(expression.type);
+  if (structural?.formatLabel) {
+    return structural.formatLabel(expression as never, fullCtx);
   }
 
   return "?";

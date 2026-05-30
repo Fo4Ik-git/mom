@@ -1,6 +1,6 @@
 import type { BlockOperand } from "@/types/calculator";
-import type { FormulaTarget } from "@/lib/formula/formula-target";
-import { FormulaParseError } from "@/lib/formula/formula-parse-error";
+import type { FormulaTarget } from "@/lib/formula/core/formula-target";
+import { FormulaParseError } from "@/lib/formula/code/formula-parse-error";
 
 export function formatOperandCode(
   operand: BlockOperand,

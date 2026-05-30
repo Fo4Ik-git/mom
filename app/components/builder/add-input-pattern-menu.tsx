@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
-import type { InputPatternId } from "@/lib/calculator/input-patterns";
-import { INPUT_PATTERN_IDS } from "@/lib/calculator/input-patterns";
+import type { InputPatternId } from "@/lib/calculator/config/input-patterns";
+import { INPUT_PATTERN_IDS } from "@/lib/calculator/config/input-patterns";
 
 interface AddInputPatternMenuProps {
   onSelect: (patternId: InputPatternId, count: number) => void;

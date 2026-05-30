@@ -3,8 +3,8 @@ import { Role } from "@prisma/client";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { verifyPassword } from "@/lib/password";
+import { db } from "@/lib/platform/db";
+import { verifyPassword } from "@/lib/auth/password";
 
 const credentialsSchema = z.object({
   email: z.string().email(),

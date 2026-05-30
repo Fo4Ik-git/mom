@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   buildOutputFromSnippet,
   type OutputSnippetId,
-} from "@/lib/calculator/output-snippets";
+} from "@/lib/calculator/config/output-snippets";
 import type { CalculatorConfig } from "@/types/calculator";
 
 const SNIPPET_IDS: OutputSnippetId[] = ["sumCost", "sumPrice", "margin"];

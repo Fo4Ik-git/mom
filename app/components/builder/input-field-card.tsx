@@ -8,11 +8,11 @@ import { NumericInput } from "@/app/components/builder/numeric-input";
 import {
   INPUT_SECTION_IDS,
   type InputSectionId,
-} from "@/lib/calculator/input-sections";
+} from "@/lib/calculator/config/input-sections";
 import {
   isLineItemsField,
   LINE_QTY_ID,
-} from "@/lib/calculator/line-items";
+} from "@/lib/calculator/fields/line-items";
 import {
   TIME_DURATION_ID,
   TIME_RATE_ID,
@@ -22,7 +22,7 @@ import {
   timeFieldPreview,
   type TimeServiceLabels,
   type TimeUnit,
-} from "@/lib/calculator/time-service";
+} from "@/lib/calculator/fields/time-service";
 
 interface InputFieldCardProps {
   field: InputField;

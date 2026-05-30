@@ -5,13 +5,13 @@ import { useEffect, useState } from "react";
 import { Card, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
-import { appFetch } from "@/lib/api-client";
-import { adminApiErrorMessage } from "@/lib/admin-api-error";
+import { appFetch } from "@/lib/api/api-client";
+import { adminApiErrorMessage } from "@/lib/admin/admin-api-error";
 import {
   ACCESS_EXPIRY_CHECK_INTERVALS,
   DEFAULT_ACCESS_EXPIRY_CHECK_INTERVAL,
   type AccessExpiryCheckIntervalValue,
-} from "@/lib/access-expiry-interval";
+} from "@/lib/access/access-expiry-interval";
 
 export function AdminPlatformSettings() {
   const t = useTranslations("admin");

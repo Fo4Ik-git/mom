@@ -1,6 +1,6 @@
-import { finalizeConfig } from "@/lib/calculator/config-sync";
-import { emptyCalculatorConfig } from "@/lib/calculator/defaults";
-import { isAutoCalculationId } from "@/lib/calculator/auto-calculations";
+import { finalizeConfig } from "@/lib/calculator/config/sync";
+import { emptyCalculatorConfig } from "@/lib/calculator/config/defaults";
+import { isAutoCalculationId } from "@/lib/calculator/config/auto-calculations";
 import { formatCalculatorScript } from "@/lib/calculator/script/format";
 import { formatScriptProject } from "@/lib/calculator/script/format-project";
 import { parseCalculatorScript } from "@/lib/calculator/script/parse";

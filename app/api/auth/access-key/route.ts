@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { inspectAccessKey } from "@/lib/access-keys";
-import { isAllowedFrontendRequest } from "@/lib/api-security";
+import { inspectAccessKey } from "@/lib/access/access-keys";
+import { isAllowedFrontendRequest } from "@/lib/api/api-security";
 
 export async function GET(request: Request) {
   if (!isAllowedFrontendRequest(request)) {

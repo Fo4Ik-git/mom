@@ -8,28 +8,28 @@ import {
 } from "@dnd-kit/sortable";
 import { useTranslations } from "next-intl";
 import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
-import { formatBlockOperand } from "@/lib/formula/block-format";
-import type { FormulaTarget } from "@/lib/formula/formula-target";
+import { formatBlockOperand } from "@/lib/formula/blocks/block-format";
+import type { FormulaTarget } from "@/lib/formula/core/formula-target";
 import {
   flattenExpression,
   isReorderableChain,
   type FlatToken,
-} from "@/lib/formula/block-tokens";
-import type { SlotPath } from "@/lib/formula/block-tree";
-import { slotPathsEqual } from "@/lib/formula/slot-path";
+} from "@/lib/formula/blocks/block-tokens";
+import type { SlotPath } from "@/lib/formula/blocks/block-tree";
+import { slotPathsEqual } from "@/lib/formula/blocks/slot-path";
 import {
   CONTINUE_PATH,
   showContinuationAfter,
   showContinuationAfterLeft,
   showContinuationInsideGroup,
-} from "@/lib/formula/block-tree";
+} from "@/lib/formula/blocks/block-tree";
 import { AggregateBracket } from "@/app/components/builder/scratch/aggregate-bracket";
 import { RowAggregateBracket } from "@/app/components/builder/scratch/row-aggregate-bracket";
 import { DragHandle } from "@/app/components/builder/scratch/drag-handle";
 import { BlockSlot } from "@/app/components/builder/scratch/block-slot";
 import { GroupBracket } from "@/app/components/builder/scratch/group-bracket";
 import { OperatorChip } from "@/app/components/builder/scratch/operator-chip";
-import { normalizeAggregateArgs } from "@/lib/formula/aggregate-helpers";
+import { normalizeAggregateArgs } from "@/lib/formula/core/aggregate-helpers";
 
 interface FormulaLinearWorkspaceProps {
   outputKey: string;

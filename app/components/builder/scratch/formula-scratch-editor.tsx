@@ -12,19 +12,19 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
 import { emptyBlockExpression } from "@/types/calculator";
-import { formatBlockExpression } from "@/lib/formula/block-format";
-import { buildPaletteBlocks, type PaletteBlock } from "@/lib/formula/block-palette";
+import { formatBlockExpression } from "@/lib/formula/blocks/block-format";
+import { buildPaletteBlocks, type PaletteBlock } from "@/lib/formula/blocks/block-palette";
 import {
   buildFormulaSnippets,
   resolveSnippetPick,
   type FormulaSnippetPick,
-} from "@/lib/formula/formula-snippets";
-import type { FormulaTarget } from "@/lib/formula/formula-target";
+} from "@/lib/formula/core/formula-snippets";
+import type { FormulaTarget } from "@/lib/formula/core/formula-target";
 import {
   flattenExpression,
   isReorderableChain,
   tokensToExpression,
-} from "@/lib/formula/block-tokens";
+} from "@/lib/formula/blocks/block-tokens";
 import {
   applyPaletteToSlot,
   clearSlot,
@@ -38,7 +38,7 @@ import {
   type PaletteDragData,
   type SlotPath,
   type WorkspaceDragData,
-} from "@/lib/formula/block-tree";
+} from "@/lib/formula/blocks/block-tree";
 import { BlockPaletteSheet } from "@/app/components/builder/scratch/block-palette-sheet";
 import { DraggableBlock } from "@/app/components/builder/scratch/draggable-block";
 import { FormulaLinearWorkspace } from "@/app/components/builder/scratch/formula-linear-workspace";

@@ -2,8 +2,8 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import type { PaletteBlock } from "@/lib/formula/block-palette";
-import { BLOCK_COLORS } from "@/lib/formula/block-palette";
+import type { PaletteBlock } from "@/lib/formula/blocks/block-palette";
+import { BLOCK_COLORS } from "@/lib/formula/blocks/block-palette";
 
 interface DraggableBlockProps {
   block: PaletteBlock;

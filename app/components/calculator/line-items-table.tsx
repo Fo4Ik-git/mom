@@ -5,7 +5,7 @@ import {
   createEmptyLineItemRow,
   lineItemMaxRows,
   lineItemMinRows,
-} from "@/lib/calculator/line-items";
+} from "@/lib/calculator/fields/line-items";
 
 interface LineItemsTableProps {
   field: InputField;

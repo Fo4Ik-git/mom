@@ -1,4 +1,4 @@
-import { isAutoCalculationId } from "@/lib/calculator/auto-calculations";
+import { isAutoCalculationId } from "@/lib/calculator/config/auto-calculations";
 import {
   extractFormulaSource,
   formatEntityOpening,
@@ -13,8 +13,8 @@ import { SCRIPT_FILE_AUTO_CALCULATIONS } from "@/lib/calculator/script/project-t
 import {
   normalizeParsedExpression,
   tryParseFormulaCode,
-} from "@/lib/formula/code-parse";
-import { formatFormulaCodeBlock } from "@/lib/formula/code-format";
+} from "@/lib/formula/code/code-parse";
+import { formatFormulaCodeBlock } from "@/lib/formula/code/code-format";
 
 export const calculationEntity: ConfigEntityDefinition = {
   keyword: "calc",

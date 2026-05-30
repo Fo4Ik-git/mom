@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { banReasonI18nKey } from "@/lib/ban-reasons";
-import { isAllowedFrontendRequest } from "@/lib/api-security";
-import { verifyPassword } from "@/lib/password";
+import { db } from "@/lib/platform/db";
+import { banReasonI18nKey } from "@/lib/access/ban-reasons";
+import { isAllowedFrontendRequest } from "@/lib/api/api-security";
+import { verifyPassword } from "@/lib/auth/password";
 
 const schema = z.object({
   email: z.string().email(),

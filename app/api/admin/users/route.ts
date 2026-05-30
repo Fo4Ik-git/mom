@@ -1,22 +1,22 @@
 import { NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { db } from "@/lib/platform/db";
 import {
   buildAdminUsersSearchWhere,
   parseAdminUsersPage,
   parseAdminUsersPageSize,
-} from "@/lib/admin-users-list";
-import { handleAdminApiError } from "@/lib/admin-api-response";
-import { requireAdmin } from "@/lib/auth-session";
-import { hashPassword } from "@/lib/password";
-import { resolveDefaultAccessExpiresAt } from "@/lib/access-keys";
-import { getPlatformSettings } from "@/lib/platform-settings";
+} from "@/lib/admin/admin-users-list";
+import { handleAdminApiError } from "@/lib/admin/admin-api-response";
+import { requireAdmin } from "@/lib/auth/auth-session";
+import { hashPassword } from "@/lib/auth/password";
+import { resolveDefaultAccessExpiresAt } from "@/lib/access/access-keys";
+import { getPlatformSettings } from "@/lib/platform/platform-settings";
 import {
   countUserCalculators,
   getEffectiveMaxCalculators,
   isAccessActive,
-} from "@/lib/user-limits";
+} from "@/lib/access/user-limits";
 
 const createSchema = z.object({
   email: z.string().email(),

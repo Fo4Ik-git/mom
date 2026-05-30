@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-session";
-import { getUserQuota } from "@/lib/user-limits";
+import { requireAuth } from "@/lib/auth/auth-session";
+import { getUserQuota } from "@/lib/access/user-limits";
 
 export async function GET() {
   try {

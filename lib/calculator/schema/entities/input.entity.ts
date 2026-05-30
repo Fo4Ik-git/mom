@@ -1,4 +1,4 @@
-import { isLineItemsField } from "@/lib/calculator/line-items";
+import { isLineItemsField } from "@/lib/calculator/fields/line-items";
 import {
   formatEntityOpening,
   formatPropertyBlock,

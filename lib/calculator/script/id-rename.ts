@@ -1,7 +1,7 @@
 import {
   autoCalculationId,
   isAutoCalculationId,
-} from "@/lib/calculator/auto-calculations";
+} from "@/lib/calculator/config/auto-calculations";
 import {
   SCRIPT_FILE_AUTO_CALCULATIONS,
   SCRIPT_FILE_CALCULATIONS,

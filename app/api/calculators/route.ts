@@ -1,17 +1,17 @@
-import { requireActiveUser } from "@/lib/auth-session";
+import { requireActiveUser } from "@/lib/auth/auth-session";
 import {
     CalculatorValidationError,
     createUniqueSlug,
     serializeConfig,
     toCalculatorResponse,
     validateCalculatorConfig,
-} from "@/lib/calculator-service";
-import { db } from "@/lib/db";
-import { UserAccessError, assertCanCreateCalculator } from "@/lib/user-limits";
+} from "@/lib/calculator/service";
+import { db } from "@/lib/platform/db";
+import { UserAccessError, assertCanCreateCalculator } from "@/lib/access/user-limits";
 import {
     formatZodIssues,
     validationErrorResponse,
-} from "@/lib/validation-errors";
+} from "@/lib/platform/validation-errors";
 import { calculatorConfigSchema } from "@/types/calculator";
 import { NextResponse } from "next/server";
 import { z } from "zod";

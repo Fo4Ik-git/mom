@@ -1,4 +1,4 @@
-import { finalizeConfig } from "@/lib/calculator/config-sync";
+import { finalizeConfig } from "@/lib/calculator/config/sync";
 import {
   applyScriptIdRenamesToConfig,
   detectScriptIdRenames,

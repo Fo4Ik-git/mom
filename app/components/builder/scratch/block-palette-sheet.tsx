@@ -3,8 +3,8 @@
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CalculatorConfig } from "@/types/calculator";
-import type { PaletteBlock } from "@/lib/formula/block-palette";
-import type { FormulaSnippetPick } from "@/lib/formula/formula-snippets";
+import type { PaletteBlock } from "@/lib/formula/blocks/block-palette";
+import type { FormulaSnippetPick } from "@/lib/formula/core/formula-snippets";
 import { BlockPaletteContent } from "@/app/components/builder/scratch/block-palette-content";
 
 const STORAGE_KEY = "builder-palette-sheet-width";

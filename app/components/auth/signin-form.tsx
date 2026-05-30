@@ -9,7 +9,7 @@ import { Button } from "@/app/components/ui/button";
 import { FormField } from "@/app/components/ui/form-field";
 import { PasswordInput } from "@/app/components/ui/password-input";
 import { Link, useRouter } from "@/i18n/navigation";
-import { appFetch } from "@/lib/api-client";
+import { appFetch } from "@/lib/api/api-client";
 
 type SignInCheckResponse = {
   status?: string;

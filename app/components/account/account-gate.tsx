@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { AccountBlockedOverlay } from "@/app/components/account/account-blocked-overlay";
-import { getUserAccountStatus, shouldBlockUser } from "@/lib/account-status";
+import { getUserAccountStatus, shouldBlockUser } from "@/lib/access/account-status";
 
 export async function AccountGate({
   children,

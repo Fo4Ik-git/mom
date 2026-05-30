@@ -5,9 +5,9 @@ import { useCallback, useEffect, useState } from "react";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardTitle } from "@/app/components/ui/card";
-import { appFetch } from "@/lib/api-client";
-import { adminApiErrorMessage } from "@/lib/admin-api-error";
-import { signupAbsoluteUrl } from "@/lib/signup-url";
+import { appFetch } from "@/lib/api/api-client";
+import { adminApiErrorMessage } from "@/lib/admin/admin-api-error";
+import { signupAbsoluteUrl } from "@/lib/auth/signup-url";
 
 interface AccessKeyRow {
   id: string;

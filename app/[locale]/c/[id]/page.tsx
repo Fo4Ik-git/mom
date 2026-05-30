@@ -6,7 +6,7 @@ import { Link, redirect } from "@/i18n/navigation";
 import {
     calculatorPublicPath,
     findCalculatorByRouteParam,
-} from "@/lib/calculator-route";
+} from "@/lib/calculator/route";
 import { parseCalculatorConfig } from "@/types/calculator";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";

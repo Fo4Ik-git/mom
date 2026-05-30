@@ -13,14 +13,14 @@ import { OutputSnippetMenu } from "@/app/components/builder/output-snippet-menu"
 import { DynamicCalculator } from "@/app/components/calculator/dynamic-calculator";
 import { Button } from "@/app/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
-import { appFetch } from "@/lib/api-client";
-import { isAutoCalculationId } from "@/lib/calculator/auto-calculations";
-import { finalizeConfig } from "@/lib/calculator/config-sync";
+import { appFetch } from "@/lib/api/api-client";
+import { isAutoCalculationId } from "@/lib/calculator/config/auto-calculations";
+import { finalizeConfig } from "@/lib/calculator/config/sync";
 import {
     applyInputPattern,
     type InputPatternId,
-} from "@/lib/calculator/input-patterns";
-import { formatBlockExpression } from "@/lib/formula/block-format";
+} from "@/lib/calculator/config/input-patterns";
+import { formatBlockExpression } from "@/lib/formula/blocks/block-format";
 import type {
     BlockExpression,
     CalculationField,

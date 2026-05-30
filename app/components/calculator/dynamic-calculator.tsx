@@ -3,19 +3,19 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { LineItemsTable } from "@/app/components/calculator/line-items-table";
-import { isTimeField, timeFieldPreview } from "@/lib/calculator/time-service";
+import { isTimeField, timeFieldPreview } from "@/lib/calculator/fields/time-service";
 import {
   buildInitialLineItemRowsState,
   isLineItemsField,
-} from "@/lib/calculator/line-items";
+} from "@/lib/calculator/fields/line-items";
 import { ActionButtons } from "@/app/components/action-buttons";
 import { ResultPanel } from "@/app/components/result-panel";
 import { Card, CardTitle } from "@/app/components/ui/card";
 import {
   calculateFromConfigWithDiagnostics,
   type CalculationWarning,
-} from "@/lib/formula/calculate";
-import { buildOutputBreakdowns } from "@/lib/formula/block-format-values";
+} from "@/lib/formula/runtime/calculate";
+import { buildOutputBreakdowns } from "@/lib/formula/blocks/block-format-values";
 import type { CalculatorConfig, LineItemRowsState } from "@/types/calculator";
 
 interface DynamicCalculatorProps {

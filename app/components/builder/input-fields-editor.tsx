@@ -23,14 +23,14 @@ import {
   reorderInputFields,
   setInputFieldSection,
   updateInputField,
-} from "@/lib/calculator/config-sync";
+} from "@/lib/calculator/config/sync";
 import {
   INPUT_SECTION_IDS,
   fieldMatchesSearch,
   groupInputsBySection,
   normalizeInputSection,
   type InputSectionId,
-} from "@/lib/calculator/input-sections";
+} from "@/lib/calculator/config/input-sections";
 import { useFormulaDndSensors } from "@/lib/hooks/use-formula-dnd-sensors";
 import type { CalculatorConfig, InputField } from "@/types/calculator";
 import { useTranslations } from "next-intl";

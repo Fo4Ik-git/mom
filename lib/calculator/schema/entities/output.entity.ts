@@ -12,8 +12,8 @@ import type { ConfigEntityDefinition } from "@/lib/calculator/schema/_definition
 import {
   normalizeParsedExpression,
   tryParseFormulaCode,
-} from "@/lib/formula/code-parse";
-import { formatFormulaCodeBlock } from "@/lib/formula/code-format";
+} from "@/lib/formula/code/code-parse";
+import { formatFormulaCodeBlock } from "@/lib/formula/code/code-format";
 
 export const outputEntity: ConfigEntityDefinition = {
   keyword: "output",

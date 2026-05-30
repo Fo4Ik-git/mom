@@ -3,10 +3,10 @@
 import { type ReactNode, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { CalculatorConfig } from "@/types/calculator";
-import type { PaletteBlock } from "@/lib/formula/block-palette";
-import { BLOCK_COLORS } from "@/lib/formula/block-palette";
-import type { FormulaSnippetPick } from "@/lib/formula/formula-snippets";
-import { snippetPickTitle } from "@/lib/formula/formula-snippets";
+import type { PaletteBlock } from "@/lib/formula/blocks/block-palette";
+import { BLOCK_COLORS } from "@/lib/formula/blocks/block-palette";
+import type { FormulaSnippetPick } from "@/lib/formula/core/formula-snippets";
+import { snippetPickTitle } from "@/lib/formula/core/formula-snippets";
 import {
   countPaletteItems,
   filterGroupedBlocks,
@@ -14,7 +14,7 @@ import {
   groupOperandBlocksByInput,
   groupSnippetsByField,
   type PaletteTab,
-} from "@/lib/formula/palette-organizer";
+} from "@/lib/formula/blocks/palette-organizer";
 import { DraggableBlock } from "@/app/components/builder/scratch/draggable-block";
 
 interface BlockPaletteContentProps {

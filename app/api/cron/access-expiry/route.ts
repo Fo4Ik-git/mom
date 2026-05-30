@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { runScheduledAccessExpiryCheckIfDue } from "@/lib/access-expiry-check";
-import { isAuthorizedCronRequest } from "@/lib/cron-auth";
+import { runScheduledAccessExpiryCheckIfDue } from "@/lib/access/access-expiry-check";
+import { isAuthorizedCronRequest } from "@/lib/api/cron-auth";
 
 export async function GET(request: Request) {
   if (!isAuthorizedCronRequest(request)) {

@@ -4,9 +4,9 @@ import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslations } from "next-intl";
 import type { BlockExpression } from "@/types/calculator";
-import { BLOCK_COLORS } from "@/lib/formula/block-palette";
-import type { SlotPath, WorkspaceDragData } from "@/lib/formula/block-tree";
-import { isExpressionFilled } from "@/lib/formula/block-tree";
+import { BLOCK_COLORS } from "@/lib/formula/blocks/block-palette";
+import type { SlotPath, WorkspaceDragData } from "@/lib/formula/blocks/block-tree";
+import { isExpressionFilled } from "@/lib/formula/blocks/block-tree";
 import { DragHandle } from "@/app/components/builder/scratch/drag-handle";
 
 interface BlockSlotProps {

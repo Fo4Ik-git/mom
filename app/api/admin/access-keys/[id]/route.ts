@@ -1,9 +1,9 @@
 import { AccessKeyKind } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { handleAdminApiError } from "@/lib/admin-api-response";
-import { db } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth-session";
+import { handleAdminApiError } from "@/lib/admin/admin-api-response";
+import { db } from "@/lib/platform/db";
+import { requireAdmin } from "@/lib/auth/auth-session";
 
 const patchSchema = z.object({
   label: z.string().max(120).nullable().optional(),

@@ -2,7 +2,7 @@ import createIntlMiddleware from "next-intl/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
-import { isAllowedFrontendRequest } from "@/lib/api-security";
+import { isAllowedFrontendRequest } from "@/lib/api/api-security";
 import { stripLocalePrefix, withLocalePath } from "@/i18n/locale";
 import { routing } from "@/i18n/routing";
 
