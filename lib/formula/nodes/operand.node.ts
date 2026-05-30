@@ -53,8 +53,17 @@ function evaluateOperand(
       }
       return constant.value;
     }
-    default:
-      throw new Error("Invalid operand");
+    case "local": {
+      const value = context.locals?.[operand.localId];
+      if (value === undefined) {
+        throw new Error(`Unknown local variable: ${operand.localId}`);
+      }
+      return value;
+    }
+    default: {
+      const _exhaustive: never = operand;
+      throw new Error(`Unknown operand kind: ${(_exhaustive as BlockOperand).kind}`);
+    }
   }
 }
 

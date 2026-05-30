@@ -27,6 +27,7 @@ type Token =
 interface ParseOptions {
   target: FormulaTarget;
   rowFieldId?: string;
+  localIds?: ReadonlySet<string>;
 }
 
 function tokenize(source: string): Token[] {
@@ -319,7 +320,13 @@ class Parser {
   }
 
   private resolveReference(raw: string, offset: number): BlockOperand {
-    return parseCodeReference(raw, this.options.target, this.options.rowFieldId, offset);
+    return parseCodeReference(
+      raw,
+      this.options.target,
+      this.options.rowFieldId,
+      offset,
+      this.options.localIds,
+    );
   }
 
   private expect(type: "ident"): Extract<Token, { type: "ident" }>;

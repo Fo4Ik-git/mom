@@ -1,9 +1,10 @@
 import type {
   BlockExpression,
-  BlockOperand,
 } from "@/types/calculator";
 import { formatExpressionViaRegistry } from "@/lib/formula/nodes/registry";
 import type { FormulaTarget } from "@/lib/formula/core/formula-target";
+import type { FormulaLocal } from "@/types/calculator";
+import { formatFormulaProgram } from "@/lib/formula/code/formula-program";
 
 export function formatFormulaCode(
   expression: BlockExpression,
@@ -16,7 +17,7 @@ export function formatFormulaCode(
 export function formatFormulaCodeBlock(
   expression: BlockExpression,
   target: FormulaTarget,
+  locals?: FormulaLocal[],
 ): string {
-  const body = formatFormulaCode(expression, target);
-  return body || "// empty";
+  return formatFormulaProgram({ expression, locals: locals ?? [] }, target);
 }

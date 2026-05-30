@@ -1,6 +1,9 @@
 import type { BlockExpression, CalculatorConfig, LineItemRowsState } from "@/types/calculator";
 import { filledAggregateArgs } from "@/lib/formula/core/aggregate-helpers";
-import { evaluateBlockExpression } from "@/lib/formula/runtime/block-evaluate";
+import {
+  computeFormulaLocalValues,
+  evaluateBlockExpression,
+} from "@/lib/formula/runtime/block-evaluate";
 import { evaluateAllFormulaFields } from "@/lib/formula/runtime/field-graph";
 import { buildInitialLineItemRowsState } from "@/lib/calculator/fields/line-items";
 
@@ -9,6 +12,12 @@ const OP_LABELS: Record<string, string> = {
   "-": "−",
   "*": "×",
   "/": "÷",
+  ">": ">",
+  "<": "<",
+  ">=": "≥",
+  "<=": "≤",
+  "==": "=",
+  "!=": "≠",
 };
 
 export function formatBlockExpressionWithValues(
@@ -18,6 +27,7 @@ export function formatBlockExpressionWithValues(
   calculations: Record<string, number>,
   outputValues: Record<string, number>,
   lineItemRows: LineItemRowsState = {},
+  localValues: Record<string, number> = {},
 ): string {
   if (expression.type === "empty") {
     return "0";
@@ -35,6 +45,7 @@ export function formatBlockExpressionWithValues(
           constants: config.constants ?? [],
           calculations,
           outputs: outputValues,
+          locals: localValues,
         },
       );
     } catch {
@@ -51,6 +62,7 @@ export function formatBlockExpressionWithValues(
       calculations,
       outputValues,
       lineItemRows,
+      localValues,
     )})`;
   }
 
@@ -63,6 +75,7 @@ export function formatBlockExpressionWithValues(
         calculations,
         outputValues,
         lineItemRows,
+        localValues,
       ),
     );
     const inner = parts.length > 0 ? parts.join(", ") : "0";
@@ -77,29 +90,67 @@ export function formatBlockExpressionWithValues(
       calculations,
       outputValues,
       lineItemRows,
+      localValues,
     );
     return `${expression.function} rows(${inner})`;
   }
 
-  const left = formatBlockExpressionWithValues(
-    expression.left,
-    config,
-    quantities,
-    calculations,
-    outputValues,
-    lineItemRows,
-  );
-  const right = formatBlockExpressionWithValues(
-    expression.right,
-    config,
-    quantities,
-    calculations,
-    outputValues,
-    lineItemRows,
-  );
-  const op = OP_LABELS[expression.operator] ?? expression.operator;
+  if (expression.type === "conditional") {
+    const condition = formatBlockExpressionWithValues(
+      expression.condition,
+      config,
+      quantities,
+      calculations,
+      outputValues,
+      lineItemRows,
+      localValues,
+    );
+    const whenTrue = formatBlockExpressionWithValues(
+      expression.whenTrue,
+      config,
+      quantities,
+      calculations,
+      outputValues,
+      lineItemRows,
+      localValues,
+    );
+    const whenFalse = formatBlockExpressionWithValues(
+      expression.whenFalse,
+      config,
+      quantities,
+      calculations,
+      outputValues,
+      lineItemRows,
+      localValues,
+    );
+    return `IF(${condition}, ${whenTrue}, ${whenFalse})`;
+  }
 
-  return `${left} ${op} ${right}`;
+  if (expression.type === "operation") {
+    const left = formatBlockExpressionWithValues(
+      expression.left,
+      config,
+      quantities,
+      calculations,
+      outputValues,
+      lineItemRows,
+      localValues,
+    );
+    const right = formatBlockExpressionWithValues(
+      expression.right,
+      config,
+      quantities,
+      calculations,
+      outputValues,
+      lineItemRows,
+      localValues,
+    );
+    const op = OP_LABELS[expression.operator] ?? expression.operator;
+
+    return `${left} ${op} ${right}`;
+  }
+
+  return "?";
 }
 
 function formatNumber(value: number): string {
@@ -122,6 +173,24 @@ export function buildOutputBreakdowns(
   );
 
   for (const output of config.outputs) {
+    const evalContext = {
+      quantities,
+      lineItemRows: rows,
+      inputs: config.inputs,
+      constants: config.constants ?? [],
+      calculations,
+      outputs,
+    };
+    const localValues = computeFormulaLocalValues(output.locals, evalContext);
+    const localSummary =
+      output.locals && output.locals.length > 0
+        ? output.locals
+            .map((local) => {
+              const value = formatNumber(localValues[local.id] ?? 0);
+              return `${local.id} = ${value}`;
+            })
+            .join("; ")
+        : "";
     const expr = formatBlockExpressionWithValues(
       output.expression,
       config,
@@ -129,9 +198,11 @@ export function buildOutputBreakdowns(
       calculations,
       outputs,
       rows,
+      localValues,
     );
     const result = formatNumber(values[output.id] ?? outputs[output.id] ?? 0);
-    breakdowns[output.id] = `${expr} = ${result}`;
+    const prefix = localSummary ? `${localSummary}; ` : "";
+    breakdowns[output.id] = `${prefix}${expr} = ${result}`;
   }
 
   return breakdowns;

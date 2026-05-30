@@ -21,6 +21,8 @@ export function formatOperandCode(
       return `${operand.fieldId}.row.${operand.propertyId}`;
     case "constant":
       return operand.constantId;
+    case "local":
+      return operand.localId;
     case "calculation":
       return operand.calculationId === target.fieldId
         ? "?"
@@ -37,6 +39,7 @@ export function parseCodeReference(
   target: FormulaTarget,
   rowFieldId: string | undefined,
   offset: number,
+  localIds?: ReadonlySet<string>,
 ): BlockOperand {
   if ((raw === "row" || raw.startsWith("row.")) && !rowFieldId) {
     throw new FormulaParseError(
@@ -87,6 +90,10 @@ export function parseCodeReference(
       throw new FormulaParseError("Formula cannot reference itself", offset);
     }
     return { kind: "output", outputId: raw };
+  }
+
+  if (localIds?.has(raw)) {
+    return { kind: "local", localId: raw };
   }
 
   throw new FormulaParseError(`Unknown reference "${raw}"`, offset);

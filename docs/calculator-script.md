@@ -9,7 +9,7 @@ Every calculator is stored as `CalculatorConfig` JSON. You can edit it as:
 | View | What you edit |
 |------|----------------|
 | **Blocks** | Visual formula workspace (drag & drop) |
-| **Formula code** | Single expression inside `formula { return … }` |
+| **Formula code** | Expression inside `formula { … }` — optional `local` lines + `return` |
 | **Full script** | All inputs, constants, calculations, outputs |
 
 Changes in any view sync to the same JSON — there is no separate “script copy” in the database (v1).
@@ -54,6 +54,16 @@ Expressions support:
 - Functions: `SUM(…)`, `AVG(…)`, `COUNT(…)`, `MIN(…)`, `MAX(…)`
 - Row aggregates (line items): `SUM_ROWS(table_id, row.qty * row.var_cost)`, etc.
 - Conditionals: `IF(condition, thenValue, elseValue)` — condition is **truthy when ≠ 0**
+- **Local variables** (optional, before `return`):
+
+```calc
+formula {
+  local price = field_item.qty * field_item.var_price
+  return IF(field_item.qty >= 10, price * 1.2, price)
+}
+```
+
+Names must be lowercase identifiers (`price`, `subtotal`). Locals can reference earlier locals; the final `return` may use any of them.
 
 Example:
 

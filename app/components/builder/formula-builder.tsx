@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { FormulaScratchEditor } from "@/app/components/builder/scratch/formula-scratch-editor";
 import { FormulaCodeModal } from "@/app/components/builder/formula-code-modal";
 import type { FormulaTarget } from "@/lib/formula/core/formula-target";
-import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
+import type { BlockExpression, CalculatorConfig, FormulaLocal } from "@/types/calculator";
 
 interface FormulaBuilderProps {
   config: CalculatorConfig;
@@ -13,7 +13,11 @@ interface FormulaBuilderProps {
   fieldKey: string;
   fieldLabel: string;
   expression: BlockExpression;
-  onChange: (expression: BlockExpression) => void;
+  locals?: FormulaLocal[];
+  onChange: (
+    expression: BlockExpression,
+    locals?: FormulaLocal[] | null,
+  ) => void;
   codeReadOnly?: boolean;
 }
 
@@ -23,6 +27,7 @@ export function FormulaBuilder({
   fieldKey,
   fieldLabel,
   expression,
+  locals,
   onChange,
   codeReadOnly = false,
 }: FormulaBuilderProps) {
@@ -51,7 +56,7 @@ export function FormulaBuilder({
         formulaTarget={formulaTarget}
         outputKey={fieldKey}
         expression={expression}
-        onChange={onChange}
+        onChange={(next) => onChange(next, locals)}
       />
 
       <FormulaCodeModal
@@ -60,6 +65,7 @@ export function FormulaBuilder({
         config={config}
         target={formulaTarget}
         expression={expression}
+        locals={locals}
         onClose={() => setCodeOpen(false)}
         onApply={onChange}
       />

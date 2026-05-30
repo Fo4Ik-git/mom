@@ -1,18 +1,16 @@
 import {
-  extractFormulaSource,
   formatEntityOpening,
   formatFormulaBlock,
   formatScalar,
+  getFormulaBlockBody,
   parseEntityHeader,
   parseStructuredBody,
   readBooleanField,
   readStringField,
 } from "@/lib/calculator/schema/patterns/structured-block";
 import type { ConfigEntityDefinition } from "@/lib/calculator/schema/_definition";
-import {
-  normalizeParsedExpression,
-  tryParseFormulaCode,
-} from "@/lib/formula/code/code-parse";
+import { normalizeParsedExpression } from "@/lib/formula/code/code-parse";
+import { tryParseFormulaProgram } from "@/lib/formula/code/formula-program";
 import { formatFormulaCodeBlock } from "@/lib/formula/code/code-format";
 
 export const outputEntity: ConfigEntityDefinition = {
@@ -36,9 +34,11 @@ export const outputEntity: ConfigEntityDefinition = {
     }
     const output = declaration.data;
     const indent = ctx.indent ?? "  ";
-    const formula = formatFormulaCodeBlock(output.expression, {
-      fieldId: output.id,
-    });
+    const formula = formatFormulaCodeBlock(
+      output.expression,
+      { fieldId: output.id },
+      output.locals,
+    );
     const lines = [
       formatEntityOpening("output", output.id),
       `${indent}${formatScalar("label", output.label)}`,
@@ -72,9 +72,9 @@ export const outputEntity: ConfigEntityDefinition = {
     const highlight =
       readBooleanField(structured.fields, "highlight") ||
       header.flags.includes("highlight");
-    const formulaSource = extractFormulaSource(body, structured, header.flags);
-    const parsed = tryParseFormulaCode(formulaSource, {
-      target: { fieldId: header.id },
+    const formulaSource = getFormulaBlockBody(structured, body, header.flags);
+    const parsed = tryParseFormulaProgram(formulaSource, {
+      fieldId: header.id,
     });
     if (!parsed.ok) {
       return { error: `[${header.id}] ${parsed.error}` };
@@ -86,7 +86,14 @@ export const outputEntity: ConfigEntityDefinition = {
         id: header.id,
         label,
         highlight,
-        expression: normalizeParsedExpression(parsed.expression),
+        expression: normalizeParsedExpression(parsed.program.expression),
+        locals:
+          parsed.program.locals.length > 0
+            ? parsed.program.locals.map((local) => ({
+                id: local.id,
+                expression: normalizeParsedExpression(local.expression),
+              }))
+            : undefined,
       },
     };
   },

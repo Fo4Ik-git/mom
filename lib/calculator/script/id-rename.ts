@@ -306,11 +306,24 @@ export function rewriteBlockExpression(
     };
   }
 
-  return {
-    ...expression,
-    fieldId: renames.inputs.get(expression.fieldId) ?? expression.fieldId,
-    inner: rewriteBlockExpression(expression.inner, renames),
-  };
+  if (expression.type === "rowAggregate") {
+    return {
+      ...expression,
+      fieldId: renames.inputs.get(expression.fieldId) ?? expression.fieldId,
+      inner: rewriteBlockExpression(expression.inner, renames),
+    };
+  }
+
+  if (expression.type === "conditional") {
+    return {
+      type: "conditional",
+      condition: rewriteBlockExpression(expression.condition, renames),
+      whenTrue: rewriteBlockExpression(expression.whenTrue, renames),
+      whenFalse: rewriteBlockExpression(expression.whenFalse, renames),
+    };
+  }
+
+  return expression;
 }
 
 export function applyScriptIdRenamesToConfig(
@@ -326,10 +339,18 @@ export function applyScriptIdRenamesToConfig(
     calculations: (config.calculations ?? []).map((calculation) => ({
       ...calculation,
       expression: rewriteBlockExpression(calculation.expression, renames),
+      locals: calculation.locals?.map((local) => ({
+        ...local,
+        expression: rewriteBlockExpression(local.expression, renames),
+      })),
     })),
     outputs: config.outputs.map((output) => ({
       ...output,
       expression: rewriteBlockExpression(output.expression, renames),
+      locals: output.locals?.map((local) => ({
+        ...local,
+        expression: rewriteBlockExpression(local.expression, renames),
+      })),
     })),
   };
 }

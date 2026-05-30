@@ -4,12 +4,10 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { FormulaCodeEditor } from "@/app/components/builder/formula-code-editor";
 import { formatFormulaCodeBlock } from "@/lib/formula/code/code-format";
-import {
-  normalizeParsedExpression,
-  tryParseFormulaCode,
-} from "@/lib/formula/code/code-parse";
+import { normalizeParsedExpression } from "@/lib/formula/code/code-parse";
+import { tryParseFormulaProgram } from "@/lib/formula/code/formula-program";
 import type { FormulaTarget } from "@/lib/formula/core/formula-target";
-import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
+import type { BlockExpression, CalculatorConfig, FormulaLocal } from "@/types/calculator";
 
 interface FormulaCodeModalProps {
   open: boolean;
@@ -17,8 +15,9 @@ interface FormulaCodeModalProps {
   config: CalculatorConfig;
   target: FormulaTarget;
   expression: BlockExpression;
+  locals?: FormulaLocal[];
   onClose: () => void;
-  onApply: (expression: BlockExpression) => void;
+  onApply: (expression: BlockExpression, locals?: FormulaLocal[] | null) => void;
 }
 
 export function FormulaCodeModal({
@@ -27,6 +26,7 @@ export function FormulaCodeModal({
   config,
   target,
   expression,
+  locals,
   onClose,
   onApply,
 }: FormulaCodeModalProps) {
@@ -38,9 +38,9 @@ export function FormulaCodeModal({
     if (!open) {
       return;
     }
-    setDraft(formatFormulaCodeBlock(expression, target));
+    setDraft(formatFormulaCodeBlock(expression, target, locals));
     setError(null);
-  }, [open, expression, target]);
+  }, [open, expression, target, locals]);
 
   useEffect(() => {
     if (!open) {
@@ -65,17 +65,26 @@ export function FormulaCodeModal({
   }
 
   function handleApply() {
-    const parsed = tryParseFormulaCode(draft, { target });
+    const parsed = tryParseFormulaProgram(draft, target);
     if (!parsed.ok) {
       setError(parsed.error);
       return;
     }
-    onApply(normalizeParsedExpression(parsed.expression));
+    const program = parsed.program;
+    onApply(
+      normalizeParsedExpression(program.expression),
+      program.locals.length > 0
+        ? program.locals.map((local) => ({
+            id: local.id,
+            expression: normalizeParsedExpression(local.expression),
+          }))
+        : null,
+    );
     onClose();
   }
 
   function handleRevert() {
-    setDraft(formatFormulaCodeBlock(expression, target));
+    setDraft(formatFormulaCodeBlock(expression, target, locals));
     setError(null);
   }
 

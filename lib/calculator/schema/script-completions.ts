@@ -115,12 +115,30 @@ function skipUntilBlockOpen(source: string, pos: number, limit: number): number 
   return -1;
 }
 
-function isInsideFormulaExpression(source: string, pos: number): boolean {
+function isInsideFormulaStatementExpression(source: string, pos: number): boolean {
   const before = source.slice(0, pos);
+  const lineStart = before.lastIndexOf("\n") + 1;
+  const currentLine = before.slice(lineStart);
+
+  if (/^\s*local\s+[a-zA-Z_][a-zA-Z0-9_]*\s*=\s*/i.test(currentLine)) {
+    return true;
+  }
+
+  if (/^\s*return\b/i.test(currentLine)) {
+    return true;
+  }
+
   const returnIndex = before.lastIndexOf("return");
   if (returnIndex < 0) {
     return false;
   }
+
+  const returnLineStart = before.lastIndexOf("\n", returnIndex - 1) + 1;
+  const beforeReturnOnLine = before.slice(returnLineStart, returnIndex);
+  if (!/^\s*$/.test(beforeReturnOnLine)) {
+    return false;
+  }
+
   const afterReturn = before.slice(returnIndex + "return".length);
   return /[\w."(]/.test(afterReturn.trimStart()[0] ?? "");
 }
@@ -258,7 +276,7 @@ export function detectScriptCompletionContext(
   const top = stack[stack.length - 1] ?? { type: "root" as const };
 
   if (top.type === "formula") {
-    if (isInsideFormulaExpression(source, pos)) {
+    if (isInsideFormulaStatementExpression(source, pos)) {
       return { kind: "formula-expr", entityId: top.entityId };
     }
     return { kind: "formula-body", entityId: top.entityId };
@@ -284,6 +302,11 @@ const FORMULA_BLOCK_FIELDS: ScriptFieldCompletion[] = [
     key: "formula",
     detail: "Formula block",
     insertText: "formula {\n  return \n}",
+  },
+  {
+    key: "local",
+    detail: "Local variable in formula block",
+    insertText: "local name = ",
   },
   {
     key: "return",

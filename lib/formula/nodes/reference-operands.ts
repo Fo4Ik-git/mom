@@ -188,6 +188,8 @@ export function formatBlockOperandLabel(
       );
       return constant ? constant.label : "?";
     }
+    case "local":
+      return operand.localId;
     default:
       return "?";
   }

@@ -290,6 +290,24 @@ export function extractFormulaSource(
   return legacyFlags.filter((flag) => flag !== "{" && flag !== "highlight").join(" ");
 }
 
+/** Full formula block body (keeps `local` lines and `return`). */
+export function getFormulaBlockBody(
+  structured: ParsedStructuredBody,
+  body: string,
+  legacyFlags: string[] = [],
+): string {
+  const formulaBlock =
+    structured.rawBlocks.get("formula") ??
+    structured.rawBlocks.get("calculations") ??
+    structured.rawBlocks.get("expression");
+
+  if (formulaBlock != null) {
+    return formulaBlock.trim();
+  }
+
+  return extractFormulaSource(body, structured, legacyFlags);
+}
+
 export function formatFormulaBlock(formula: string, indent = "  "): string[] {
   const body = formula.trim() || "// empty";
   const lines = body.split("\n");

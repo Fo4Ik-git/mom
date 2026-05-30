@@ -54,7 +54,7 @@ export function createEvalContext(overrides?: Partial<EvalContext>): EvalContext
       ],
     },
     inputs: configWithLineItems.inputs,
-    constants: evalCalculatorConfig.constants,
+    constants: evalCalculatorConfig.constants ?? [],
     calculations: { calc_subtotal: 100 },
     outputs: {},
     ...overrides,

@@ -84,6 +84,7 @@ export const blockOperandSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("calculation"), calculationId: z.string() }),
   z.object({ kind: z.literal("number"), value: z.number() }),
   z.object({ kind: z.literal("constant"), constantId: z.string() }),
+  z.object({ kind: z.literal("local"), localId: z.string() }),
 ]);
 
 export type BlockOperand = z.infer<typeof blockOperandSchema>;
@@ -143,6 +144,16 @@ export type BlockExpression =
       whenFalse: BlockExpression;
     };
 
+export const formulaLocalSchema = z.object({
+  id: z
+    .string()
+    .min(1)
+    .regex(/^[a-z][a-z0-9_]*$/),
+  expression: blockExpressionSchema,
+});
+
+export type FormulaLocal = z.infer<typeof formulaLocalSchema>;
+
 export type LineItemRow = Record<string, number>;
 export type LineItemRowsState = Record<string, LineItemRow[]>;
 
@@ -173,6 +184,7 @@ const expressionFieldSchema = z.object({
   id: idSchema,
   label: z.string().min(1).max(120),
   expression: blockExpressionSchema,
+  locals: z.array(formulaLocalSchema).max(20).optional(),
 });
 
 function normalizeExpressionFields(items: unknown) {
@@ -181,9 +193,19 @@ function normalizeExpressionFields(items: unknown) {
   }
   return items.map((item) => {
     const row = item as Record<string, unknown>;
+    const locals = Array.isArray(row.locals)
+      ? row.locals.map((local) => {
+          const entry = local as Record<string, unknown>;
+          return {
+            id: entry.id,
+            expression: normalizeBlockExpression(entry.expression),
+          };
+        })
+      : row.locals;
     return {
       ...row,
       expression: normalizeBlockExpression(row.expression),
+      locals,
     };
   });
 }
@@ -203,6 +225,7 @@ export const calculatorConfigSchema = z.object({
         id: idSchema,
         label: z.string().min(1).max(120),
         expression: blockExpressionSchema,
+        locals: z.array(formulaLocalSchema).max(20).optional(),
         highlight: z.boolean().optional(),
       }),
     ).min(1).max(20),
@@ -215,11 +238,13 @@ export type CalculationField = {
   id: string;
   label: string;
   expression: BlockExpression;
+  locals?: FormulaLocal[];
 };
 export type OutputField = {
   id: string;
   label: string;
   expression: BlockExpression;
+  locals?: FormulaLocal[];
   highlight?: boolean;
 };
 export type CalculatorConfig = {

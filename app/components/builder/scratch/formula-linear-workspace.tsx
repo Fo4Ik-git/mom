@@ -359,6 +359,7 @@ function ExpressionNode({
               onGroupRemove={onGroupRemove}
               onAggregateRemove={onAggregateRemove}
               onRowAggregateRemove={onRowAggregateRemove}
+              onConditionalRemove={onConditionalRemove}
               onSlotTap={onSlotTap}
               activeSlotPath={activeSlotPath}
             />

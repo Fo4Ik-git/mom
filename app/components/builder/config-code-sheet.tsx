@@ -24,6 +24,7 @@ interface ConfigCodeSheetProps {
   config: CalculatorConfig;
   onClose: () => void;
   onApply: (config: CalculatorConfig) => void;
+  onPreviewConfig?: (config: CalculatorConfig | null) => void;
 }
 
 const TAB_LABEL_KEYS: Record<ScriptProjectFileId, string> = {
@@ -49,6 +50,7 @@ export function ConfigCodeSheet({
   config,
   onClose,
   onApply,
+  onPreviewConfig,
 }: ConfigCodeSheetProps) {
   const t = useTranslations("builder");
   const autoTotalSuffix = t("autoTotalSuffix");
@@ -60,12 +62,28 @@ export function ConfigCodeSheet({
 
   useEffect(() => {
     if (!open) {
+      onPreviewConfig?.(null);
       return;
     }
     setProject(formatScriptProject(finalizeConfig(config, autoTotalSuffix)));
     setActiveFile(SCRIPT_FILE_INPUTS);
     setError(null);
-  }, [open, config, autoTotalSuffix]);
+  }, [open, config, autoTotalSuffix, onPreviewConfig]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const result = parseScriptProject(project, config);
+      onPreviewConfig?.(
+        result.errors.length === 0 && result.config ? result.config : null,
+      );
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [open, project, config, onPreviewConfig]);
 
   useEffect(() => {
     if (!open) {
@@ -110,10 +128,12 @@ export function ConfigCodeSheet({
       setProject(result.project);
     }
     onApply(result.config);
+    onPreviewConfig?.(null);
     onClose();
   }
 
   function handleCancel() {
+    onPreviewConfig?.(null);
     onClose();
   }
 

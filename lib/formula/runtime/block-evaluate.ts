@@ -1,6 +1,7 @@
 import type {
   BlockExpression,
   CalculatorConstant,
+  FormulaLocal,
   InputField,
   LineItemRowsState,
 } from "@/types/calculator";
@@ -14,6 +15,7 @@ export interface EvalContext {
   constants: CalculatorConstant[];
   calculations: Record<string, number>;
   outputs: Record<string, number>;
+  locals?: Record<string, number>;
   onWarning?: (message: string) => void;
 }
 
@@ -22,4 +24,32 @@ export function evaluateBlockExpression(
   context: EvalContext,
 ): number {
   return evaluateExpressionViaRegistry(expression, context);
+}
+
+export function evaluateFormulaWithLocals(
+  expression: BlockExpression,
+  locals: FormulaLocal[] | undefined,
+  context: EvalContext,
+): number {
+  const localValues = computeFormulaLocalValues(locals, context);
+  return evaluateBlockExpression(expression, {
+    ...context,
+    locals: localValues,
+  });
+}
+
+export function computeFormulaLocalValues(
+  locals: FormulaLocal[] | undefined,
+  context: EvalContext,
+): Record<string, number> {
+  const localValues: Record<string, number> = { ...(context.locals ?? {}) };
+
+  for (const local of locals ?? []) {
+    localValues[local.id] = evaluateBlockExpression(local.expression, {
+      ...context,
+      locals: localValues,
+    });
+  }
+
+  return localValues;
 }

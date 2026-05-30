@@ -17,6 +17,13 @@ import {
 export const templateEntity: ConfigEntityDefinition = {
   keyword: "my_entity",
   label: "My entity",
+  scriptCompletions: {
+    declarationSnippet:
+      'my_entity my_id "Label" {\n  label = "Label"\n}',
+    bodyFields: [
+      { key: "label", detail: "Display name", insertText: 'label = "Label"' },
+    ],
+  },
   format: (declaration, ctx) => {
     if (declaration.kind !== "constant") {
       return [];

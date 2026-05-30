@@ -1,7 +1,10 @@
-import type { BlockExpression, CalculatorConfig } from "@/types/calculator";
+import type { BlockExpression, CalculatorConfig, FormulaLocal } from "@/types/calculator";
 import type { LineItemRowsState } from "@/types/calculator";
 import { collectExpressionFieldRefs } from "@/lib/formula/nodes/collect-dependencies";
-import { evaluateBlockExpression } from "@/lib/formula/runtime/block-evaluate";
+import {
+  evaluateBlockExpression,
+  evaluateFormulaWithLocals,
+} from "@/lib/formula/runtime/block-evaluate";
 import { buildInitialLineItemRowsState } from "@/lib/calculator/fields/line-items";
 
 export type FormulaFieldKind = "calculation" | "output";
@@ -11,6 +14,7 @@ export type FormulaFieldNode = {
   id: string;
   label: string;
   expression: BlockExpression;
+  locals?: FormulaLocal[];
 };
 
 export function fieldNodeKey(kind: FormulaFieldKind, id: string): string {
@@ -23,6 +27,7 @@ export function listFormulaFields(config: CalculatorConfig): FormulaFieldNode[] 
     id: field.id,
     label: field.label,
     expression: field.expression,
+    locals: field.locals,
   }));
 
   const outputs = config.outputs.map((field) => ({
@@ -30,6 +35,7 @@ export function listFormulaFields(config: CalculatorConfig): FormulaFieldNode[] 
     id: field.id,
     label: field.label,
     expression: field.expression,
+    locals: field.locals,
   }));
 
   return [...calculations, ...outputs];
@@ -228,17 +234,21 @@ export function evaluateAllFormulaFields(
 
   for (const field of order) {
     try {
-      const value = evaluateBlockExpression(field.expression, {
-        quantities,
-        lineItemRows: rows,
-        inputs: config.inputs,
-        constants,
-        calculations,
-        outputs,
-        onWarning: onWarning
-          ? (message) => onWarning(field, message)
-          : undefined,
-      });
+      const value = evaluateFormulaWithLocals(
+        field.expression,
+        field.locals,
+        {
+          quantities,
+          lineItemRows: rows,
+          inputs: config.inputs,
+          constants,
+          calculations,
+          outputs,
+          onWarning: onWarning
+            ? (message) => onWarning(field, message)
+            : undefined,
+        },
+      );
 
       if (field.kind === "calculation") {
         calculations[field.id] = value;

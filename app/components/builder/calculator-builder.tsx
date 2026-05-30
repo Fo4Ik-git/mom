@@ -27,6 +27,7 @@ import type {
     CalculationField,
     CalculatorConfig,
     CalculatorConstant,
+    FormulaLocal,
     OutputField,
 } from "@/types/calculator";
 import { emptyBlockExpression, slugifyId } from "@/types/calculator";
@@ -81,6 +82,20 @@ function formulaSummary(
   return preview.length > 52 ? `${preview.slice(0, 52)}…` : preview;
 }
 
+function applyFormulaUpdate(
+  field: { expression: BlockExpression; locals?: FormulaLocal[] },
+  expression: BlockExpression,
+  locals?: FormulaLocal[] | null,
+) {
+  if (locals === null) {
+    return { expression, locals: undefined };
+  }
+  if (locals !== undefined) {
+    return { expression, locals };
+  }
+  return { expression, locals: field.locals };
+}
+
 function emptyOutput(): OutputField {
   return {
     id: randomId("output"),
@@ -130,7 +145,10 @@ export function CalculatorBuilder({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [codeSheetOpen, setCodeSheetOpen] = useState(false);
+  const [scriptPreviewConfig, setScriptPreviewConfig] =
+    useState<CalculatorConfig | null>(null);
   const autoTotalSuffix = t("autoTotalSuffix");
+  const previewConfig = scriptPreviewConfig ?? config;
 
   function applyPattern(patternId: InputPatternId, count = 1) {
     setConfig((current) =>
@@ -208,8 +226,12 @@ export function CalculatorBuilder({
       <ConfigCodeSheet
         open={codeSheetOpen}
         config={config}
-        onClose={() => setCodeSheetOpen(false)}
+        onClose={() => {
+          setScriptPreviewConfig(null);
+          setCodeSheetOpen(false);
+        }}
         onApply={setConfig}
+        onPreviewConfig={setScriptPreviewConfig}
       />
       <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(280px,380px)] 2xl:grid-cols-[minmax(0,3.5fr)_minmax(300px,400px)]">
         <div className="min-w-0 space-y-5">
@@ -427,11 +449,17 @@ export function CalculatorBuilder({
                         fieldKey={calculation.id}
                         fieldLabel={calculation.label}
                         expression={calculation.expression}
-                        onChange={(expression) =>
+                        locals={calculation.locals}
+                        onChange={(expression, locals) =>
                           setConfig((c) => ({
                             ...c,
                             calculations: (c.calculations ?? []).map((item, i) =>
-                              i === index ? { ...item, expression } : item,
+                              i === index
+                                ? {
+                                    ...item,
+                                    ...applyFormulaUpdate(item, expression, locals),
+                                  }
+                                : item,
                             ),
                           }))
                         }
@@ -598,11 +626,17 @@ export function CalculatorBuilder({
                     fieldKey={output.id}
                     fieldLabel={output.label}
                     expression={output.expression}
-                    onChange={(expression) =>
+                    locals={output.locals}
+                    onChange={(expression, locals) =>
                       setConfig((c) => ({
                         ...c,
                         outputs: c.outputs.map((o, i) =>
-                          i === index ? { ...o, expression } : o,
+                          i === index
+                            ? {
+                                ...o,
+                                ...applyFormulaUpdate(o, expression, locals),
+                              }
+                            : o,
                         ),
                       }))
                     }
@@ -647,7 +681,7 @@ export function CalculatorBuilder({
 
         <div className="min-w-0 xl:sticky xl:top-24 xl:self-start">
           <h2 className="mb-4 text-lg font-semibold">{t("preview")}</h2>
-          <DynamicCalculator config={config} />
+          <DynamicCalculator config={previewConfig} />
         </div>
       </div>
     </div>

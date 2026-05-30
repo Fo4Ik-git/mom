@@ -21,7 +21,7 @@ import {
   buildFormulaCompletions,
   filterCompletions,
 } from "@/lib/formula/code/formula-code-completions";
-import { tryParseFormulaCode } from "@/lib/formula/code/code-parse";
+import { tryParseFormulaProgram } from "@/lib/formula/code/formula-program";
 import type { FormulaTarget } from "@/lib/formula/core/formula-target";
 import type { CalculatorConfig } from "@/types/calculator";
 
@@ -114,7 +114,7 @@ function createFormulaLinter(
       return diagnostics;
     }
 
-    const parsed = tryParseFormulaCode(source, { target });
+    const parsed = tryParseFormulaProgram(source, target);
     if (!parsed.ok) {
       diagnostics.push({
         from: parsed.offset,

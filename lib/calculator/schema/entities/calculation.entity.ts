@@ -1,19 +1,17 @@
 import { isAutoCalculationId } from "@/lib/calculator/config/auto-calculations";
 import {
-  extractFormulaSource,
   formatEntityOpening,
   formatFormulaBlock,
   formatScalar,
+  getFormulaBlockBody,
   parseEntityHeader,
   parseStructuredBody,
   readStringField,
 } from "@/lib/calculator/schema/patterns/structured-block";
 import type { ConfigEntityDefinition } from "@/lib/calculator/schema/_definition";
 import { SCRIPT_FILE_AUTO_CALCULATIONS } from "@/lib/calculator/script/project-types";
-import {
-  normalizeParsedExpression,
-  tryParseFormulaCode,
-} from "@/lib/formula/code/code-parse";
+import { normalizeParsedExpression } from "@/lib/formula/code/code-parse";
+import { tryParseFormulaProgram } from "@/lib/formula/code/formula-program";
 import { formatFormulaCodeBlock } from "@/lib/formula/code/code-format";
 
 export const calculationEntity: ConfigEntityDefinition = {
@@ -35,9 +33,11 @@ export const calculationEntity: ConfigEntityDefinition = {
       return [];
     }
     const indent = ctx.indent ?? "  ";
-    const formula = formatFormulaCodeBlock(calc.expression, {
-      fieldId: calc.id,
-    });
+    const formula = formatFormulaCodeBlock(
+      calc.expression,
+      { fieldId: calc.id },
+      calc.locals,
+    );
     const lines = [
       formatEntityOpening("calc", calc.id),
       `${indent}${formatScalar("label", calc.label)}`,
@@ -69,9 +69,9 @@ export const calculationEntity: ConfigEntityDefinition = {
 
     const label =
       readStringField(structured.fields, "label") || header.label || header.id;
-    const formulaSource = extractFormulaSource(body, structured, header.flags);
-    const parsed = tryParseFormulaCode(formulaSource, {
-      target: { fieldId: header.id },
+    const formulaSource = getFormulaBlockBody(structured, body, header.flags);
+    const parsed = tryParseFormulaProgram(formulaSource, {
+      fieldId: header.id,
     });
     if (!parsed.ok) {
       return { error: `[${header.id}] ${parsed.error}` };
@@ -82,7 +82,14 @@ export const calculationEntity: ConfigEntityDefinition = {
       data: {
         id: header.id,
         label,
-        expression: normalizeParsedExpression(parsed.expression),
+        expression: normalizeParsedExpression(parsed.program.expression),
+        locals:
+          parsed.program.locals.length > 0
+            ? parsed.program.locals.map((local) => ({
+                id: local.id,
+                expression: normalizeParsedExpression(local.expression),
+              }))
+            : undefined,
       },
     };
   },
