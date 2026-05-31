@@ -3,6 +3,7 @@ import {
   parseNumberToken,
   quoteLabel,
   readQuotedString,
+  tokenizeAssignmentLine,
 } from "@/lib/calculator/schema/patterns/block-body";
 
 export type StructuredScalar = string | number | boolean;
@@ -155,6 +156,52 @@ function readUntilNewline(source: string, start: number): { value: string; end: 
   return { value: source.slice(start, i).trim(), end: i + 1 };
 }
 
+function lineBounds(source: string, index: number): { start: number; end: number } {
+  let start = index;
+  while (start > 0 && source[start - 1] !== "\n") {
+    start -= 1;
+  }
+  let end = index;
+  while (end < source.length && source[end] !== "\n") {
+    end += 1;
+  }
+  return { start, end };
+}
+
+function parseAssignmentsFromLine(
+  line: string,
+): Array<{ key: string; scalar: StructuredScalar }> | { error: string } {
+  const tokens = tokenizeAssignmentLine(line.trim());
+  const assignments: Array<{ key: string; scalar: StructuredScalar }> = [];
+  let i = 0;
+
+  while (i < tokens.length) {
+    const keyToken = tokens[i];
+    if (!keyToken || tokens[i + 1] !== "=") {
+      return { error: `Invalid assignment near "${keyToken ?? ""}"` };
+    }
+
+    const key = normalizeFieldKey(keyToken);
+    if (key === "presets") {
+      return { error: "Use presets = 1, 2, 3 on its own line" };
+    }
+
+    i += 2;
+    const valueToken = tokens[i];
+    if (!valueToken) {
+      return { error: `Missing value for ${key}` };
+    }
+    const scalar = parseScalar(valueToken);
+    if (scalar == null) {
+      return { error: `Invalid value for ${key}` };
+    }
+    assignments.push({ key, scalar });
+    i += 1;
+  }
+
+  return assignments;
+}
+
 export function parseStructuredBody(source: string): ParsedStructuredBody | { error: string } {
   const fields = new Map<string, StructuredScalar>();
   const listFields = new Map<string, number[]>();
@@ -168,7 +215,8 @@ export function parseStructuredBody(source: string): ParsedStructuredBody | { er
       break;
     }
 
-    const ident = readIdentifier(source, i);
+    const identStart = i;
+    const ident = readIdentifier(source, identStart);
     if (!ident) {
       return { error: `Unexpected character near column ${i + 1}` };
     }
@@ -177,12 +225,13 @@ export function parseStructuredBody(source: string): ParsedStructuredBody | { er
     const next = source[i];
 
     if (next === "=") {
-      i += 1;
-      i = skipWhitespaceAndComments(source, i);
-      const valuePart = readUntilNewline(source, i);
       const fieldKey = normalizeFieldKey(ident.value);
+      const { start: lineStart, end: lineEnd } = lineBounds(source, identStart);
 
       if (fieldKey === "presets") {
+        i += 1;
+        i = skipWhitespaceAndComments(source, i);
+        const valuePart = readUntilNewline(source, i);
         const presets = parseNumberList(valuePart.value);
         if (!presets) {
           return { error: `Invalid presets value for ${ident.value}` };
@@ -192,12 +241,17 @@ export function parseStructuredBody(source: string): ParsedStructuredBody | { er
         continue;
       }
 
-      const scalar = parseScalar(valuePart.value);
-      if (scalar == null) {
-        return { error: `Invalid value for ${ident.value}` };
+      const parsedLine = parseAssignmentsFromLine(source.slice(lineStart, lineEnd));
+      if ("error" in parsedLine) {
+        return parsedLine;
       }
-      fields.set(fieldKey, scalar);
-      i = valuePart.end;
+      for (const assignment of parsedLine) {
+        fields.set(assignment.key, assignment.scalar);
+      }
+      i = lineEnd;
+      if (i < source.length && source[i] === "\n") {
+        i += 1;
+      }
       continue;
     }
 

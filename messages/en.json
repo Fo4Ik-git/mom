@@ -315,7 +315,31 @@
     "codeEditorProblems": "Problems",
     "codeEditorNoProblems": "No issues",
     "codeEditorAutoFileReadonly": "Auto totals are generated from inputs. Edit inputs.calc or formulas in calculations.calc.",
-    "paletteDocsHelp": "Open documentation for this block"
+    "paletteDocsHelp": "Open documentation for this block",
+    "ai": {
+      "openChat": "AI assistant",
+      "sheetTitle": "AI assistant",
+      "sheetSubtitleNew": "Describe the calculator — each reply updates the builder preview.",
+      "sheetSubtitleExisting": "Describe what to change — uses the current calculator in the builder.",
+      "sheetClose": "Close chat",
+      "sheetResize": "Resize chat panel",
+      "chatEmptyTitle": "Start a conversation",
+      "chatEmptyNew": "Example: print shop with cost and price per item, markup constant, total and profit outputs.",
+      "chatEmptyExisting": "Example: change textile discount to 8%, add a profit output, swap default cost and price.",
+      "chatInputLabel": "Message to AI",
+      "chatInputPlaceholder": "Describe what you need…",
+      "chatEnterSend": "Enter to send · Shift+Enter for new line",
+      "chatApplied": "Done — the calculator in the builder was updated. You can ask for more changes or save.",
+      "chatTyping": "Thinking…",
+      "chatSend": "Send",
+      "chatNew": "New chat",
+      "minChars": "{count} / {min} characters minimum",
+      "generating": "Sending…",
+      "applySuccess": "Applied — review and save",
+      "parseFailed": "Could not apply the script. Rephrase your request or fix in Code.",
+      "requestFailed": "Could not reach AI. Try again.",
+      "notConfigured": "AI is not configured on the server (GEMINI_API_KEY)."
+    }
   },
   "sharing": {
     "title": "Shared access",

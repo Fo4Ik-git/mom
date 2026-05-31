@@ -6,6 +6,7 @@ import { PageShell } from "@/app/components/layout/page-shell";
 import { emptyCalculatorConfig } from "@/lib/calculator/config/defaults";
 import { db } from "@/lib/platform/db";
 import { isAccessActive } from "@/lib/access/user-limits";
+import { Role } from "@prisma/client";
 
 export default async function NewBuilderPage({
   params,
@@ -31,7 +32,10 @@ export default async function NewBuilderPage({
   return (
     <PageShell width="full">
       <h1 className="mb-8 text-3xl font-bold tracking-tight">{t("newTitle")}</h1>
-      <CalculatorBuilder initialConfig={emptyCalculatorConfig} />
+      <CalculatorBuilder
+        initialConfig={emptyCalculatorConfig}
+        isAdmin={user?.role === Role.ADMIN}
+      />
     </PageShell>
   );
 }

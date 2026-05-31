@@ -31,6 +31,7 @@ import type {
     OutputField,
 } from "@/types/calculator";
 import { emptyBlockExpression, slugifyId } from "@/types/calculator";
+import { AiChatSidebar } from "@/app/components/builder/ai-chat-sidebar";
 import { CalculatorSharesPanel } from "@/app/components/builder/calculator-shares-panel";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -52,6 +53,8 @@ interface CalculatorBuilderProps {
   canManageShares?: boolean;
   /** When admin edits another user's calculator */
   apiBase?: string;
+  /** Show AI draft generator (admin only) */
+  isAdmin?: boolean;
 }
 
 function randomId(prefix: string) {
@@ -141,6 +144,7 @@ export function CalculatorBuilder({
   readOnly = false,
   canManageShares = false,
   apiBase = "/api/calculators",
+  isAdmin = false,
 }: CalculatorBuilderProps) {
   const t = useTranslations("builder");
   const tc = useTranslations("common");
@@ -164,6 +168,7 @@ export function CalculatorBuilder({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [codeSheetOpen, setCodeSheetOpen] = useState(false);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
   const [scriptPreviewConfig, setScriptPreviewConfig] =
     useState<CalculatorConfig | null>(null);
   const autoTotalSuffix = t("autoTotalSuffix");
@@ -275,7 +280,7 @@ export function CalculatorBuilder({
   );
 
   return (
-    <div className="space-y-6">
+    <>
       <ConfigCodeSheet
         open={codeSheetOpen}
         config={config}
@@ -286,6 +291,26 @@ export function CalculatorBuilder({
         onApply={setConfig}
         onPreviewConfig={setScriptPreviewConfig}
       />
+      <div
+        className={`flex w-full items-start gap-0 ${
+          aiChatOpen && isAdmin && !readOnly
+            ? "-ml-2 w-[calc(100%+0.5rem)] sm:-ml-3 sm:w-[calc(100%+0.75rem)]"
+            : ""
+        }`}
+      >
+        {isAdmin && !readOnly && aiChatOpen && (
+          <AiChatSidebar
+            config={config}
+            calculatorId={calculatorId}
+            onClose={() => setAiChatOpen(false)}
+            onApply={(nextConfig) => {
+              setConfig(nextConfig);
+              setScriptPreviewConfig(null);
+              toast.success(t("ai.applySuccess"));
+            }}
+          />
+        )}
+        <div className="min-w-0 flex-1 space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(280px,380px)] 2xl:grid-cols-[minmax(0,3.5fr)_minmax(300px,400px)]">
         <div className="min-w-0 space-y-5">
           <BuilderSection title={t("settings")} defaultOpen={false}>
@@ -731,6 +756,16 @@ export function CalculatorBuilder({
 
           {!readOnly && (
             <div className="flex flex-wrap items-center gap-2">
+              {isAdmin && (
+                <Button
+                  type="button"
+                  variant={aiChatOpen ? "primary" : "outline"}
+                  onClick={() => setAiChatOpen((open) => !open)}
+                  className="w-full sm:w-auto"
+                >
+                  {t("ai.openChat")}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"
@@ -756,6 +791,8 @@ export function CalculatorBuilder({
           <DynamicCalculator config={previewConfig} />
         </div>
       </div>
-    </div>
+        </div>
+      </div>
+    </>
   );
 }

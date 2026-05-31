@@ -10,7 +10,7 @@ export function parseBlockBody(body: string): Map<string, string[]> {
       continue;
     }
 
-    const parts = tokenizeLine(line);
+    const parts = tokenizeAssignmentLine(line);
     if (parts.length === 0) {
       continue;
     }
@@ -25,7 +25,8 @@ export function parseBlockBody(body: string): Map<string, string[]> {
   return map;
 }
 
-function tokenizeLine(line: string): string[] {
+/** Tokens for `key = value` lines (supports multiple assignments per line). */
+export function tokenizeAssignmentLine(line: string): string[] {
   const tokens: string[] = [];
   let current = "";
   let inString = false;

@@ -84,6 +84,7 @@ export default async function EditBuilderPage({
         apiBase={
           access.kind === "admin" ? "/api/admin/calculators" : "/api/calculators"
         }
+        isAdmin={session!.user.role === Role.ADMIN}
       />
     </PageShell>
   );
