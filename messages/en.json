@@ -166,6 +166,13 @@
     "formulaTitle": "Calculation logic",
     "quantityLabel": "quantity",
     "formulaPreview": "Reads as",
+    "formulaViewModeLabel": "Formula editor view",
+    "formulaViewBoth": "Code + blocks",
+    "formulaViewCode": "Code",
+    "formulaViewBlocks": "Blocks",
+    "formulaUnifiedHint": "One formula in config: code and blocks stay in sync via the same AST. Edit either side — invalid code is not applied until it parses.",
+    "formulaCodePanel": "Formula code",
+    "formulaBlocksPanel": "Blocks (generated from the same formula)",
     "blocksPalette": "Blocks",
     "blocksPaletteHint": "Drag a block into the formula, or tap a slot then a block",
     "blocksVariables": "Variables",
@@ -310,6 +317,8 @@
     "codeModeApply": "Apply",
     "codeModeRevert": "Cancel",
     "codeModeClose": "Close",
+    "codeModeBuilderChanged": "The builder was updated while you edit this script. Reload to match blocks, or keep editing and Apply when ready.",
+    "codeModeReloadFromBuilder": "Reload from builder",
     "codeModeDocsHelp": "Formula & code reference",
     "codeEditorLineCol": "Line {line}, col {column}",
     "codeEditorErrors": "{count} error(s)",
@@ -521,7 +530,7 @@
     "flags": "Flags",
     "deleteConfirm": "Delete this calculator?",
     "editCalculator": "Edit",
-    "manage": "Access",
+    "manage": "Manage",
     "manageClose": "Close",
     "transferTitle": "Transfer ownership",
     "transferEmailPlaceholder": "New owner email",
@@ -562,7 +571,6 @@
     "accessExpiryCheckNone": "Done. No users with expired access to ban.",
     "accessExpiryCheckAutoDone": "Auto check: banned {count}",
     "accessExpiryCheckCronHint": "For a precise schedule without opening admin: GET /api/cron/access-expiry with header Authorization: Bearer CRON_SECRET (.env).",
-    "manage": "Manage",
     "hideDetails": "Collapse",
     "manageModalClose": "Close",
     "manageModalResizeWidth": "Resize width",
@@ -724,9 +732,12 @@
     "calculatorsStatus": "Calculators"
   },
   "docs": {
+    "pageEyebrow": "Help center",
     "pageTitle": "Formula & code reference",
-    "pageDescription": "How blocks and code work in the calculator builder. This page is generated automatically from the formula registry.",
-    "intro": "Use **blocks** in the visual editor or **code** in the script sheet — both use the same language. Search below or browse by category.\n\nNew operators and functions appear here automatically when added to the platform.",
+    "pageDescription": "Beginner guide, block editor, formula code, and full calculator script. Reference cards are generated from the formula registry.",
+    "guideTocLabel": "On this page",
+    "searchEmpty": "No matches. Try another keyword or open **Getting started**.",
+    "intro": "Welcome. This help explains how calculator logic works in **blocks**, in **formula code**, and in the **full script** — all three edit the same underlying formula tree.",
     "tabFormulas": "Formulas & blocks",
     "tabScript": "Calculator script",
     "searchPlaceholder": "Search SUM, field, input…",
@@ -745,162 +756,247 @@
       "plus": {
         "title": "Addition (+)",
         "description": "Adds two values.",
-        "blockUsage": "Drag the **+** operator between two blocks in the formula workspace."
+        "blockUsage": "Drag the **+** operator between two blocks in the formula workspace.",
+        "codeUsage": "Write `a + b` with field references, e.g. `field_item.qty + 1`."
       },
       "minus": {
         "title": "Subtraction (−)",
         "description": "Subtracts the right value from the left.",
-        "blockUsage": "Drag **−** between blocks, e.g. revenue minus cost."
+        "blockUsage": "Drag **−** between blocks, e.g. revenue minus cost.",
+        "codeUsage": "Write `a - b`, e.g. `field_item.var_price - field_item.var_cost`."
       },
       "multiply": {
         "title": "Multiplication (×)",
         "description": "Multiplies two values.",
-        "blockUsage": "Drag **×** — typical for quantity × price."
+        "blockUsage": "Drag **×** — typical for quantity × price.",
+        "codeUsage": "Write `a * b` — the usual qty × price pattern."
       },
       "divide": {
         "title": "Division (÷)",
         "description": "Divides the left value by the right. Division by zero shows a warning and returns 0.",
-        "blockUsage": "Drag **÷** between blocks."
+        "blockUsage": "Drag **÷** between blocks.",
+        "codeUsage": "Write `a / b`. Parentheses group sub-expressions: `(a + b) / c`."
       },
       "gt": {
         "title": "Greater than (>)",
         "description": "Returns 1 when the left value is greater than the right, otherwise 0.",
-        "blockUsage": "Use in code or drag **>** between blocks, e.g. for IF conditions."
+        "blockUsage": "Use in code or drag **>** between blocks, e.g. for IF conditions.",
+        "codeUsage": "Use in `IF(field_item.qty > 10, …)` — result is 1 or 0."
       },
       "lt": {
         "title": "Less than (<)",
         "description": "Returns 1 when the left value is smaller than the right, otherwise 0.",
-        "blockUsage": "Use in code or drag **<** between blocks."
+        "blockUsage": "Use in code or drag **<** between blocks.",
+        "codeUsage": "Use `a < b` inside `IF` or compare calc outputs."
       },
       "gte": {
         "title": "Greater or equal (≥)",
         "description": "Returns 1 when the left value is greater than or equal to the right, otherwise 0.",
-        "blockUsage": "Type **>=** in code or drag **≥** from the palette."
+        "blockUsage": "Type **>=** in code or drag **≥** from the palette.",
+        "codeUsage": "Type `>=` in code (not a single Unicode char)."
       },
       "lte": {
         "title": "Less or equal (≤)",
         "description": "Returns 1 when the left value is less than or equal to the right, otherwise 0.",
-        "blockUsage": "Type **<=** in code or drag **≤** from the palette."
+        "blockUsage": "Type **<=** in code or drag **≤** from the palette.",
+        "codeUsage": "Type `<=` in code."
       },
       "eq": {
         "title": "Equal (==)",
         "description": "Returns 1 when both values are equal, otherwise 0.",
-        "blockUsage": "Type **==** in code or drag **=** from the palette."
+        "blockUsage": "Type **==** in code or drag **=** from the palette.",
+        "codeUsage": "Type `==` for equality tests."
       },
       "neq": {
         "title": "Not equal (≠)",
         "description": "Returns 1 when values differ, otherwise 0.",
-        "blockUsage": "Type **!=** in code or drag **≠** from the palette."
+        "blockUsage": "Type **!=** in code or drag **≠** from the palette.",
+        "codeUsage": "Type `!=` for inequality."
       },
       "sum": {
         "title": "SUM",
         "description": "Sum of all arguments.",
-        "blockUsage": "Drag **SUM** from the palette and fill the inner slots with values to add."
+        "blockUsage": "Drag **SUM** from the palette and fill the inner slots with values to add.",
+        "codeUsage": "`SUM(a, b, c)` — comma-separated; nest calls: `SUM(a, SUM(b, c))`."
       },
       "count": {
         "title": "COUNT",
         "description": "Number of arguments (not empty slots).",
-        "blockUsage": "Drag **COUNT** and add values inside the brackets."
+        "blockUsage": "Drag **COUNT** and add values inside the brackets.",
+        "codeUsage": "`COUNT(a, b, …)` counts how many arguments you pass."
       },
       "avg": {
         "title": "AVG",
         "description": "Average (arithmetic mean) of all arguments.",
-        "blockUsage": "Drag **AVG** from aggregates in the palette."
+        "blockUsage": "Drag **AVG** from aggregates in the palette.",
+        "codeUsage": "`AVG(a, b, c)` — arithmetic mean."
       },
       "min": {
         "title": "MIN",
         "description": "Smallest value among arguments.",
-        "blockUsage": "Drag **MIN** from the palette."
+        "blockUsage": "Drag **MIN** from the palette.",
+        "codeUsage": "`MIN(a, b, …)` — smallest argument value."
       },
       "max": {
         "title": "MAX",
         "description": "Largest value among arguments.",
-        "blockUsage": "Drag **MAX** from the palette."
+        "blockUsage": "Drag **MAX** from the palette.",
+        "codeUsage": "`MAX(a, b, …)` — largest argument value."
       },
       "sum-rows": {
         "title": "SUM_ROWS",
         "description": "Sum of an expression evaluated for each row in a line-items table.",
-        "blockUsage": "Under a line-items field, drag **SUM rows** and build the per-row formula inside."
+        "blockUsage": "Under a line-items field, drag **SUM rows** and build the per-row formula inside.",
+        "codeUsage": "`SUM_ROWS(field_lines, row.qty * row.var_cost)` — `row.*` only inside the second argument."
       },
       "count-rows": {
         "title": "COUNT_ROWS",
         "description": "Number of rows in a line-items table (same expression evaluated per row for consistency).",
-        "blockUsage": "Use **COUNT rows** from the line-items group in the palette."
+        "blockUsage": "Use **COUNT rows** from the line-items group in the palette.",
+        "codeUsage": "`COUNT_ROWS(table_id, row.qty)` — per-row expression."
       },
       "avg-rows": {
         "title": "AVG_ROWS",
         "description": "Average of an expression over all rows in a line-items table.",
-        "blockUsage": "Drag **AVG rows** for a table field."
+        "blockUsage": "Drag **AVG rows** for a table field.",
+        "codeUsage": "`AVG_ROWS(table_id, row.var_price)` averages over rows."
       },
       "min-rows": {
         "title": "MIN_ROWS",
         "description": "Minimum of an expression across table rows.",
-        "blockUsage": "Drag **MIN rows** from the palette."
+        "blockUsage": "Drag **MIN rows** from the palette.",
+        "codeUsage": "`MIN_ROWS(table_id, row.var_cost)`."
       },
       "max-rows": {
         "title": "MAX_ROWS",
         "description": "Maximum of an expression across table rows.",
-        "blockUsage": "Drag **MAX rows** from the palette."
+        "blockUsage": "Drag **MAX rows** from the palette.",
+        "codeUsage": "`MAX_ROWS(table_id, row.var_price)`."
       },
       "if": {
         "title": "IF",
         "description": "Picks the second value when the condition is non-zero, otherwise the third.",
-        "blockUsage": "Drag **IF** and fill condition, then-branch, and else-branch."
+        "blockUsage": "Drag **IF** and fill condition, then-branch, and else-branch.",
+        "codeUsage": "`IF(condition, thenValue, elseValue)` — condition true when ≠ 0. Example: `IF(field_item.qty >= 10, price * 0.9, price)`."
       },
       "round": {
         "title": "ROUND",
         "description": "Rounds a numeric value to the given number of decimal places (0–10).",
-        "blockUsage": "Drag **ROUND** and fill value and optional decimals."
+        "blockUsage": "Drag **ROUND** and fill value and optional decimals.",
+        "codeUsage": "`ROUND(value, decimals)` — e.g. `ROUND(calc_subtotal, 2)`."
       }
     },
     "operands": {
       "quantity": {
         "title": "Quantity (.qty)",
         "description": "User-entered quantity for an input field.",
-        "blockUsage": "Drag the field's quantity chip from the palette."
+        "blockUsage": "Drag the field's quantity chip from the palette.",
+        "codeUsage": "Reference as `field_item.qty` in any formula."
       },
       "property": {
         "title": "Property (.var_*)",
         "description": "A numeric property on an input (cost, price, etc.).",
-        "blockUsage": "Drag a property block under its field group."
+        "blockUsage": "Drag a property block under its field group.",
+        "codeUsage": "Reference as `field_item.var_cost` (property id after the dot)."
       },
       "constant": {
         "title": "Constant",
         "description": "Fixed value defined in calculator constants.",
-        "blockUsage": "Drag a constant from the palette into the formula."
+        "blockUsage": "Drag a constant from the palette into the formula.",
+        "codeUsage": "Use the constant id alone: `const_markup`."
       },
       "macro": {
         "title": "Macro",
         "description": "Reusable formula fragment defined in calculator macros.",
-        "blockUsage": "Drag a macro chip into any formula."
+        "blockUsage": "Drag a macro chip into any formula.",
+        "codeUsage": "Use macro id alone: `macro_sheet_cost` (defined in macros.calc)."
       },
       "calculation": {
         "title": "Calculation",
         "description": "Result of another intermediate formula.",
-        "blockUsage": "Drag a calculation reference when building outputs or other calcs."
+        "blockUsage": "Drag a calculation reference when building outputs or other calcs.",
+        "codeUsage": "Use calc id: `calc_subtotal` (must be declared above in dependency order)."
       },
       "row-property": {
         "title": "Row property (row.*)",
         "description": "Property of the current row inside SUM_ROWS / line-items formulas.",
-        "blockUsage": "Inside a row aggregate bracket, use row property blocks."
+        "blockUsage": "Inside a row aggregate bracket, use row property blocks.",
+        "codeUsage": "Only inside `SUM_ROWS(…, …)`: `row.var_cost`, `row.qty`."
       }
     },
     "script": {
       "input": {
         "title": "input",
-        "description": "Declares an input field with properties and optional quantity."
+        "description": "Declares an input field with properties and optional quantity.",
+        "codeUsage": "Declare fields the user fills. Properties become `field_id.var_*`.",
+        "blockUsage": "Add inputs in the builder sidebar; they appear in the block palette under each field."
       },
       "constant": {
         "title": "constant",
-        "description": "Fixed numeric constant used in formulas."
+        "description": "Fixed numeric constant used in formulas.",
+        "codeUsage": "Fixed value; reference as `const_id` in formulas.",
+        "blockUsage": "Constants section → drag into formulas."
       },
       "calc": {
         "title": "calc",
-        "description": "Intermediate calculation with a formula block."
+        "description": "Intermediate calculation with a formula block.",
+        "codeUsage": "Intermediate formula; reference as `calc_id`.",
+        "blockUsage": "Calculation fields section → open formula → blocks or code."
       },
       "output": {
         "title": "output",
-        "description": "Final result shown to the user."
+        "description": "Final result shown to the user.",
+        "codeUsage": "Shown after Calculate; use a `formula { return … }` block in the output declaration.",
+        "blockUsage": "Result fields section → formula defines what the user sees."
+      },
+      "macro": {
+        "title": "macro",
+        "description": "Reusable formula fragment; referenced by id in other formulas.",
+        "codeUsage": "Declare once in `macros.calc`, use as `macro_sheet_cost` elsewhere.",
+        "blockUsage": "Define the macro body with blocks in the Macros section; drag the macro chip into any formula."
+      }
+    },
+    "tabGuide": "Getting started",
+    "introShort": "Reference cards for every operator and function. Use **Getting started** for a full walkthrough, or search below.",
+    "codeUsageLabel": "In code / formula text",
+    "guide": {
+      "sections": {
+        "overview": {
+          "title": "What is this calculator?",
+          "body": "A calculator is a **configuration** (`CalculatorConfig`): input fields, constants, optional macros, intermediate **calculations**, and final **outputs**. Each calc/output has one **formula** stored as a tree (AST). The builder lets you edit that tree as **blocks** or as **text** — both views read and write the **same** tree, so you never maintain two separate formulas.\n\nOn the public screen the user fills quantities and properties; the app walks the dependency graph and evaluates every formula in order."
+        },
+        "configParts": {
+          "title": "Parts of the configuration",
+          "body": "| Part | User sees it? | Role |\n|------|----------------|------|\n| **Input** (`field_*`) | Yes — quantity + properties | Values the user types (qty, cost, price, table rows) |\n| **Constant** (`const_*`) | No | Fixed numbers you embed in formulas (markup, tax rate) |\n| **Macro** (`macro_*`) | No | Reusable formula fragment; drag into any formula like a variable |\n| **Calculation** (`calc_*`) | No (intermediate) | Hidden step used by other formulas |\n| **Output** (`output_*`) | Yes — after **Calculate** | Final result shown to the user |\n\n**Auto calculations** (badge «Auto») are created when you enable «quantity × property» on an input variable. They appear in a read-only script tab and in the block palette as calc references."
+        },
+        "oneFormula": {
+          "title": "One formula, three views",
+          "body": "```\nCalculatorConfig.expression (JSON AST)  ← only source of truth in the database\n        ↑ parse (registry)     ↓ format (registry)\n   formula code text          block workspace UI\n```\n\n- **Blocks** — Scratch-style workspace: operands, operators, `SUM(…)`, `IF(…)`, groups `( )`.\n- **Code** — same language inside `formula { … }` or in the full script sheet.\n- **Preview** («Reads as» / breakdown on the calculator page) — human-readable text generated from the AST.\n\nWhen you add a new operator in the platform, it is implemented once in `lib/formula/nodes/primitives/*.node.ts` and appears in blocks, code, autocomplete, and this help page automatically."
+        },
+        "blocksHowTo": {
+          "title": "Block editor — step by step",
+          "body": "1. Open a **calculation** or **output** field and expand **Calculation logic**.\n2. Choose view **Blocks** or **Code + blocks**.\n3. Tap an empty **＋** slot (or drag from the palette). The dashed area is the formula workspace.\n4. **Palette → Blocks**: fields (qty, properties), constants, macros, other calcs/outputs.\n5. **Palette → Actions**: `+ − × ÷`, comparisons, `( )`, `SUM`, `IF`, `ROUND`, row aggregates.\n6. Drag **⠿** on a block to move it; drop on another slot to nest inside `SUM` / `IF` / groups.\n7. **Reads as** under the workspace shows the formula as text (always synced with blocks).\n\n**IF** and **ROUND** use colored brackets with labeled slots (condition / then / else, value / decimals). **SUM** accepts comma-separated arguments inside one bracket."
+        },
+        "codeHowTo": {
+          "title": "Formula code — step by step",
+          "body": "1. In the same panel, switch to **Code** or **Code + blocks**.\n2. Write an expression or a small program:\n\n```calc\nformula {\n  local subtotal = field_item.qty * field_item.var_cost\n  return ROUND(subtotal * const_markup, 2)\n}\n```\n\n3. **Locals** must appear before `return`. Names are lowercase identifiers.\n4. References: `field_id.qty`, `field_id.var_cost`, `const_id`, `calc_id`, `output_id`, `macro_id`.\n5. Comparisons return **1** (true) or **0** (false). `IF(condition, then, else)` treats any non-zero condition as true.\n6. Invalid syntax is **not** saved to blocks until the parser accepts it (debounced while typing).\n7. Use **Ctrl/Cmd+S** in the code sheet to apply the whole project; in a single formula field, changes apply when you save the calculator.\n\nAutocomplete (Ctrl+Space) lists fields, functions, and script keywords."
+        },
+        "unifiedSync": {
+          "title": "Keeping blocks and code in sync",
+          "body": "- Editing **blocks** updates the code panel immediately (format from registry).\n- Editing **code** updates blocks after a short pause once the text parses.\n- Opening **Code** (toolbar) opens the **full calculator script** split into tabs (`inputs.calc`, `constants.calc`, …). **Apply** merges all tabs into the same `CalculatorConfig` the block UI uses.\n- If you change the builder while the script sheet is open and you have **not** edited the script, the sheet reloads from the builder automatically.\n- If you **have** edited the script, a banner offers **Reload from builder** so you do not accidentally overwrite your text.\n\nThere is still only one JSON config — the sheet is a text projection, not a second database."
+        },
+        "fullScript": {
+          "title": "Full script (Code sheet)",
+          "body": "The **Code** button in the builder toolbar opens all declarations at once:\n\n| Tab | Content |\n|-----|--------|\n| `inputs.calc` | `input field_… { … }` |\n| `constants.calc` | `constant const_… { … }` |\n| `macros.calc` | `macro macro_… { formula { … } }` |\n| `calculations.calc` | `calc calc_… { formula { … } }` |\n| `outputs.calc` | `output output_… { formula { … } }` |\n| `auto-calculations.calc` | read-only auto totals |\n\nDirectives: `#include \"file.calc\"`, `#use \"template-id\"` (preset). See the **Calculator script** tab below for syntax cards.\n\nRepo reference: `docs/calculator-script.md`."
+        },
+        "evaluation": {
+          "title": "How values are computed",
+          "body": "1. Collect user **quantities** and **line-item rows**.\n2. Run **auto calcs** and user **calculations** in dependency order (`field-graph` detects cycles).\n3. Evaluate each formula via **registry** (`evaluateExpressionViaRegistry`).\n4. Run **outputs** last.\n5. **Locals** inside one output are evaluated inside that field only.\n\nDivision by zero returns **0** with a warning in logs. `ROUND(x, n)` clamps `n` to 0–10."
+        },
+        "tips": {
+          "title": "Tips for beginners",
+          "body": "- Start from a **preset** (typography, salon, print shop) in the builder, then tweak blocks.\n- Use **calc** fields for long intermediate steps; keep **outputs** short.\n- Use **macros** when the same sub-expression appears in several formulas.\n- For tables (line items), use `SUM_ROWS(table_id, row.qty * row.var_cost)` in code or **SUM rows** in blocks.\n- **?** on palette blocks and **Help** in the header open this page.\n- Run tests after script changes: `npx vitest run tests/formula`."
+        }
       }
     }
   },

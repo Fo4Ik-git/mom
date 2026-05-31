@@ -1,28 +1,46 @@
 /** Lightweight formula/script syntax colors — no extra deps. */
-export function FormulaCodeSnippet({ code }: { code: string }) {
+export function FormulaCodeSnippet({
+  code,
+  label,
+}: {
+  code: string;
+  label?: string;
+}) {
   const tokens = tokenizeFormulaCode(code);
 
   return (
-    <pre className="overflow-x-auto rounded-lg bg-muted/50 px-3 py-2 font-mono text-xs whitespace-pre-wrap">
-      <code>
-        {tokens.map((token, index) => (
-          <span key={index} className={TOKEN_CLASS[token.kind]}>
-            {token.text}
+    <div className="overflow-hidden rounded-xl border border-border/70 bg-[#0f1419] shadow-inner dark:border-border/50">
+      {label && (
+        <div className="flex items-center gap-2 border-b border-white/10 px-3 py-1.5">
+          <span className="size-2 rounded-full bg-rose-400/90" aria-hidden />
+          <span className="size-2 rounded-full bg-amber-400/90" aria-hidden />
+          <span className="size-2 rounded-full bg-emerald-400/90" aria-hidden />
+          <span className="ml-1 font-mono text-[10px] uppercase tracking-wider text-slate-500">
+            {label}
           </span>
-        ))}
-      </code>
-    </pre>
+        </div>
+      )}
+      <pre className="overflow-x-auto px-3 py-2.5 font-mono text-[13px] leading-relaxed whitespace-pre-wrap text-slate-300">
+        <code>
+          {tokens.map((token, index) => (
+            <span key={index} className={TOKEN_CLASS[token.kind]}>
+              {token.text}
+            </span>
+          ))}
+        </code>
+      </pre>
+    </div>
   );
 }
 
 type TokenKind = "plain" | "keyword" | "number" | "ident" | "op";
 
 const TOKEN_CLASS: Record<TokenKind, string> = {
-  plain: "",
-  keyword: "font-semibold text-violet-700 dark:text-violet-300",
-  number: "text-amber-700 dark:text-amber-300",
-  ident: "text-sky-800 dark:text-sky-300",
-  op: "text-rose-700 dark:text-rose-300",
+  plain: "text-slate-300",
+  keyword: "font-semibold text-violet-300",
+  number: "text-amber-300",
+  ident: "text-sky-300",
+  op: "text-rose-300",
 };
 
 const KEYWORDS = new Set([
@@ -36,11 +54,15 @@ const KEYWORDS = new Set([
   "AVG_ROWS",
   "MIN_ROWS",
   "MAX_ROWS",
+  "IF",
+  "ROUND",
   "return",
+  "local",
   "input",
   "output",
   "calc",
   "constant",
+  "macro",
   "property",
   "formula",
   "mode",

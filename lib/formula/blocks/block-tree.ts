@@ -16,6 +16,14 @@ import {
   unwrapAggregate,
 } from "@/lib/formula/core/aggregate-helpers";
 import { createExpressionFromPaletteDrag } from "@/lib/formula/blocks/palette-from-registry";
+import {
+  isCompositeExpressionFilled,
+  isCompositeSlotKey,
+  readCompositeSlot,
+  unwrapCompositeNode,
+  writeCompositeSlot,
+} from "@/lib/formula/blocks/composite-node-ops";
+import { isCompositeExpressionType } from "@/lib/formula/nodes/block-ui-registry";
 
 export type SlotPath =
   | "left"
@@ -204,23 +212,14 @@ export function applyContinueAtPath(
   }
 
   if (
-    parent.type === "conditional" &&
-    (slot === "condition" || slot === "whenTrue" || slot === "whenFalse")
+    isCompositeExpressionType(parent.type) &&
+    isCompositeSlotKey(parent.type, slot)
   ) {
-    return setSlotExpression(root, parentPath, {
-      ...parent,
-      [slot]: applyAfterExpression(anchor, item),
-    });
-  }
-
-  if (
-    parent.type === "round" &&
-    (slot === "value" || slot === "decimals")
-  ) {
-    return setSlotExpression(root, parentPath, {
-      ...parent,
-      [slot]: applyAfterExpression(anchor, item),
-    });
+    return setSlotExpression(
+      root,
+      parentPath,
+      writeCompositeSlot(parent, slot, applyAfterExpression(anchor, item)),
+    );
   }
 
   return setSlotExpression(
@@ -270,18 +269,8 @@ export function isExpressionFilled(expression: BlockExpression): boolean {
   if (expression.type === "rowAggregate") {
     return isExpressionFilled(expression.inner);
   }
-  if (expression.type === "conditional") {
-    return (
-      isExpressionFilled(expression.condition) ||
-      isExpressionFilled(expression.whenTrue) ||
-      isExpressionFilled(expression.whenFalse)
-    );
-  }
-  if (expression.type === "round") {
-    return (
-      isExpressionFilled(expression.value) ||
-      isExpressionFilled(expression.decimals)
-    );
+  if (isCompositeExpressionType(expression.type)) {
+    return isCompositeExpressionFilled(expression, isExpressionFilled);
   }
   return expression.type !== "empty";
 }
@@ -317,22 +306,11 @@ export function getSlotExpression(
       current = current.inner;
       continue;
     }
-    if (current.type === "conditional") {
-      if (
-        slot !== "condition" &&
-        slot !== "whenTrue" &&
-        slot !== "whenFalse"
-      ) {
+    if (isCompositeExpressionType(current.type)) {
+      if (!isCompositeSlotKey(current.type, slot)) {
         return emptyBlockExpression();
       }
-      current = current[slot];
-      continue;
-    }
-    if (current.type === "round") {
-      if (slot !== "value" && slot !== "decimals") {
-        return emptyBlockExpression();
-      }
-      current = current[slot];
+      current = readCompositeSlot(current, slot);
       continue;
     }
     if (current.type !== "operation") {
@@ -394,36 +372,19 @@ export function setSlotExpression(
     };
   }
 
-  if (root.type === "conditional") {
+  if (isCompositeExpressionType(root.type)) {
     const [slot, ...rest] = path;
-    if (
-      slot !== "condition" &&
-      slot !== "whenTrue" &&
-      slot !== "whenFalse"
-    ) {
+    if (!isCompositeSlotKey(root.type, slot)) {
       return root;
     }
     if (rest.length === 0) {
-      return { ...root, [slot]: value };
+      return writeCompositeSlot(root, slot, value);
     }
-    return {
-      ...root,
-      [slot]: setSlotExpression(root[slot], rest, value),
-    };
-  }
-
-  if (root.type === "round") {
-    const [slot, ...rest] = path;
-    if (slot !== "value" && slot !== "decimals") {
-      return root;
-    }
-    if (rest.length === 0) {
-      return { ...root, [slot]: value };
-    }
-    return {
-      ...root,
-      [slot]: setSlotExpression(root[slot], rest, value),
-    };
+    return writeCompositeSlot(
+      root,
+      slot,
+      setSlotExpression(readCompositeSlot(root, slot), rest, value),
+    );
   }
 
   if (root.type !== "operation") {
@@ -605,55 +566,33 @@ export function removeRowAggregateAt(
   return setSlotExpression(root, aggregatePath, replacement);
 }
 
-export function removeConditionalAt(
+export function removeCompositeAt(
   root: BlockExpression,
-  conditionalPath: SlotPath[],
+  compositePath: SlotPath[],
 ): BlockExpression {
   const node =
-    conditionalPath.length === 0
+    compositePath.length === 0
       ? root
-      : getSlotExpression(root, conditionalPath);
+      : getSlotExpression(root, compositePath);
 
-  if (node.type !== "conditional") {
+  if (!isCompositeExpressionType(node.type)) {
     return root;
   }
 
-  const replacement = isExpressionFilled(node.whenTrue)
-    ? node.whenTrue
-    : isExpressionFilled(node.whenFalse)
-      ? node.whenFalse
-      : isExpressionFilled(node.condition)
-        ? node.condition
-        : emptyBlockExpression();
+  const replacement = unwrapCompositeNode(node, isExpressionFilled);
 
-  if (conditionalPath.length === 0) {
+  if (compositePath.length === 0) {
     return replacement;
   }
 
-  return setSlotExpression(root, conditionalPath, replacement);
+  return setSlotExpression(root, compositePath, replacement);
 }
 
-export function removeRoundAt(
-  root: BlockExpression,
-  roundPath: SlotPath[],
-): BlockExpression {
-  const node =
-    roundPath.length === 0 ? root : getSlotExpression(root, roundPath);
+/** @deprecated Use removeCompositeAt */
+export const removeConditionalAt = removeCompositeAt;
 
-  if (node.type !== "round") {
-    return root;
-  }
-
-  const replacement = isExpressionFilled(node.value)
-    ? node.value
-    : emptyBlockExpression();
-
-  if (roundPath.length === 0) {
-    return replacement;
-  }
-
-  return setSlotExpression(root, roundPath, replacement);
-}
+/** @deprecated Use removeCompositeAt */
+export const removeRoundAt = removeCompositeAt;
 
 /** Remove an operation node; keeps a filled child if any, otherwise empty. */
 export function removeOperationAt(

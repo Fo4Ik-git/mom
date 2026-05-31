@@ -10,6 +10,7 @@ import {
 import { useEditorShortcutLabels } from "@/app/components/builder/use-editor-shortcut-labels";
 import { DocsHelpLink } from "@/app/components/docs/docs-help-link";
 import { usePersistedResize } from "@/lib/hooks/use-persisted-resize";
+import { calculatorConfigFingerprint } from "@/lib/calculator/config/config-fingerprint";
 import { finalizeConfig } from "@/lib/calculator/config/sync";
 import { formatScriptFileSource } from "@/lib/calculator/script/format-file";
 import { formatScriptProject } from "@/lib/calculator/script/format-project";
@@ -127,6 +128,15 @@ export function ConfigCodeSheet({
     SCRIPT_FILE_INPUTS,
   );
   const [error, setError] = useState<string | null>(null);
+  const [syncedFingerprint, setSyncedFingerprint] = useState("");
+  const [dirty, setDirty] = useState(false);
+
+  const builderFingerprint = useMemo(
+    () => calculatorConfigFingerprint(config, autoTotalSuffix),
+    [config, autoTotalSuffix],
+  );
+  const builderAhead =
+    open && dirty && builderFingerprint !== syncedFingerprint;
 
   const parsePreview = useMemo(
     () => parseScriptProject(project, config),
@@ -152,15 +162,34 @@ export function ConfigCodeSheet({
     return counts;
   }, [parsePreview.errors]);
 
+  function loadProjectFromBuilder() {
+    const fp = calculatorConfigFingerprint(config, autoTotalSuffix);
+    setSyncedFingerprint(fp);
+    setProject(formatScriptProject(finalizeConfig(config, autoTotalSuffix)));
+    setDirty(false);
+    setError(null);
+  }
+
   useEffect(() => {
     if (!open) {
       onPreviewConfig?.(null);
       return;
     }
-    setProject(formatScriptProject(finalizeConfig(config, autoTotalSuffix)));
+    loadProjectFromBuilder();
     setActiveFile(SCRIPT_FILE_INPUTS);
-    setError(null);
-  }, [open, config, autoTotalSuffix, onPreviewConfig]);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    if (builderFingerprint === syncedFingerprint) {
+      return;
+    }
+    if (!dirty) {
+      loadProjectFromBuilder();
+    }
+  }, [open, builderFingerprint, syncedFingerprint, dirty, config, autoTotalSuffix]);
 
   useEffect(() => {
     if (!open) {
@@ -226,6 +255,10 @@ export function ConfigCodeSheet({
       setProject(result.project);
     }
     onApply(result.config);
+    setDirty(false);
+    setSyncedFingerprint(
+      calculatorConfigFingerprint(result.config, autoTotalSuffix),
+    );
     onPreviewConfig?.(null);
     onClose();
   }
@@ -237,6 +270,7 @@ export function ConfigCodeSheet({
 
   function updateActiveFile(value: string) {
     setProject((prev) => ({ ...prev, [activeFile]: value }));
+    setDirty(true);
     setError(null);
   }
 
@@ -295,6 +329,18 @@ export function ConfigCodeSheet({
             <p className="mt-0.5 text-xs text-muted-foreground">
               {t("codeModeProjectHint")} · {shortcuts.summary}
             </p>
+            {builderAhead && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
+                <span className="min-w-0 flex-1">{t("codeModeBuilderChanged")}</span>
+                <button
+                  type="button"
+                  onClick={loadProjectFromBuilder}
+                  className="shrink-0 rounded-lg bg-amber-600 px-2.5 py-1 font-semibold text-white hover:bg-amber-700"
+                >
+                  {t("codeModeReloadFromBuilder")}
+                </button>
+              </div>
+            )}
           </div>
           <button
             type="button"

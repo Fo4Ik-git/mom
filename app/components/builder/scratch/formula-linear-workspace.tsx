@@ -24,14 +24,14 @@ import {
   showContinuationInsideGroup,
 } from "@/lib/formula/blocks/block-tree";
 import { AggregateBracket } from "@/app/components/builder/scratch/aggregate-bracket";
-import { ConditionalBracket } from "@/app/components/builder/scratch/conditional-bracket";
-import { RoundBracket } from "@/app/components/builder/scratch/round-bracket";
+import { renderCompositeExpression } from "@/app/components/builder/scratch/composite-expression-node";
 import { RowAggregateBracket } from "@/app/components/builder/scratch/row-aggregate-bracket";
 import { DragHandle } from "@/app/components/builder/scratch/drag-handle";
 import { BlockSlot } from "@/app/components/builder/scratch/block-slot";
 import { GroupBracket } from "@/app/components/builder/scratch/group-bracket";
 import { OperatorChip } from "@/app/components/builder/scratch/operator-chip";
 import { normalizeAggregateArgs } from "@/lib/formula/core/aggregate-helpers";
+import { isCompositeBlockType } from "@/lib/formula/nodes/block-ui-registry";
 
 interface FormulaLinearWorkspaceProps {
   outputKey: string;
@@ -45,8 +45,7 @@ interface FormulaLinearWorkspaceProps {
   onGroupRemove: (path: SlotPath[]) => void;
   onAggregateRemove: (path: SlotPath[]) => void;
   onRowAggregateRemove: (path: SlotPath[]) => void;
-  onConditionalRemove: (path: SlotPath[]) => void;
-  onRoundRemove: (path: SlotPath[]) => void;
+  onCompositeRemove: (path: SlotPath[]) => void;
   onSlotTap: (path: SlotPath[]) => void;
   activeSlotPath?: SlotPath[] | null;
 }
@@ -56,8 +55,7 @@ function hasGroups(expression: BlockExpression): boolean {
     expression.type === "group" ||
     expression.type === "aggregate" ||
     expression.type === "rowAggregate" ||
-    expression.type === "conditional" ||
-    expression.type === "round"
+    isCompositeBlockType(expression.type)
   ) {
     return true;
   }
@@ -238,122 +236,30 @@ function ExpressionNode({
   onGroupRemove,
   onAggregateRemove,
   onRowAggregateRemove,
-  onConditionalRemove,
-  onRoundRemove,
+  onCompositeRemove,
   onSlotTap,
   activeSlotPath = null,
 }: ExpressionNodeProps) {
-  if (expression.type === "round") {
-    const slots: Array<{ key: "value" | "decimals"; label: string }> = [
-      { key: "value", label: "v" },
-      { key: "decimals", label: "d" },
-    ];
-
-    return (
-      <RoundBracket
-        outputKey={outputKey}
-        path={path}
-        onRemove={() => onRoundRemove(path)}
-      >
-        {slots.map((slot, index) => (
-          <span
-            key={`${path.join("-")}-${slot.key}`}
-            className="inline-flex items-center gap-1.5"
-          >
-            {index > 0 && (
-              <span className="select-none text-sm font-medium text-muted-foreground">
-                ,
-              </span>
-            )}
-            <span className="select-none text-[10px] font-semibold uppercase text-lime-700/80 dark:text-lime-300/80">
-              {slot.label}
-            </span>
-            <ExpressionNode
-              expression={expression[slot.key]}
-              path={[...path, slot.key]}
-              outputKey={outputKey}
-              config={config}
-              formulaTarget={formulaTarget}
-              quantityLabel={quantityLabel}
-              onSlotClear={onSlotClear}
-              onOperationRemove={onOperationRemove}
-              onGroupRemove={onGroupRemove}
-              onAggregateRemove={onAggregateRemove}
-              onRowAggregateRemove={onRowAggregateRemove}
-              onConditionalRemove={onConditionalRemove}
-              onRoundRemove={onRoundRemove}
-              onSlotTap={onSlotTap}
-              activeSlotPath={activeSlotPath}
-            />
-            {showContinuationAfter(expression[slot.key]) && (
-              <ContinuationSlot
-                outputKey={outputKey}
-                path={[...path, slot.key, "continue"]}
-                onSlotTap={onSlotTap}
-                activeSlotPath={activeSlotPath}
-              />
-            )}
-          </span>
-        ))}
-      </RoundBracket>
-    );
-  }
-
-  if (expression.type === "conditional") {
-    const branches: Array<{ key: "condition" | "whenTrue" | "whenFalse"; label: string }> = [
-      { key: "condition", label: "?" },
-      { key: "whenTrue", label: "✓" },
-      { key: "whenFalse", label: "✗" },
-    ];
-
-    return (
-      <ConditionalBracket
-        outputKey={outputKey}
-        path={path}
-        onRemove={() => onConditionalRemove(path)}
-      >
-        {branches.map((branch, index) => (
-          <span
-            key={`${path.join("-")}-${branch.key}`}
-            className="inline-flex items-center gap-1.5"
-          >
-            {index > 0 && (
-              <span className="select-none text-sm font-medium text-muted-foreground">
-                ,
-              </span>
-            )}
-            <span className="select-none text-[10px] font-semibold uppercase text-rose-700/80 dark:text-rose-300/80">
-              {branch.label}
-            </span>
-            <ExpressionNode
-              expression={expression[branch.key]}
-              path={[...path, branch.key]}
-              outputKey={outputKey}
-              config={config}
-              formulaTarget={formulaTarget}
-              quantityLabel={quantityLabel}
-              onSlotClear={onSlotClear}
-              onOperationRemove={onOperationRemove}
-              onGroupRemove={onGroupRemove}
-              onAggregateRemove={onAggregateRemove}
-              onRowAggregateRemove={onRowAggregateRemove}
-              onConditionalRemove={onConditionalRemove}
-              onRoundRemove={onRoundRemove}
-              onSlotTap={onSlotTap}
-              activeSlotPath={activeSlotPath}
-            />
-            {showContinuationAfter(expression[branch.key]) && (
-              <ContinuationSlot
-                outputKey={outputKey}
-                path={[...path, branch.key, "continue"]}
-                onSlotTap={onSlotTap}
-                activeSlotPath={activeSlotPath}
-              />
-            )}
-          </span>
-        ))}
-      </ConditionalBracket>
-    );
+  const composite = renderCompositeExpression({
+    expression,
+    path,
+    outputKey,
+    config,
+    formulaTarget,
+    quantityLabel,
+    onSlotClear,
+    onOperationRemove,
+    onGroupRemove,
+    onAggregateRemove,
+    onRowAggregateRemove,
+    onCompositeRemove,
+    onSlotTap,
+    activeSlotPath,
+    ExpressionNode,
+    ContinuationSlot,
+  });
+  if (composite) {
+    return composite;
   }
 
   if (expression.type === "rowAggregate") {
@@ -381,8 +287,7 @@ function ExpressionNode({
           onGroupRemove={onGroupRemove}
           onAggregateRemove={onAggregateRemove}
           onRowAggregateRemove={onRowAggregateRemove}
-          onConditionalRemove={onConditionalRemove}
-          onRoundRemove={onRoundRemove}
+          onCompositeRemove={onCompositeRemove}
           onSlotTap={onSlotTap}
           activeSlotPath={activeSlotPath}
         />
@@ -423,8 +328,7 @@ function ExpressionNode({
               onGroupRemove={onGroupRemove}
               onAggregateRemove={onAggregateRemove}
               onRowAggregateRemove={onRowAggregateRemove}
-              onConditionalRemove={onConditionalRemove}
-              onRoundRemove={onRoundRemove}
+              onCompositeRemove={onCompositeRemove}
               onSlotTap={onSlotTap}
               activeSlotPath={activeSlotPath}
             />
@@ -454,8 +358,7 @@ function ExpressionNode({
           onGroupRemove={onGroupRemove}
           onAggregateRemove={onAggregateRemove}
           onRowAggregateRemove={onRowAggregateRemove}
-          onConditionalRemove={onConditionalRemove}
-          onRoundRemove={onRoundRemove}
+          onCompositeRemove={onCompositeRemove}
           onSlotTap={onSlotTap}
           activeSlotPath={activeSlotPath}
         />
@@ -518,58 +421,60 @@ function ExpressionNode({
     );
   }
 
-  return (
-    <>
-      <ExpressionNode
-        expression={expression.left}
-        path={[...path, "left"]}
-        outputKey={outputKey}
-        config={config}
-        formulaTarget={formulaTarget}
-        quantityLabel={quantityLabel}
-        onSlotClear={onSlotClear}
-        onOperationRemove={onOperationRemove}
-        onGroupRemove={onGroupRemove}
-        onAggregateRemove={onAggregateRemove}
-        onRowAggregateRemove={onRowAggregateRemove}
-        onConditionalRemove={onConditionalRemove}
-        onRoundRemove={onRoundRemove}
-        onSlotTap={onSlotTap}
-        activeSlotPath={activeSlotPath}
-      />
-      {showContinuationAfterLeft(expression) && (
-        <ContinuationSlot
+  if (expression.type === "operation") {
+    return (
+      <>
+        <ExpressionNode
+          expression={expression.left}
+          path={[...path, "left"]}
           outputKey={outputKey}
-          path={[...path, "left", "continue"]}
+          config={config}
+          formulaTarget={formulaTarget}
+          quantityLabel={quantityLabel}
+          onSlotClear={onSlotClear}
+          onOperationRemove={onOperationRemove}
+          onGroupRemove={onGroupRemove}
+          onAggregateRemove={onAggregateRemove}
+          onRowAggregateRemove={onRowAggregateRemove}
+          onCompositeRemove={onCompositeRemove}
           onSlotTap={onSlotTap}
           activeSlotPath={activeSlotPath}
         />
-      )}
-      <OperatorChip
-        operator={expression.operator}
-        path={path}
-        draggable
-        onRemove={() => onOperationRemove(path)}
-      />
-      <ExpressionNode
-        expression={expression.right}
-        path={[...path, "right"]}
-        outputKey={outputKey}
-        config={config}
-        formulaTarget={formulaTarget}
-        quantityLabel={quantityLabel}
-        onSlotClear={onSlotClear}
-        onOperationRemove={onOperationRemove}
-        onGroupRemove={onGroupRemove}
-        onAggregateRemove={onAggregateRemove}
-        onRowAggregateRemove={onRowAggregateRemove}
-        onConditionalRemove={onConditionalRemove}
-        onRoundRemove={onRoundRemove}
-        onSlotTap={onSlotTap}
-        activeSlotPath={activeSlotPath}
-      />
-    </>
-  );
+        {showContinuationAfterLeft(expression) && (
+          <ContinuationSlot
+            outputKey={outputKey}
+            path={[...path, "left", "continue"]}
+            onSlotTap={onSlotTap}
+            activeSlotPath={activeSlotPath}
+          />
+        )}
+        <OperatorChip
+          operator={expression.operator}
+          path={path}
+          draggable
+          onRemove={() => onOperationRemove(path)}
+        />
+        <ExpressionNode
+          expression={expression.right}
+          path={[...path, "right"]}
+          outputKey={outputKey}
+          config={config}
+          formulaTarget={formulaTarget}
+          quantityLabel={quantityLabel}
+          onSlotClear={onSlotClear}
+          onOperationRemove={onOperationRemove}
+          onGroupRemove={onGroupRemove}
+          onAggregateRemove={onAggregateRemove}
+          onRowAggregateRemove={onRowAggregateRemove}
+          onCompositeRemove={onCompositeRemove}
+          onSlotTap={onSlotTap}
+          activeSlotPath={activeSlotPath}
+        />
+      </>
+    );
+  }
+
+  return null;
 }
 
 export function FormulaLinearWorkspace({
@@ -577,8 +482,7 @@ export function FormulaLinearWorkspace({
   onGroupRemove,
   onAggregateRemove,
   onRowAggregateRemove,
-  onConditionalRemove,
-  onRoundRemove,
+  onCompositeRemove,
   ...props
 }: FormulaLinearWorkspaceProps) {
   const { expression, outputKey } = props;
@@ -613,8 +517,7 @@ export function FormulaLinearWorkspace({
         onGroupRemove={onGroupRemove}
         onAggregateRemove={onAggregateRemove}
         onRowAggregateRemove={onRowAggregateRemove}
-        onConditionalRemove={onConditionalRemove}
-        onRoundRemove={onRoundRemove}
+        onCompositeRemove={onCompositeRemove}
       />
       {showContinuationAfter(expression) && (
         <ContinuationSlot

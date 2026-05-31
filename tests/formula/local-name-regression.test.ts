@@ -77,7 +77,7 @@ describe("local variable name", () => {
       values,
     );
     expect(breakdowns.output_total).toBe(
-      "name = 200; IF(10 ≥ 10, 200 + 1.20, 200) = 201.20",
+      "name = 200; IF(10 >= 10, 200 + 1.20, 200) = 201.20",
     );
   });
 

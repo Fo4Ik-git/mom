@@ -28,10 +28,15 @@ export default async function DocsPage({
 
   return (
     <PageShell>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">{t("pageTitle")}</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">{t("pageDescription")}</p>
-      </div>
+      <header className="mb-6 sm:mb-8">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-accent">
+          {t("pageEyebrow")}
+        </p>
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{t("pageTitle")}</h1>
+        <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
+          {t("pageDescription")}
+        </p>
+      </header>
       <FormulaDocsView data={data} />
     </PageShell>
   );

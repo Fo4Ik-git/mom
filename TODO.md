@@ -107,10 +107,12 @@
     - Контекст: логика в JSON (`CalculatorConfig`) как AST `BlockExpression`. Реализовано: `lib/formula/code/*`, script project (`lib/calculator/script/*`), `config-code-sheet`, `formula-code-modal`, CodeMirror 6. **Остаётся:** полная registry-driven синхронизация без дублирования → **п.7**.
 
     - **Принципы архитектуры**
-      - [x] Единый источник правды — `CalculatorConfig` в JSON (в БД отдельного «code string» нет)
-      - [x] Текстовый режим = представление + редактор; Apply → parse → AST; открытие → serialize
-      - [ ] Блоки и код **всегда синхронны** при одновременном редактировании (есть live preview в sheet, нет dirty-badge при правке блоков)
-      - [x] Невалидный код не ломает сохранённый конфиг до Apply; ошибки inline (CM6 `linter`)
+      - [x] Единый источник правды — `CalculatorConfig` / AST `BlockExpression` в JSON (отдельного «code string» в БД нет)
+      - [x] Текст = **представление** AST: `formulaFieldToCode` / `formulaFieldFromCode` (`lib/formula/sync/formula-field-sync.ts`)
+      - [x] Блоки = **другое представление** того же AST (DnD меняет дерево, не параллельную логику)
+      - [x] Редактор поля формулы: код ↔ блоки live sync (`formula-unified-editor.tsx`, debounce parse)
+      - [ ] Полный конфиг в sheet: тот же pipeline без «двух правд» (preview есть, конфликт блоки+sheet — [ ])
+      - [x] Невалидный код не ломает AST до успешного parse; ошибка inline под редактором
 
     - **6.1. Выбор редактора (не писать свой с нуля)**
       - [x] Выбран **CodeMirror 6** (`@uiw/react-codemirror`, `@codemirror/*`) — `formula-code-editor.tsx`
@@ -154,7 +156,7 @@
     - **6.6. Расширение DSL (после MVP формул)**
       - [x] `IF(cond, then, else)` — `if.node.ts`
       - [x] Локальные переменные в `formula { local x = …; return … }` — `formula-program.ts`
-      - [ ] **Макросы** — `@macro` / п.4
+      - [x] **Макросы** — `macro` в script + autocomplete (п.4)
       - [ ] **Циклы** `FOR` — п.5 / п.7.6
       - [x] Весь конфиг текстом — script project + `parse-project.ts` / `format-project.ts`
 
@@ -224,7 +226,7 @@
     - **7.6. Целевой DX новых примитивов**
       - [x] `IF` — `primitives/if.node.ts` (eval + code + blocks + docs)
       - [ ] `FOR` / fixed-range — `for-range.node.ts`
-      - [ ] `ROUND` — `round.node.ts`
+      - [x] `ROUND` — `round.node.ts`
       - [x] Гайд разработчику: `lib/formula/README.md` + `_template.primitive.node.ts` (вместо `docs/formula-nodes.md`)
 
     - **7.7. Миграция (incremental)**
@@ -232,7 +234,7 @@
       - [x] **Шаг 2:** primitives в отдельных файлах; structural `group` / `operand` / `empty`
       - [x] **Шаг 3:** palette + `formatExpressionLabelViaRegistry` + reference operands
       - [x] **Шаг 4:** code format/parse через registry (infix + `parseCodeCall` на всех primitives)
-      - [ ] **Шаг 5:** generic workspace; убрать switch в `block-tree` / `block-tokens`
+      - [ ] **Шаг 5:** generic workspace; убрать switch в `block-tree` / `block-tokens` (начато: `lib/formula/nodes/block-slots.ts`)
       - [x] **Шаг 6 (частично):** `IF` через node file; `FOR` / `ROUND` — [ ]
 
     - **7.8. Codegen (опционально)**
@@ -256,6 +258,29 @@
       3. [ ] §7.7 шаг 5 — generic `block-tree`
       4. [ ] `FOR` / `ROUND` через registry (§7.6)
       5. [ ] Codegen §7.8 — при необходимости
+
+  - **10. Код пишется один раз → блоки и текст из AST (не дублировать логику)**
+    - **Проблема:** eval/format/parse уже в registry, но UI и `block-tree` дублируют знание о слотах (IF, ROUND, aggregate…) и редактор формулы был «блоки + модалка Apply».
+    - **Модель (целевая):**
+      ```
+      CalculatorConfig.expression (AST)
+            ↑ parse          ↓ format (registry)
+         код формулы    блоки (workspace)
+      ```
+      - Пользователь **не** хранит два независимых описания; меняется только AST.
+      - Код и блоки — **views**; при добавлении примитива расширяется `*.node.ts`, не второй парсер.
+    - **Сделано (MVP):**
+      - [x] `lib/formula/sync/formula-field-sync.ts` — единые `formulaFieldToCode` / `formulaFieldFromCode`
+      - [x] `FormulaUnifiedEditor` — вкладки Code / Blocks / оба; правка кода debounce → AST → блоки перерисовываются
+      - [x] Правка блоков → сразу обновляет текст кода (format из registry)
+      - [x] `lib/formula/nodes/block-slots.ts` — каталог слотов composite-узлов (шаг к generic `block-tree`)
+    - **Дальше:**
+      - [x] `block-tree.ts` — generic composite slots (`composite-node-ops`, `block-ui-registry`)
+      - [x] Generic `CompositeBracket` + `renderCompositeExpression` (удалены per-type brackets)
+      - [x] `formatBlockExpressionWithValues` → `formatExpressionWithValuesViaRegistry`
+      - [ ] Integration test: один AST → eval(code) === eval(blocks) для fixture-конфига
+      - [x] Config code sheet: fingerprint sync, auto-reload when clean, banner + reload when dirty
+    - **Не делать:** хранить `formulaCode: string` рядом с `expression` в JSON; второй eval-path для блоков.
 
     - **Структура (фактическая)**
       ```

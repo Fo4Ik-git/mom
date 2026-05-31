@@ -1,4 +1,10 @@
-import type { BlockExpression, BlockOperand } from "@/types/calculator";
+import type {
+  BlockExpression,
+  BlockOperand,
+  CalculatorConfig,
+  LineItemRowsState,
+} from "@/types/calculator";
+import { emptyBlockExpression } from "@/types/calculator";
 import type { FormulaTarget } from "@/lib/formula/core/formula-target";
 import type { EvalContext } from "@/lib/formula/runtime/block-evaluate";
 import type { PaletteBlock } from "@/lib/formula/blocks/block-palette-types";
@@ -214,4 +220,73 @@ export function formatExpressionLabelViaRegistry(
   }
 
   return "?";
+}
+
+function formatNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
+export type FormulaValuesContext = {
+  config: CalculatorConfig;
+  quantities: Record<string, number>;
+  calculations: Record<string, number>;
+  outputs: Record<string, number>;
+  lineItemRows?: LineItemRowsState;
+  macros?: Record<string, number>;
+  locals?: Record<string, number>;
+};
+
+/** Preview with numeric values — registry formatCode + evaluate (single code path). */
+export function formatExpressionWithValuesViaRegistry(
+  expression: BlockExpression,
+  ctx: FormulaValuesContext,
+): string {
+  const evalContext: EvalContext = {
+    quantities: ctx.quantities,
+    lineItemRows: ctx.lineItemRows ?? {},
+    inputs: ctx.config.inputs,
+    constants: ctx.config.constants ?? [],
+    calculations: ctx.calculations,
+    outputs: ctx.outputs,
+    macros: ctx.macros,
+    locals: ctx.locals,
+  };
+
+  const previewTarget: FormulaTarget = { fieldId: "preview" };
+
+  function formatWithValues(node: BlockExpression): string {
+    if (node.type === "empty") {
+      return "0";
+    }
+    if (node.type === "operand") {
+      try {
+        return formatNumber(
+          evaluateExpressionViaRegistry(node, evalContext),
+        );
+      } catch {
+        return "?";
+      }
+    }
+
+    const codeCtx: FormulaCodeFormatContext = {
+      target: previewTarget,
+      formatChild: (child) => formatWithValues(child),
+      formatOperand: (operand) =>
+        formatOperandCode(operand, previewTarget),
+    };
+
+    const primitive = findPrimitive(node);
+    if (primitive?.formatCode) {
+      return primitive.formatCode(node, codeCtx);
+    }
+
+    const structural = structuralNodes.get(node.type);
+    if (structural?.formatCode) {
+      return structural.formatCode(node as never, codeCtx);
+    }
+
+    return "?";
+  }
+
+  return formatWithValues(expression);
 }

@@ -1,0 +1,78 @@
+{
+  "en": {
+    "overview": {
+      "title": "What is this calculator?",
+      "body": "A calculator is a **configuration** (`CalculatorConfig`): input fields, constants, optional macros, intermediate **calculations**, and final **outputs**. Each calc/output has one **formula** stored as a tree (AST). The builder lets you edit that tree as **blocks** or as **text** — both views read and write the **same** tree, so you never maintain two separate formulas.\n\nOn the public screen the user fills quantities and properties; the app walks the dependency graph and evaluates every formula in order."
+    },
+    "configParts": {
+      "title": "Parts of the configuration",
+      "body": "| Part | User sees it? | Role |\n|------|----------------|------|\n| **Input** (`field_*`) | Yes — quantity + properties | Values the user types (qty, cost, price, table rows) |\n| **Constant** (`const_*`) | No | Fixed numbers you embed in formulas (markup, tax rate) |\n| **Macro** (`macro_*`) | No | Reusable formula fragment; drag into any formula like a variable |\n| **Calculation** (`calc_*`) | No (intermediate) | Hidden step used by other formulas |\n| **Output** (`output_*`) | Yes — after **Calculate** | Final result shown to the user |\n\n**Auto calculations** (badge «Auto») are created when you enable «quantity × property» on an input variable. They appear in a read-only script tab and in the block palette as calc references."
+    },
+    "oneFormula": {
+      "title": "One formula, three views",
+      "body": "```\nCalculatorConfig.expression (JSON AST)  ← only source of truth in the database\n        ↑ parse (registry)     ↓ format (registry)\n   formula code text          block workspace UI\n```\n\n- **Blocks** — Scratch-style workspace: operands, operators, `SUM(…)`, `IF(…)`, groups `( )`.\n- **Code** — same language inside `formula { … }` or in the full script sheet.\n- **Preview** («Reads as» / breakdown on the calculator page) — human-readable text generated from the AST.\n\nWhen you add a new operator in the platform, it is implemented once in `lib/formula/nodes/primitives/*.node.ts` and appears in blocks, code, autocomplete, and this help page automatically."
+    },
+    "blocksHowTo": {
+      "title": "Block editor — step by step",
+      "body": "1. Open a **calculation** or **output** field and expand **Calculation logic**.\n2. Choose view **Blocks** or **Code + blocks**.\n3. Tap an empty **＋** slot (or drag from the palette). The dashed area is the formula workspace.\n4. **Palette → Blocks**: fields (qty, properties), constants, macros, other calcs/outputs.\n5. **Palette → Actions**: `+ − × ÷`, comparisons, `( )`, `SUM`, `IF`, `ROUND`, row aggregates.\n6. Drag **⠿** on a block to move it; drop on another slot to nest inside `SUM` / `IF` / groups.\n7. **Reads as** under the workspace shows the formula as text (always synced with blocks).\n\n**IF** and **ROUND** use colored brackets with labeled slots (condition / then / else, value / decimals). **SUM** accepts comma-separated arguments inside one bracket."
+    },
+    "codeHowTo": {
+      "title": "Formula code — step by step",
+      "body": "1. In the same panel, switch to **Code** or **Code + blocks**.\n2. Write an expression or a small program:\n\n```calc\nformula {\n  local subtotal = field_item.qty * field_item.var_cost\n  return ROUND(subtotal * const_markup, 2)\n}\n```\n\n3. **Locals** must appear before `return`. Names are lowercase identifiers.\n4. References: `field_id.qty`, `field_id.var_cost`, `const_id`, `calc_id`, `output_id`, `macro_id`.\n5. Comparisons return **1** (true) or **0** (false). `IF(condition, then, else)` treats any non-zero condition as true.\n6. Invalid syntax is **not** saved to blocks until the parser accepts it (debounced while typing).\n7. Use **Ctrl/Cmd+S** in the code sheet to apply the whole project; in a single formula field, changes apply when you save the calculator.\n\nAutocomplete (Ctrl+Space) lists fields, functions, and script keywords."
+    },
+    "unifiedSync": {
+      "title": "Keeping blocks and code in sync",
+      "body": "- Editing **blocks** updates the code panel immediately (format from registry).\n- Editing **code** updates blocks after a short pause once the text parses.\n- Opening **Code** (toolbar) opens the **full calculator script** split into tabs (`inputs.calc`, `constants.calc`, …). **Apply** merges all tabs into the same `CalculatorConfig` the block UI uses.\n- If you change the builder while the script sheet is open and you have **not** edited the script, the sheet reloads from the builder automatically.\n- If you **have** edited the script, a banner offers **Reload from builder** so you do not accidentally overwrite your text.\n\nThere is still only one JSON config — the sheet is a text projection, not a second database."
+    },
+    "fullScript": {
+      "title": "Full script (Code sheet)",
+      "body": "The **Code** button in the builder toolbar opens all declarations at once:\n\n| Tab | Content |\n|-----|--------|\n| `inputs.calc` | `input field_… { … }` |\n| `constants.calc` | `constant const_… { … }` |\n| `macros.calc` | `macro macro_… { formula { … } }` |\n| `calculations.calc` | `calc calc_… { formula { … } }` |\n| `outputs.calc` | `output output_… { formula { … } }` |\n| `auto-calculations.calc` | read-only auto totals |\n\nDirectives: `#include \"file.calc\"`, `#use \"template-id\"` (preset). See the **Calculator script** tab below for syntax cards.\n\nRepo reference: `docs/calculator-script.md`."
+    },
+    "evaluation": {
+      "title": "How values are computed",
+      "body": "1. Collect user **quantities** and **line-item rows**.\n2. Run **auto calcs** and user **calculations** in dependency order (`field-graph` detects cycles).\n3. Evaluate each formula via **registry** (`evaluateExpressionViaRegistry`).\n4. Run **outputs** last.\n5. **Locals** inside one output are evaluated inside that field only.\n\nDivision by zero returns **0** with a warning in logs. `ROUND(x, n)` clamps `n` to 0–10."
+    },
+    "tips": {
+      "title": "Tips for beginners",
+      "body": "- Start from a **preset** (typography, salon, print shop) in the builder, then tweak blocks.\n- Use **calc** fields for long intermediate steps; keep **outputs** short.\n- Use **macros** when the same sub-expression appears in several formulas.\n- For tables (line items), use `SUM_ROWS(table_id, row.qty * row.var_cost)` in code or **SUM rows** in blocks.\n- **?** on palette blocks and **Help** in the header open this page.\n- Run tests after script changes: `npx vitest run tests/formula`."
+    }
+  },
+  "uk": {
+    "overview": {
+      "title": "Що таке цей калькулятор?",
+      "body": "Калькулятор — це **конфігурація** (`CalculatorConfig`): поля вводу, константи, опційні макроси, проміжні **розрахунки** (calc) і фінальні **результати** (output). У кожного calc/output одна **формула** у вигляді дерева (AST). Білдер дозволяє редагувати дерево **блоками** або **текстом** — обидва види читають і пишуть **одне й те саме** дерево, тож дві незалежні формули не потрібні.\n\nНа екрані калькулятора користувач вводить кількості та властивості; застосунок обходить граф залежностей і обчислює формули в правильному порядку."
+    },
+    "configParts": {
+      "title": "Частини конфігурації",
+      "body": "| Частина | Бачить користувач? | Роль |\n|---------|-------------------|------|\n| **Input** (`field_*`) | Так — qty + властивості | Те, що вводить користувач |\n| **Constant** (`const_*`) | Ні | Фіксовані числа в формулах |\n| **Macro** (`macro_*`) | Ні | Повторюваний фрагмент; перетягується як змінна |\n| **Calculation** (`calc_*`) | Ні (проміжний) | Прихований крок для інших формул |\n| **Output** (`output_*`) | Так — після **Розрахувати** | Підсумок для користувача |\n\n**Авто-розрахунки** (бейдж «Auto») з’являються при «кількість × властивість» на полі. Вони в read-only вкладці скрипта і в палитрі як посилання на calc."
+    },
+    "oneFormula": {
+      "title": "Одна формула — три види",
+      "body": "```\nCalculatorConfig.expression (JSON AST)  ← єдине джерело правди в БД\n        ↑ parse (registry)     ↓ format (registry)\n   текст коду формули         UI блоків\n```\n\n- **Блоки** — workspace у стилі Scratch.\n- **Код** — та сама мова в `formula { … }` або в повному скрипті.\n- **Preview** («Читається як» / breakdown) — текст з AST.\n\nНовий оператор додається один раз у `lib/formula/nodes/primitives/*.node.ts` і з’являється в блоках, коді, autocomplete та цій довідці."
+    },
+    "blocksHowTo": {
+      "title": "Редактор блоків — покроково",
+      "body": "1. Відкрийте **розрахунок** або **результат** і розгорніть **Логіку розрахунку**.\n2. Оберіть вид **Блоки** або **Код + блоки**.\n3. Натисніть **＋** у слоті або перетягніть з палитри.\n4. **Палитра → Блоки**: поля, константи, макроси, інші calc/output.\n5. **Палитра → Дії**: `+ − × ÷`, порівняння, `( )`, `SUM`, `IF`, `ROUND`, агрегати по рядках.\n6. **⠿** — перетягнути блок; вкладення в `SUM` / `IF` / дужки.\n7. **Читається як** — текст формули, синхронний з блоками.\n\n**IF** і **ROUND** — кольорові дужки з підписаними слотами. **SUM** — аргументи через кому всередині дужки."
+    },
+    "codeHowTo": {
+      "title": "Код формули — покроково",
+      "body": "1. У тій же панелі — **Код** або **Код + блоки**.\n2. Приклад:\n\n```calc\nformula {\n  local subtotal = field_item.qty * field_item.var_cost\n  return ROUND(subtotal * const_markup, 2)\n}\n```\n\n3. **local** лише перед `return`. Імена — lowercase.\n4. Посилання: `field_id.qty`, `field_id.var_cost`, `const_id`, `calc_id`, `output_id`, `macro_id`.\n5. Порівняння → **1** або **0**. `IF(умова, так, ні)` — умова істинна, якщо ≠ 0.\n6. Невалідний код **не** потрапляє в блоки, поки парсер не прийме текст.\n7. **Ctrl/Cmd+S** у sheet — застосувати весь проєкт.\n\nAutocomplete (Ctrl+Space) — поля, функції, ключові слова скрипта."
+    },
+    "unifiedSync": {
+      "title": "Синхронізація блоків і коду",
+      "body": "- **Блоки** → код оновлюється одразу (format з registry).\n- **Код** → блоки після паузи, коли текст парситься.\n- **Код** у тулбарі — повний скрипт по вкладках. **Застосувати** → той самий `CalculatorConfig`, що й UI блоків.\n- Зміни в білдері без правок у sheet — авто-перезавантаження скрипта.\n- Якщо sheet **редагували** — банер **Перезавантажити з білдера**.\n\nУ БД лишається один JSON — sheet лише текстове відображення."
+    },
+    "fullScript": {
+      "title": "Повний скрипт (вкладка Код)",
+      "body": "Кнопка **Код** у білдері відкриває всі декларації:\n\n| Вкладка | Зміст |\n|---------|--------|\n| `inputs.calc` | `input field_… { … }` |\n| `constants.calc` | `constant const_… { … }` |\n| `macros.calc` | `macro macro_… { … }` |\n| `calculations.calc` | `calc calc_… { … }` |\n| `outputs.calc` | `output output_… { … }` |\n| `auto-calculations.calc` | read-only авто-підсумки |\n\nДирективи: `#include`, `#use` (шаблон). Деталі — вкладка **Скрипт калькулятора** нижче.\n\nУ репозиторії: `docs/calculator-script.md`."
+    },
+    "evaluation": {
+      "title": "Як обчислюються значення",
+      "body": "1. Збираються **qty** і **рядки** таблиць.\n2. **Авто-calc** і **calc** — у порядку залежностей (цикли виявляються).\n3. Кожна формула — через **registry**.\n4. Потім **outputs**.\n5. **local** лише всередині одного output.\n\nДілення на 0 → **0** і попередження в логах. `ROUND(x, n)` — n від 0 до 10."
+    },
+    "tips": {
+      "title": "Поради новачкам",
+      "body": "- Почніть з **пресету** (типографія, салон, друкарня).\n- Довгі кроки — у **calc**, короткі — у **output**.\n- **Макроси** — для повторюваних виразів.\n- Таблиці рядків: `SUM_ROWS(…)` у коді або **SUM rows** у блоках.\n- **?** на блоках палитри та **Довідка** в шапці — ця сторінка.\n- Тести: `npx vitest run tests/formula`."
+    }
+  }
+}

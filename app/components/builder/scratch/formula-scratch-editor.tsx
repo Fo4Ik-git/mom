@@ -31,8 +31,7 @@ import {
   getSlotExpression,
   moveExpressionToSlot,
   removeAggregateAt,
-  removeConditionalAt,
-  removeRoundAt,
+  removeCompositeAt,
   removeGroupAt,
   removeRowAggregateAt,
   removeOperationAt,
@@ -41,6 +40,8 @@ import {
   type SlotPath,
   type WorkspaceDragData,
 } from "@/lib/formula/blocks/block-tree";
+import { firstEmptyCompositeSlot } from "@/lib/formula/blocks/composite-node-ops";
+import { listCompositeBlockUi } from "@/lib/formula/nodes/block-ui-registry";
 import { BlockPaletteSheet } from "@/app/components/builder/scratch/block-palette-sheet";
 import { DraggableBlock } from "@/app/components/builder/scratch/draggable-block";
 import { FormulaLinearWorkspace } from "@/app/components/builder/scratch/formula-linear-workspace";
@@ -238,35 +239,26 @@ export function FormulaScratchEditor({
               ] as SlotPath[])
             : path;
         onChange(applyPaletteToSlot(expression, insertPath, dragData));
-      } else if (
-        overData?.target === "conditional" &&
-        dragData.kind !== "conditional"
-      ) {
-        const condExpr = getSlotExpression(expression, path);
-        const branch: SlotPath =
-          condExpr.type === "conditional"
-            ? condExpr.condition.type === "empty"
-              ? "condition"
-              : condExpr.whenTrue.type === "empty"
-                ? "whenTrue"
-                : condExpr.whenFalse.type === "empty"
-                  ? "whenFalse"
-                  : "whenFalse"
-            : "condition";
-        onChange(
-          applyPaletteToSlot(expression, [...path, branch], dragData),
-        );
-      } else if (
-        overData?.target === "round" &&
-        dragData.kind !== "round"
-      ) {
-        const roundExpr = getSlotExpression(expression, path);
-        const slot: SlotPath =
-          roundExpr.type === "round" && roundExpr.value.type === "empty"
-            ? "value"
-            : "decimals";
-        onChange(applyPaletteToSlot(expression, [...path, slot], dragData));
       } else {
+        const compositeUi = listCompositeBlockUi().find(
+          (ui) =>
+            overData?.target === ui.dropTarget &&
+            dragData.kind !== ui.workspaceKind,
+        );
+        if (compositeUi) {
+          const node = getSlotExpression(expression, path);
+          const slotKey =
+            node.type === compositeUi.type
+              ? firstEmptyCompositeSlot(node)
+              : compositeUi.slots[0]?.key;
+          if (slotKey) {
+            onChange(
+              applyPaletteToSlot(expression, [...path, slotKey as SlotPath], dragData),
+            );
+            setActiveSlot(null);
+            return;
+          }
+        }
         applyToSlot(path, dragData);
       }
       setActiveSlot(null);
@@ -309,12 +301,14 @@ export function FormulaScratchEditor({
       const overTarget =
         overData && "target" in overData ? overData.target : undefined;
 
+      const compositeWorkspaceKinds = listCompositeBlockUi().map(
+        (ui) => ui.workspaceKind,
+      );
       if (
         (workspaceActive.kind === "slot" ||
           workspaceActive.kind === "group" ||
           workspaceActive.kind === "aggregate" ||
-          workspaceActive.kind === "conditional" ||
-          workspaceActive.kind === "round") &&
+          compositeWorkspaceKinds.includes(workspaceActive.kind)) &&
         overPath
       ) {
         const destination =
@@ -474,11 +468,8 @@ export function FormulaScratchEditor({
             onRowAggregateRemove={(path) =>
               onChange(removeRowAggregateAt(expression, path))
             }
-            onConditionalRemove={(path) =>
-              onChange(removeConditionalAt(expression, path))
-            }
-            onRoundRemove={(path) =>
-              onChange(removeRoundAt(expression, path))
+            onCompositeRemove={(path) =>
+              onChange(removeCompositeAt(expression, path))
             }
             onSlotTap={handleSlotTap}
           />

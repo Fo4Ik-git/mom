@@ -48,6 +48,8 @@ lib/
 
 **Три представлення однієї формули:** блоки ↔ код ↔ JSON AST — все через `nodes/registry`.
 
+**Документація:** `/docs` у застосунку; у репозиторії — `docs/formulas-guide.md`, `docs/calculator-script.md`, `lib/formula/README.md`.
+
 ## Клієнт vs сервер
 
 Файли з `"use client"`: `api/api-client.ts`, `hooks/*`. Решта — server-safe.

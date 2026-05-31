@@ -1,102 +1,130 @@
-# `formula/` — мова формул та обчислення
+# `formula/` — formula language, blocks, and code
 
-Один AST (`BlockExpression` у JSON) — три UI: блоки, код, preview.
+One AST (`BlockExpression` in JSON) — three **views**: blocks, code, numeric preview. Logic is not duplicated: eval / format / parse go through `nodes/registry.ts`; field-level sync uses `sync/formula-field-sync.ts`.
 
-## Структура
+**User-facing docs:** `/docs` in the app (Getting started + reference cards). Repo copies: `docs/formulas-guide.md`, `docs/calculator-script.md`.
+
+## Mental model
+
+```
+                    ┌─────────────────────┐
+                    │  BlockExpression    │  ← stored in CalculatorConfig
+                    │  (JSON AST)         │
+                    └──────────┬──────────┘
+           format ▲            │ parse
+                  │            ▼
+     ┌────────────┴────────────┴────────────┐
+     │         nodes/registry.ts            │
+     │  evaluate · formatCode · parseCodeCall │
+     └────────────┬────────────┬────────────┘
+                  │            │
+          block UI workspace   formula { … } text
+          (scratch/*)          (code/* + sync/*)
+```
+
+## Directory map
 
 ```
 formula/
-├── runtime/     обчислення та порядок eval
-├── code/        текстовий DSL (SUM, field.qty, …)
-├── blocks/      візуальний конструктор (palette, DnD tree)
-├── core/        спільні builders, labels, snippets
-└── nodes/       registry примітивів (single source of truth)
+├── nodes/           registry — single source of truth per primitive
+│   ├── primitives/  plus, sum, if, round, … (*.node.ts)
+│   ├── block-ui-registry.ts   composite brackets (IF, ROUND)
+│   ├── registry.ts            dispatch + formatExpressionWithValuesViaRegistry
+│   └── reference-code.ts      operands → code text
+├── sync/            formulaFieldToCode / formulaFieldFromCode
+├── code/            parse/format DSL, completions, formula-program (locals)
+├── blocks/          block-tree, palette, composite-node-ops, block-format-values
+├── runtime/         field-graph, calculate, block-evaluate
+├── core/            builders, snippets, formula-target, labels
+└── docs/            collectFormulaDocs() for /docs page
 ```
 
-## `nodes/` — головна точка розширення
+## Who owns what (for newcomers)
 
-### Один файл = один примітив
+| Question | Answer |
+|----------|--------|
+| Where is the formula stored? | `calculation.expression` / `output.expression` in `CalculatorConfig` |
+| How do blocks change the AST? | `block-tree.ts` — slot paths, palette apply, composite slots via `composite-node-ops` |
+| How does code change the AST? | `code-parse.ts` → registry `parseCodeCall` / infix; field wrapper in `formula-field-sync.ts` |
+| How is code generated from blocks? | `formatExpressionCodeViaRegistry` / `formulaFieldToCode` |
+| How is preview with numbers built? | `formatExpressionWithValuesViaRegistry` (eval + formatCode) |
+| Where is IF/ROUND UI defined? | `block-ui-registry.ts` + `CompositeBracket` (not per-type files) |
+| Full calculator script? | `lib/calculator/script/*` — not under `formula/`, but formulas inside entities use the same registry |
 
-Оператори та функції живуть у **`nodes/primitives/`**:
+## `nodes/` — adding a primitive
 
-```
-primitives/
-├── plus.node.ts       →  a + b
-├── minus.node.ts      →  a - b
-├── multiply.node.ts   →  a * b
-├── divide.node.ts     →  a / b
-├── sum.node.ts        →  SUM(...)
-├── avg.node.ts        →  AVG(...)
-├── count.node.ts, min.node.ts, max.node.ts
-├── sum-rows.node.ts   →  SUM_ROWS(field, expr)
-└── index.ts           →  ALL_PRIMITIVES (реєстр)
-```
+1. Copy `primitives/_template.primitive.node.ts` → `my-fn.node.ts`
+2. Implement `evaluate`, optional `formatCode`, `parseCodeCall`, `paletteItems`, `doc.example`
+3. Register in `primitives/index.ts` → `ALL_PRIMITIVES`
+4. Extend `BlockExpression` in `types/calculator.ts` if new AST shape
+5. For composite nodes (like IF): add entry to `block-ui-registry.ts`, implement `*.node.ts`
+6. Add i18n: `messages/en.json` + `uk.json` → `docs.primitives.<id>` (title, description, `codeUsage`, `blockUsage`)
 
-Кожен файл експортує повний `FormulaPrimitiveDefinition`.  
-`_helpers.ts` — тільки parse/format/palette (без логіки обчислення).
+| Capability | Registry API |
+|------------|----------------|
+| Eval | `evaluateExpressionViaRegistry` |
+| Code out | `formatExpressionCodeViaRegistry` |
+| Code in | `parseExpressionViaRegistry` |
+| Block labels | `formatExpressionLabelViaRegistry` |
+| Numeric preview | `formatExpressionWithValuesViaRegistry` |
+| Palette | `paletteItems` on primitive |
+| Autocomplete | `call` + `astType` or custom `completions` |
 
-| Можливість | Що робить registry |
-|------------|-------------------|
-| **eval** | `evaluateExpressionViaRegistry` |
-| **код** | parse (`parseCodeCall` / infix), format (`formatCode`) |
-| **блоки** | палитра DnD (`paletteItems`) |
-| **autocomplete** | auto з `call` + `astType` (`generateDefaultCompletions`); опційно `completions` override |
-
-### Додати новий примітив
-
-1. Скопіюй `primitives/_template.primitive.node.ts` → `round.node.ts`
-2. Напиши **evaluate** зі своєю логікою в цьому файлі
-3. Додай import + рядок у `primitives/index.ts` → `ALL_PRIMITIVES`
-
-Більше ніде switch не потрібен.
-
-### Структурні вузли (не примітиви)
-
-`empty.node.ts`, `group.node.ts`, `operand.node.ts` — контейнери AST.
-
-Dynamic operands (поля з config) — `reference-operands.ts`, `reference-code.ts`.
-
-### Registry
-
-`nodes/registry.ts` — dispatch eval/format/palette/completions з `ALL_PRIMITIVES` + structural nodes.
-
-## `runtime/`
-
-| Файл | Роль |
-|------|------|
-| `block-evaluate.ts` | Eval одного виразу |
-| `field-graph.ts` | Залежності, цикли, порядок calc/output |
-| `calculate.ts` | Публічний API для екрана калькулятора |
-| `evaluate.ts` | Валідація конфігу + re-exports |
-
-## `code/`
-
-| Файл | Роль |
-|------|------|
-| `code-parse.ts` | Текст → AST |
-| `code-format.ts` | AST → текст |
-| `formula-code-completions.ts` | Autocomplete (SUM, поля, …) |
-| `formula-code-document.ts` | Документ на кілька формул |
+Structural nodes (not primitives): `empty`, `group`, `operand` — `empty.node.ts`, etc.
 
 ## `blocks/`
 
-| Файл | Роль |
+| File | Role |
 |------|------|
-| `block-tree.ts` | Дерево слотів для DnD |
-| `block-palette.ts` | Палитра з registry |
-| `block-format.ts` | Людиночитні підписи блоків |
-| `slot-path.ts` | Шлях до слота в дереві |
+| `block-tree.ts` | Slot paths, DnD, `removeCompositeAt`, palette apply |
+| `composite-node-ops.ts` | Read/write composite slots, `firstEmptyCompositeSlot` |
+| `block-ui-registry.ts` | IF/ROUND metadata (slots, colors, drop targets) |
+| `block-palette.ts` | Palette from registry |
+| `block-format.ts` | Human labels for workspace |
+| `block-format-values.ts` | Breakdown with numbers → registry |
+| `block-tokens.ts` | Flatten/reorder simple chains |
 
-## `core/`
+UI: `app/components/builder/scratch/` — `formula-scratch-editor`, `formula-linear-workspace`, `composite-expression-node`.
 
-| Файл | Роль |
+## `sync/`
+
+`formula-field-sync.ts` — one calc/output field:
+
+- `formulaFieldToCode(expression, target, config)` → `formula { … }`
+- `formulaFieldFromCode(text, target, config)` → AST or errors
+
+Used by `formula-unified-editor.tsx` (debounced parse).
+
+## `code/`
+
+| File | Role |
 |------|------|
-| `expression-builders.ts` | Фабрики AST (`quantityTimesProperty`, …) |
-| `formula-target.ts` | Контекст «для якого calc/output» |
-| `formula-snippets.ts` | Готові шматки формул |
-| `operand-labels.ts` | Підписи operand у UI |
+| `code-parse.ts` | Text → AST |
+| `code-format.ts` | AST → text |
+| `formula-program.ts` | `local` lines + `return` |
+| `formula-code-completions.ts` | Fields, macros, SUM, … |
 
-## Залежності
+## `runtime/`
 
-`formula/` ↔ `calculator/fields` + `calculator/config` (line items, auto-calcs).  
-Типи AST — `@/types/calculator`.
+| File | Role |
+|------|------|
+| `field-graph.ts` | Dependency order, macros, cycles |
+| `block-evaluate.ts` | EvalContext, per-node eval |
+| `calculate.ts` | Public API for calculator page |
+
+## Config code sheet
+
+`app/components/builder/config-code-sheet.tsx` — multi-tab script; fingerprint sync via `lib/calculator/config/config-fingerprint.ts`. Documented in `docs/calculator-script.md`.
+
+## Tests
+
+```bash
+npx vitest run tests/formula
+npx vitest run tests/docs
+```
+
+## Dependencies
+
+- Types: `@/types/calculator`
+- Config / fields: `lib/calculator/config`, `lib/calculator/fields`
+- Script entities: `lib/calculator/schema/registry` (separate from formula primitives but shares formula body syntax)

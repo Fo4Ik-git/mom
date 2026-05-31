@@ -3,10 +3,28 @@ import en from "@/messages/en.json";
 import uk from "@/messages/uk.json";
 import { collectFormulaDocs } from "@/lib/formula/docs/collect-formula-docs";
 
+const GUIDE_SECTION_IDS = [
+  "overview",
+  "configParts",
+  "oneFormula",
+  "blocksHowTo",
+  "codeHowTo",
+  "unifiedSync",
+  "fullScript",
+  "evaluation",
+  "tips",
+] as const;
+
 type DocsMessages = {
   primitives: Record<string, { title: string; description: string }>;
   operands: Record<string, { title: string; description: string }>;
   script: Record<string, { title: string; description: string }>;
+  guide: {
+    sections: Record<
+      (typeof GUIDE_SECTION_IDS)[number],
+      { title: string; body: string }
+    >;
+  };
 };
 
 function getDocsLocale(messages: { docs: DocsMessages }) {
@@ -48,6 +66,16 @@ describe("docs i18n completeness", () => {
           const entry = docs.script[id];
           expect(entry?.title?.trim().length).toBeGreaterThan(0);
           expect(entry?.description?.trim().length).toBeGreaterThan(0);
+        },
+      );
+
+      it.each(GUIDE_SECTION_IDS)(
+        "has guide section %s with ICU-safe body",
+        (id) => {
+          const section = docs.guide.sections[id];
+          expect(section?.title?.trim().length).toBeGreaterThan(0);
+          expect(section?.body?.trim().length).toBeGreaterThan(0);
+          expect(section.body).not.toMatch(/docs\.guide\.sections/);
         },
       );
     });

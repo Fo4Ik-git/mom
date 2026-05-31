@@ -144,7 +144,7 @@ describe("output breakdown with locals", () => {
     });
 
     expect(breakdowns.output_total).toBe(
-      "price = 200; IF(10 ≥ 10, 200 + 1.20, 200) = 201.20",
+      "price = 200; IF(10 >= 10, 200 + 1.20, 200) = 201.20",
     );
   });
 });

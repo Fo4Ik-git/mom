@@ -1,22 +1,24 @@
 # Calculator script reference
 
-This document describes the **calculator script DSL** — the text format behind **Code** mode in the builder. The live reference at `/docs` is generated from the same registries as the app; this guide focuses on workflow and multi-file projects.
+Text format for **Code** mode in the builder. The live **Help** page (`/docs` → **Calculator script**) lists the same entities with examples; primitive/function cards are under **Formulas & blocks**.
 
 ## Three views, one config
 
-Every calculator is stored as `CalculatorConfig` JSON. You can edit it as:
+| View | Where | What you edit |
+|------|--------|----------------|
+| **Blocks** | Calculation logic → Blocks | AST via drag & drop |
+| **Formula code** | Same panel → Code, or `formula { }` inside script | Expression text for one field |
+| **Full script** | Toolbar **Code** → tabbed `.calc` files | Entire `CalculatorConfig` |
 
-| View | What you edit |
-|------|----------------|
-| **Blocks** | Visual formula workspace (drag & drop) |
-| **Formula code** | Expression inside `formula { … }` — optional `local` lines + `return` |
-| **Full script** | All inputs, constants, calculations, outputs |
+All views persist to the same JSON. There is no second “script copy” in the database.
 
-Changes in any view sync to the same JSON — there is no separate “script copy” in the database (v1).
+For architecture and beginner steps, see [formulas-guide.md](./formulas-guide.md).
 
-## Script syntax (entities)
+## Entity syntax
 
-Declarations use keyword blocks with `{ … }` bodies:
+Declarations use keyword blocks with `{ … }` bodies.
+
+### `input` — fields the user fills
 
 ```calc
 input field_item {
@@ -27,6 +29,120 @@ input field_item {
     label = "Cost"
     value = 0
   }
+
+  property var_price {
+    label = "Price"
+    value = 0
+  }
+}
+```
+
+- **Blocks:** add the field in the sidebar; palette shows `qty` and each property under the field group.
+- **Code:** reference `field_item.qty`, `field_item.var_cost`, `field_item.var_price`.
+
+Line-item tables use the line-items input pattern; row properties appear as `row.var_*` inside `SUM_ROWS`.
+
+### `constant` — fixed numbers
+
+```calc
+constant const_markup {
+  label = "Markup"
+  value = 1.2
+}
+```
+
+- **Blocks:** drag from **Constants** in the palette.
+- **Code:** `const_markup` alone (no prefix).
+
+### `macro` — reusable formula fragment
+
+```calc
+macro macro_sheet_cost {
+  label = "Sheet cost"
+  formula {
+    return field_item.var_pages * field_item.var_paper
+  }
+}
+```
+
+- **Blocks:** define macro body in **Macros** section; drag macro chip into any formula.
+- **Code:** `macro_sheet_cost` where you would use a number.
+
+Macros are not shown on the public calculator screen.
+
+### `calc` — intermediate calculation
+
+```calc
+calc calc_subtotal {
+  label = "Subtotal"
+  formula {
+    return field_item.qty * field_item.var_cost
+  }
+}
+```
+
+- **Blocks:** open the calc field → build formula in workspace.
+- **Code:** reference `calc_subtotal` in later formulas.
+
+Order matters: do not reference a calc before it is defined (dependency graph).
+
+### `output` — result shown to the user
+
+```calc
+output output_total {
+  label = "Total"
+  formula {
+    local subtotal = calc_subtotal
+    return ROUND(subtotal * const_markup, 2)
+  }
+}
+```
+
+- **Blocks:** result field → formula workspace.
+- **Code:** `formula { local …; return … }` optional.
+
+## Formula language inside `formula { … }`
+
+### Operators and comparisons
+
+| Code | Meaning | Block palette |
+|------|---------|---------------|
+| `+` `-` `*` `/` | Arithmetic | Actions → operators |
+| `>` `<` `>=` `<=` `==` `!=` | Returns 1 or 0 | Comparison chips |
+
+Use `>=` and `<=` in code (ASCII). Breakdown preview uses the same symbols.
+
+### Functions
+
+| Code | Blocks | Notes |
+|------|--------|-------|
+| `SUM(a, b, …)` | SUM bracket | Comma-separated args |
+| `AVG`, `MIN`, `MAX`, `COUNT` | Same family | |
+| `IF(cond, then, else)` | IF bracket | cond truthy when ≠ 0 |
+| `ROUND(value, decimals)` | ROUND bracket | decimals 0–10 |
+| `SUM_ROWS(table, expr)` | SUM rows | `row.*` inside expr |
+| `AVG_ROWS`, `MIN_ROWS`, `MAX_ROWS`, `COUNT_ROWS` | Row aggregate blocks | |
+
+### Locals
+
+```calc
+formula {
+  local price = field_item.qty * field_item.var_price
+  local discounted = IF(field_item.qty >= 10, price * 0.9, price)
+  return discounted
+}
+```
+
+Locals are scoped to this formula only. Names must be lowercase identifiers.
+
+### Complete mini-calculator
+
+```calc
+input field_item {
+  label = "Item"
+  quantity = 1
+  property var_cost { label = "Cost"; value = 0 }
+  property var_price { label = "Price"; value = 0 }
 }
 
 constant const_markup {
@@ -34,64 +150,38 @@ constant const_markup {
   value = 1.2
 }
 
+calc calc_cost_line {
+  label = "Line cost"
+  formula { return field_item.qty * field_item.var_cost }
+}
+
 output output_total {
   label = "Total"
   formula {
-    return field_item.var_price * field_item.qty * const_markup
+    return ROUND(calc_cost_line * const_markup, 2)
   }
 }
 ```
 
-Supported entities: `input`, `constant`, `calc`, `output`. See `/docs` → **Script** tab for field-level details and autocomplete snippets.
-
-### Formula language inside `formula { … }`
-
-Expressions support:
-
-- Operators: `+`, `-`, `*`, `/`
-- Comparisons (return **1** for true, **0** for false): `>`, `<`, `>=`, `<=`, `==`, `!=`
-- References: `field_id.qty`, `field_id.var_*`, `const_id`, `calc_id`, `output_id`
-- Functions: `SUM(…)`, `AVG(…)`, `COUNT(…)`, `MIN(…)`, `MAX(…)`
-- Row aggregates (line items): `SUM_ROWS(table_id, row.qty * row.var_cost)`, etc.
-- Conditionals: `IF(condition, thenValue, elseValue)` — condition is **truthy when ≠ 0**
-- **Local variables** (optional, before `return`):
-
-```calc
-formula {
-  local price = field_item.qty * field_item.var_price
-  return IF(field_item.qty >= 10, price * 1.2, price)
-}
-```
-
-Names must be lowercase identifiers (`price`, `subtotal`). Locals can reference earlier locals; the final `return` may use any of them.
-
-Example:
-
-```calc
-formula {
-  return IF(field_item.qty > 10, field_item.var_price * 0.9, field_item.var_price)
-}
-```
-
-> **Note:** `FOR` loops are planned but not implemented yet.
-
-## Multi-file project (virtual tabs)
-
-In the Code sheet, the script is split into tabs:
+## Multi-file project (Code sheet tabs)
 
 | File | Allowed declarations |
 |------|----------------------|
 | `inputs.calc` | `input` only |
 | `constants.calc` | `constant` only |
+| `macros.calc` | `macro` only |
 | `calculations.calc` | `calc` only |
 | `outputs.calc` | `output` only |
-| `auto-calculations.calc` | auto-generated qty × property calcs (read-only tab) |
+| `auto-calculations.calc` | auto-generated (read-only) |
 
-**Apply** merges all tabs in order: inputs → constants → calculations → outputs. Duplicate ids across files are errors with `file:line` locations.
+**Apply** merges tabs in order: inputs → constants → macros → calculations → outputs. Errors include `file:line`.
+
+### Sync with block builder
+
+- If the script sheet is open and you **have not** edited text, changes in the block UI reload the script automatically.
+- If you **have** edited the script, a banner warns that the builder changed; use **Reload from builder** to discard local script text and match blocks.
 
 ### `#include "other.calc"`
-
-Pull declarations from another project file (each included file is parsed once):
 
 ```calc
 #include "constants.calc"
@@ -101,33 +191,32 @@ output output_total {
 }
 ```
 
-- Unknown paths and include cycles are rejected.
-- Maximum include depth: 8.
+Unknown paths and include cycles are rejected (max depth 8).
 
 ### `#use "template-id"`
-
-Load a **built-in preset** and merge your edits on top. Put the directive in any tab (typically `inputs.calc` when starting a new calculator):
 
 ```calc
 #use "print-shop-basic"
 ```
 
-Available templates:
+Loads a built-in preset; user declarations append per file. One `#use` per project.
 
-| Id | Alias | Description |
-|----|-------|-------------|
-| `print-shop-basic` | `platform/templates/print-shop` | Item + cost/price + markup constant + total output |
+| Id | Description |
+|----|-------------|
+| `print-shop-basic` | Item + cost/price + markup + total |
+| `typography` | Typography shop preset (builder picker) |
+| `salon` | Salon / services preset |
 
-Only one `#use` per project. User declarations in any tab are appended after the template content for that file.
+## Errors and tooling
 
-## Errors and round-trip
-
-- Parser errors show as `inputs.calc:12 — message`.
-- **Format** regenerates script from config (project split or monolith).
-- Round-trip tests: `npm run test:script`.
+- Parser errors: `inputs.calc:12 — message` in the sheet problems panel.
+- **Format** regenerates script from config.
+- Autocomplete: Ctrl+Space in formula and script editors.
+- Tests: `npx vitest run tests/formula`, `npm run test:script` if defined.
 
 ## Related
 
-- In-app help: **Help** in the header → `/docs`
-- Builder: **?** next to Code opens docs; palette blocks have **?** tooltips
-- Export static docs: `npm run docs:build` → `docs/generated/`
+- In-app: **Help** → `/docs` (Getting started + reference cards)
+- [formulas-guide.md](./formulas-guide.md) — blocks vs code, evaluation, file map
+- `lib/formula/README.md` — registry and adding primitives
+- Export static docs: `npm run docs:build` → `docs/generated/` (if configured)
