@@ -8,6 +8,7 @@ import {
 } from "@/lib/ai/gemini";
 import { normalizeAiCalculatorScript } from "@/lib/ai/normalize-ai-script";
 import { prepareAiChatMessages } from "@/lib/ai/prepare-chat-messages";
+import type { GeminiTokenUsage } from "@/lib/ai/token-usage-types";
 import { finalizeConfig } from "@/lib/calculator/config/sync";
 import { parseCalculatorScript } from "@/lib/calculator/script/parse";
 import type { CalculatorConfig } from "@/types/calculator";
@@ -20,18 +21,20 @@ export type GenerateCalculatorScriptResult =
       script: string;
       config: CalculatorConfig;
       usedCache: boolean;
+      tokenUsages: GeminiTokenUsage[];
     }
   | {
       ok: false;
       script: string;
       errors: Array<{ message: string; line: number; file?: string }>;
       usedCache: boolean;
+      tokenUsages: GeminiTokenUsage[];
     };
 
 async function generateRawScript(
   messages: AiChatMessage[],
   baseConfig?: CalculatorConfig,
-): Promise<{ text: string; usedCache: boolean }> {
+): Promise<{ text: string; usedCache: boolean; usage: GeminiTokenUsage }> {
   const prepared = prepareAiChatMessages(messages, baseConfig);
   if (prepared.length === 1 && prepared[0]?.role === "user" && !baseConfig) {
     return generateCalculatorScriptWithGemini(prepared[0].content);
@@ -43,7 +46,9 @@ async function parseGeneratedScript(
   raw: string,
   baseConfig: CalculatorConfig | undefined,
   usedCache: boolean,
+  initialUsage: GeminiTokenUsage,
 ): Promise<GenerateCalculatorScriptResult> {
+  const tokenUsages: GeminiTokenUsage[] = [initialUsage];
   let lastScript = normalizeAiCalculatorScript(extractScriptFromLlmResponse(raw));
   let parsed = parseCalculatorScript(lastScript, baseConfig);
 
@@ -51,10 +56,13 @@ async function parseGeneratedScript(
     const fixHint = parsed.errors
       .map((e) => `${e.file ? `${e.file}:` : ""}${e.line} ${e.message}`)
       .join("; ");
-    const { text: fixRaw } = await generateCalculatorScriptWithGemini(
+    const fixResult = await generateCalculatorScriptWithGemini(
       `Fix this calculator script. Parser errors: ${fixHint}\n\nRules: use .qty in formulas; one line per local/return; no markdown.\n\nScript:\n${lastScript}`,
     );
-    lastScript = normalizeAiCalculatorScript(extractScriptFromLlmResponse(fixRaw));
+    tokenUsages.push(fixResult.usage);
+    lastScript = normalizeAiCalculatorScript(
+      extractScriptFromLlmResponse(fixResult.text),
+    );
     parsed = parseCalculatorScript(lastScript, baseConfig);
   }
 
@@ -64,11 +72,12 @@ async function parseGeneratedScript(
       script: lastScript,
       errors: parsed.errors,
       usedCache,
+      tokenUsages,
     };
   }
 
   const config = finalizeConfig(parsed.config, AUTO_TOTAL_SUFFIX);
-  return { ok: true, script: lastScript, config, usedCache };
+  return { ok: true, script: lastScript, config, usedCache, tokenUsages };
 }
 
 export async function generateCalculatorFromChat(
@@ -83,8 +92,11 @@ export async function generateCalculatorFromChat(
     throw new Error("Prompt is required");
   }
 
-  const { text: raw, usedCache } = await generateRawScript(normalized, baseConfig);
-  return parseGeneratedScript(raw, baseConfig, usedCache);
+  const { text: raw, usedCache, usage } = await generateRawScript(
+    normalized,
+    baseConfig,
+  );
+  return parseGeneratedScript(raw, baseConfig, usedCache, usage);
 }
 
 export async function generateCalculatorFromPrompt(

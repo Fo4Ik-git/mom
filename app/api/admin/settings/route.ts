@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { AiTokenQuotaPeriod } from "@prisma/client";
 import { z } from "zod";
 import {
   ACCESS_EXPIRY_CHECK_INTERVALS,
@@ -12,6 +13,7 @@ import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
 import { withApiRoute } from "@/lib/api/with-api-route";
 import { setAuditDetail } from "@/lib/logger/audit";
+import { AI_TOKEN_QUOTA_MAX } from "@/lib/ai/ai-quota-limits";
 
 const updateSchema = z.object({
   defaultMaxCalculators: z.number().int().min(0).max(1000),
@@ -23,6 +25,14 @@ const updateSchema = z.object({
     .string()
     .refine(isAccessExpiryCheckInterval)
     .optional(),
+  defaultAiTokenQuota: z
+    .number()
+    .int()
+    .min(0)
+    .max(AI_TOKEN_QUOTA_MAX)
+    .nullable()
+    .optional(),
+  defaultAiTokenQuotaPeriod: z.nativeEnum(AiTokenQuotaPeriod).optional(),
 });
 
 function serializeAccessExpirySettings(
@@ -43,6 +53,8 @@ export const GET = withApiRoute(async function GET() {
       defaultMaxCalculators: settings.defaultMaxCalculators,
       defaultAccessDays: settings.defaultAccessDays,
       defaultReferrerBonusDays: settings.defaultReferrerBonusDays,
+      defaultAiTokenQuota: settings.defaultAiTokenQuota,
+      defaultAiTokenQuotaPeriod: settings.defaultAiTokenQuotaPeriod,
       supportEmail: settings.supportEmail,
       supportTelegram: settings.supportTelegram,
       updatedAt: settings.updatedAt.toISOString(),
@@ -82,6 +94,8 @@ export const PATCH = withApiRoute(async function PATCH(request: Request) {
       defaultMaxCalculators: settings.defaultMaxCalculators,
       defaultAccessDays: settings.defaultAccessDays,
       defaultReferrerBonusDays: settings.defaultReferrerBonusDays,
+      defaultAiTokenQuota: settings.defaultAiTokenQuota,
+      defaultAiTokenQuotaPeriod: settings.defaultAiTokenQuotaPeriod,
       supportEmail: settings.supportEmail,
       supportTelegram: settings.supportTelegram,
       updatedAt: settings.updatedAt.toISOString(),

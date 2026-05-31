@@ -12,6 +12,7 @@ export async function getPlatformSettings() {
       defaultMaxCalculators: 5,
       defaultAccessDays: 30,
       defaultReferrerBonusDays: 0,
+      defaultAiTokenQuota: 100_000,
       accessExpiryCheckInterval: DEFAULT_ACCESS_EXPIRY_CHECK_INTERVAL,
     },
     update: {},
@@ -22,6 +23,8 @@ export async function updatePlatformSettings(data: {
   defaultMaxCalculators: number;
   defaultAccessDays: number;
   defaultReferrerBonusDays?: number;
+  defaultAiTokenQuota?: number | null;
+  defaultAiTokenQuotaPeriod?: import("@prisma/client").AiTokenQuotaPeriod;
   supportEmail?: string | null;
   supportTelegram?: string | null;
   accessExpiryCheckInterval?: AccessExpiryCheckInterval;

@@ -34,6 +34,19 @@ enum CalculatorShareRole {
   EDIT
 }
 
+enum AiAccessMode {
+  OFF
+  PERMANENT
+  UNTIL_DATE
+  DURATION
+}
+
+enum AiTokenQuotaPeriod {
+  DAY
+  WEEK
+  MONTH
+}
+
 model PlatformSettings {
   id                    String   @id @default("default")
   defaultMaxCalculators Int      @default(5)
@@ -46,6 +59,9 @@ model PlatformSettings {
   /// Auto-ban users with expired access (manual run or scheduled)
   accessExpiryCheckInterval   AccessExpiryCheckInterval @default(OFF)
   accessExpiryCheckLastRunAt  DateTime?
+  /// Default token quota for users when AI access is granted (null = unlimited)
+  defaultAiTokenQuota         Int?
+  defaultAiTokenQuotaPeriod   AiTokenQuotaPeriod @default(MONTH)
   updatedAt             DateTime @updatedAt
 }
 
@@ -104,9 +120,22 @@ model User {
   /// accessExpiresAt value when admin dismissed expired-access alert
   issueExpiredDismissedFor DateTime?
   adminNotes        String?
+  /// AI assistant access (admins always have access regardless of mode)
+  aiAccessMode           AiAccessMode        @default(OFF)
+  /// For UNTIL_DATE: access ends at this instant
+  aiAccessExpiresAt      DateTime?
+  /// For DURATION: grant start (set when admin enables duration mode)
+  aiAccessGrantedAt      DateTime?
+  /// For DURATION: days from aiAccessGrantedAt
+  aiAccessDurationDays   Int?
+  /// Per-user token cap per period; null = unlimited
+  aiTokenQuota           Int?
+  aiTokenQuotaPeriod     AiTokenQuotaPeriod  @default(MONTH)
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   accounts          Account[]
+  aiTokenUsages     AiTokenUsage[]
+  aiChatThreads     AiChatThread[]
   sessions          Session[]
   calculators          Calculator[]
   calculatorShares     CalculatorShare[]
@@ -127,8 +156,35 @@ model Calculator {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   shares      CalculatorShare[]
+  aiChatThreads AiChatThread[]
 
   @@index([userId])
+}
+
+model AiChatThread {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calculatorId String
+  calculator   Calculator @relation(fields: [calculatorId], references: [id], onDelete: Cascade)
+  messages     AiChatMessage[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, calculatorId])
+  @@index([calculatorId])
+}
+
+model AiChatMessage {
+  id        String   @id @default(cuid())
+  threadId  String
+  thread    AiChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  role      String
+  content   String
+  sortOrder Int
+  createdAt DateTime @default(now())
+
+  @@index([threadId, sortOrder])
 }
 
 model CalculatorShare {
@@ -175,4 +231,18 @@ model VerificationToken {
   expires    DateTime
 
   @@id([identifier, token])
+}
+
+model AiTokenUsage {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calculatorId     String?
+  model            String
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  @@index([userId, createdAt])
 }

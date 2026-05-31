@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AiChatPanel } from "@/app/components/builder/ai-chat-panel";
+import type { AiQuotaSnapshot } from "@/lib/ai/token-usage-types";
 import type { CalculatorConfig } from "@/types/calculator";
 
 const STORAGE_KEY = "builder-ai-chat-sidebar-width";
@@ -17,6 +18,7 @@ function clampWidth(value: number) {
 interface AiChatSidebarProps {
   config: CalculatorConfig;
   calculatorId?: string;
+  initialQuota?: AiQuotaSnapshot | null;
   disabled?: boolean;
   onClose: () => void;
   onApply: (config: CalculatorConfig, script: string) => void;
@@ -25,6 +27,7 @@ interface AiChatSidebarProps {
 export function AiChatSidebar({
   config,
   calculatorId,
+  initialQuota,
   disabled,
   onClose,
   onApply,
@@ -115,6 +118,7 @@ export function AiChatSidebar({
         disabled={disabled}
         config={config}
         calculatorId={calculatorId}
+        initialQuota={initialQuota}
         onApply={onApply}
       />
     </aside>

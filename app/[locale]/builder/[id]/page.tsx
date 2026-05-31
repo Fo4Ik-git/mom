@@ -10,6 +10,11 @@ import {
 } from "@/lib/calculator/access";
 import { calculatorPublicPath } from "@/lib/calculator/paths";
 import { isAccessActive } from "@/lib/access/user-limits";
+import { getAiQuotaSnapshot } from "@/lib/ai/ai-quota";
+import {
+  canShowAiInBuilder,
+  loadAiUserForSession,
+} from "@/lib/ai/handle-generate-calculator-request";
 import { db } from "@/lib/platform/db";
 import { Role } from "@prisma/client";
 import { parseCalculatorConfig } from "@/types/calculator";
@@ -49,6 +54,14 @@ export default async function EditBuilderPage({
   const canManageShares =
     access.kind === "owner" || access.kind === "admin";
 
+  const aiUser = await loadAiUserForSession({
+    id: userId!,
+    role: session!.user.role ?? Role.USER,
+  });
+  const canUseAi = canShowAiInBuilder(aiUser) && !readOnly;
+  const initialAiQuota =
+    aiUser && canUseAi ? await getAiQuotaSnapshot(aiUser) : null;
+
   const t = await getTranslations("builder");
 
   return (
@@ -84,7 +97,8 @@ export default async function EditBuilderPage({
         apiBase={
           access.kind === "admin" ? "/api/admin/calculators" : "/api/calculators"
         }
-        isAdmin={session!.user.role === Role.ADMIN}
+        canUseAi={canUseAi}
+        initialAiQuota={initialAiQuota}
       />
     </PageShell>
   );

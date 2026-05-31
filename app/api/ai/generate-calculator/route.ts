@@ -5,13 +5,12 @@ import {
   handleGenerateCalculatorRequest,
 } from "@/lib/ai/handle-generate-calculator-request";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
-import { requireAdmin } from "@/lib/auth/auth-session";
+import { requireAuth } from "@/lib/auth/auth-session";
 import { withApiRoute } from "@/lib/api/with-api-route";
 
-/** @deprecated Prefer POST /api/ai/generate-calculator — kept for compatibility */
 export const POST = withApiRoute(async function POST(request: Request) {
   try {
-    const session = await requireAdmin();
+    const session = await requireAuth();
     const body = generateCalculatorBodySchema.parse(await request.json());
     return handleGenerateCalculatorRequest(session.user.id, body);
   } catch (error) {
@@ -19,8 +18,8 @@ export const POST = withApiRoute(async function POST(request: Request) {
       return NextResponse.json({ error: "invalid_data" }, { status: 400 });
     }
     if (error instanceof Error) {
-      if (error.message === "Forbidden") {
-        return NextResponse.json({ error: "forbidden" }, { status: 403 });
+      if (error.message === "Unauthorized") {
+        return NextResponse.json({ error: "unauthorized" }, { status: 401 });
       }
       if (error.message === "GEMINI_API_KEY is not configured") {
         return NextResponse.json({ error: "ai_not_configured" }, { status: 503 });
@@ -29,6 +28,6 @@ export const POST = withApiRoute(async function POST(request: Request) {
         return NextResponse.json({ error: "invalid_data" }, { status: 400 });
       }
     }
-    return handleAdminApiError(error, "admin.ai.generate-calculator");
+    return handleAdminApiError(error, "ai.generate-calculator");
   }
 });

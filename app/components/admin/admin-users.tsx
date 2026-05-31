@@ -40,6 +40,11 @@ interface UserRow {
   calculatorsCount: number;
   usesDefaultLimit: boolean;
   createdAt: string;
+  aiAccessActive: boolean;
+  aiTokensUsedPeriod: number;
+  aiTokenQuota: number | null;
+  aiTokenQuotaPeriod: "DAY" | "WEEK" | "MONTH";
+  aiTokensUnlimited: boolean;
 }
 
 function addMonths(base: Date, months: number): string {
@@ -373,6 +378,28 @@ export function AdminUsers() {
     return `${user.calculatorsCount} / ${user.effectiveMaxCalculators}`;
   }
 
+  function aiTokensLabel(user: UserRow) {
+    if (!user.aiAccessActive && user.role !== "ADMIN") {
+      return "—";
+    }
+    if (user.aiTokensUnlimited) {
+      return t("aiTableUnlimited", {
+        used: user.aiTokensUsedPeriod.toLocaleString(),
+      });
+    }
+    const limit = user.aiTokenQuota;
+    if (limit == null) {
+      return t("aiTableUnlimited", {
+        used: user.aiTokensUsedPeriod.toLocaleString(),
+      });
+    }
+    return t("aiTableQuota", {
+      used: user.aiTokensUsedPeriod.toLocaleString(),
+      limit: limit.toLocaleString(),
+      period: t(`aiQuotaPeriod_${user.aiTokenQuotaPeriod}`),
+    });
+  }
+
   function accessLabel(user: UserRow) {
     return user.accessExpiresAt
       ? formatAccessDateShort(user.accessExpiresAt, locale)
@@ -437,6 +464,12 @@ export function AdminUsers() {
       cell: (user) => quotaLabel(user),
     },
     {
+      id: "aiTokens",
+      header: t("aiTableColumn"),
+      cellClassName: "text-xs tabular-nums",
+      cell: (user) => aiTokensLabel(user),
+    },
+    {
       id: "actions",
       header: t("actions"),
       headerClassName: "text-right",
@@ -486,6 +519,10 @@ export function AdminUsers() {
                 {t("calculatorsQuota")}
               </dt>
               <dd className="font-medium">{quotaLabel(user)}</dd>
+            </div>
+            <div className="col-span-2">
+              <dt className="text-xs text-muted-foreground">{t("aiTableColumn")}</dt>
+              <dd className="font-medium">{aiTokensLabel(user)}</dd>
             </div>
           </dl>
 
@@ -620,7 +657,7 @@ export function AdminUsers() {
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
         onRefresh={() => void refresh()}
-        minTableWidth="960px"
+        minTableWidth="1080px"
         renderMobileCard={renderUserMobileCard}
         toolbar={
           <label className="block space-y-1">

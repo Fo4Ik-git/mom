@@ -10,6 +10,7 @@ import { Button } from "@/app/components/ui/button";
 import { PasswordInput } from "@/app/components/ui/password-input";
 import { appFetch } from "@/lib/api/api-client";
 import { adminApiErrorMessage } from "@/lib/admin/admin-api-error";
+import { AdminUserAiSection } from "@/app/components/admin/admin-user-ai-section";
 import { BAN_REASON_CODES } from "@/lib/access/ban-reasons";
 import type { ReferralKeyDto } from "@/lib/access/referral-key-display";
 
@@ -444,6 +445,11 @@ export function AdminUserManageModal({
           />
         </label>
       ),
+    },
+    {
+      id: "ai",
+      label: t("manageSectionAi"),
+      content: <AdminUserAiSection userId={user.id} />,
     },
     {
       id: "referral",

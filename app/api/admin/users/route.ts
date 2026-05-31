@@ -15,6 +15,12 @@ import { resolveDefaultAccessExpiresAt } from "@/lib/access/access-keys";
 import { getPlatformSettings } from "@/lib/platform/platform-settings";
 import { withApiRoute } from "@/lib/api/with-api-route";
 import {
+  hasUnlimitedAiTokens,
+  isAiAssistantAccessActive,
+} from "@/lib/ai/ai-access";
+import { getQuotaPeriodStart } from "@/lib/ai/ai-quota-period";
+import { sumTokensByUserIdsSince } from "@/lib/ai/ai-quota";
+import {
   countUserCalculators,
   getEffectiveMaxCalculators,
   isAccessActive,
@@ -41,6 +47,12 @@ const userSelect = {
   accessExpiresAt: true,
   adminNotes: true,
   createdAt: true,
+  aiAccessMode: true,
+  aiAccessExpiresAt: true,
+  aiAccessGrantedAt: true,
+  aiAccessDurationDays: true,
+  aiTokenQuota: true,
+  aiTokenQuotaPeriod: true,
 } as const;
 
 async function mapUserRow(
@@ -55,7 +67,14 @@ async function mapUserRow(
     accessExpiresAt: Date | null;
     adminNotes: string | null;
     createdAt: Date;
+    aiAccessMode: import("@prisma/client").AiAccessMode;
+    aiAccessExpiresAt: Date | null;
+    aiAccessGrantedAt: Date | null;
+    aiAccessDurationDays: number | null;
+    aiTokenQuota: number | null;
+    aiTokenQuotaPeriod: import("@prisma/client").AiTokenQuotaPeriod;
   },
+  aiTokensUsedPeriod: number,
 ) {
   const max = await getEffectiveMaxCalculators(user);
   const calculatorsCount = await countUserCalculators(user.id);
@@ -74,6 +93,11 @@ async function mapUserRow(
     createdAt: user.createdAt.toISOString(),
     calculatorsCount,
     usesDefaultLimit: user.maxCalculators == null && user.role !== Role.ADMIN,
+    aiAccessActive: isAiAssistantAccessActive(user),
+    aiTokensUsedPeriod,
+    aiTokenQuota: user.aiTokenQuota,
+    aiTokenQuotaPeriod: user.aiTokenQuotaPeriod,
+    aiTokensUnlimited: hasUnlimitedAiTokens(user),
   };
 }
 
@@ -111,7 +135,16 @@ export const GET = withApiRoute(async function GET(request: Request) {
       getPlatformSettings(),
     ]);
 
-    const rows = await Promise.all(users.map(mapUserRow));
+    const periodStart = getQuotaPeriodStart("MONTH");
+    const usageMap = await sumTokensByUserIdsSince(
+      users.map((u) => u.id),
+      periodStart,
+    );
+    const rows = await Promise.all(
+      users.map((user) =>
+        mapUserRow(user, usageMap.get(user.id) ?? 0),
+      ),
+    );
 
     return NextResponse.json({
       users: rows,
@@ -154,7 +187,7 @@ export const POST = withApiRoute(async function POST(request: Request) {
       select: userSelect,
     });
 
-    const row = await mapUserRow(user);
+    const row = await mapUserRow(user, 0);
 
     return NextResponse.json({ user: row }, { status: 201 });
   } catch (error) {

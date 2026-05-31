@@ -34,7 +34,7 @@ import { emptyBlockExpression, slugifyId } from "@/types/calculator";
 import { AiChatSidebar } from "@/app/components/builder/ai-chat-sidebar";
 import { CalculatorSharesPanel } from "@/app/components/builder/calculator-shares-panel";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   formatApiErrorForToast,
   formatApiStatusLine,
@@ -53,8 +53,9 @@ interface CalculatorBuilderProps {
   canManageShares?: boolean;
   /** When admin edits another user's calculator */
   apiBase?: string;
-  /** Show AI draft generator (admin only) */
-  isAdmin?: boolean;
+  /** Show AI assistant in builder */
+  canUseAi?: boolean;
+  initialAiQuota?: import("@/lib/ai/token-usage-types").AiQuotaSnapshot | null;
 }
 
 function randomId(prefix: string) {
@@ -144,7 +145,8 @@ export function CalculatorBuilder({
   readOnly = false,
   canManageShares = false,
   apiBase = "/api/calculators",
-  isAdmin = false,
+  canUseAi = false,
+  initialAiQuota = null,
 }: CalculatorBuilderProps) {
   const t = useTranslations("builder");
   const tc = useTranslations("common");
@@ -172,6 +174,12 @@ export function CalculatorBuilder({
   const [scriptPreviewConfig, setScriptPreviewConfig] =
     useState<CalculatorConfig | null>(null);
   const autoTotalSuffix = t("autoTotalSuffix");
+
+  useEffect(() => {
+    if (!canUseAi) {
+      setAiChatOpen(false);
+    }
+  }, [canUseAi]);
   const previewConfig = scriptPreviewConfig ?? config;
 
   function applyPattern(patternId: InputPatternId, count = 1) {
@@ -293,15 +301,16 @@ export function CalculatorBuilder({
       />
       <div
         className={`flex w-full items-start gap-0 ${
-          aiChatOpen && isAdmin && !readOnly
+          aiChatOpen && canUseAi && !readOnly
             ? "-ml-2 w-[calc(100%+0.5rem)] sm:-ml-3 sm:w-[calc(100%+0.75rem)]"
             : ""
         }`}
       >
-        {isAdmin && !readOnly && aiChatOpen && (
+        {canUseAi && !readOnly && aiChatOpen && (
           <AiChatSidebar
             config={config}
             calculatorId={calculatorId}
+            initialQuota={initialAiQuota}
             onClose={() => setAiChatOpen(false)}
             onApply={(nextConfig) => {
               setConfig(nextConfig);
@@ -756,7 +765,7 @@ export function CalculatorBuilder({
 
           {!readOnly && (
             <div className="flex flex-wrap items-center gap-2">
-              {isAdmin && (
+              {canUseAi && (
                 <Button
                   type="button"
                   variant={aiChatOpen ? "primary" : "outline"}

@@ -2,6 +2,7 @@ import "server-only";
 
 import type { AiChatMessage } from "@/lib/ai/chat-types";
 import { buildCalculatorGeneratorSystemInstruction } from "@/lib/ai/calculator-generator-prompt";
+import type { GeminiTokenUsage } from "@/lib/ai/token-usage-types";
 
 const DEFAULT_MODEL = "gemini-2.0-flash";
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
@@ -37,6 +38,11 @@ async function geminiFetch(path: string, body: unknown) {
     candidates?: Array<{
       content?: { parts?: GeminiPart[] };
     }>;
+    usageMetadata?: {
+      promptTokenCount?: number;
+      candidatesTokenCount?: number;
+      totalTokenCount?: number;
+    };
     name?: string;
   };
   if (!response.ok) {
@@ -101,9 +107,24 @@ function buildGeminiContents(messages: AiChatMessage[]) {
   }));
 }
 
+function parseUsageMetadata(
+  model: string,
+  meta?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  },
+): GeminiTokenUsage {
+  const promptTokens = meta?.promptTokenCount ?? 0;
+  const completionTokens = meta?.candidatesTokenCount ?? 0;
+  const totalTokens =
+    meta?.totalTokenCount ?? promptTokens + completionTokens;
+  return { model, promptTokens, completionTokens, totalTokens };
+}
+
 async function generateWithGeminiContents(
   contents: Array<{ role: "user" | "model"; parts: GeminiPart[] }>,
-): Promise<{ text: string; usedCache: boolean }> {
+): Promise<{ text: string; usedCache: boolean; usage: GeminiTokenUsage }> {
   const model = getModel();
   const cacheName = await ensureCalculatorGeminiCache();
 
@@ -133,12 +154,16 @@ async function generateWithGeminiContents(
     throw new Error("Gemini returned an empty response");
   }
 
-  return { text, usedCache: Boolean(cacheName) };
+  return {
+    text,
+    usedCache: Boolean(cacheName),
+    usage: parseUsageMetadata(model, data.usageMetadata),
+  };
 }
 
 export async function generateCalculatorScriptWithGemini(
   userPrompt: string,
-): Promise<{ text: string; usedCache: boolean }> {
+): Promise<{ text: string; usedCache: boolean; usage: GeminiTokenUsage }> {
   return generateWithGeminiContents([
     { role: "user", parts: [{ text: userPrompt }] },
   ]);
@@ -146,7 +171,7 @@ export async function generateCalculatorScriptWithGemini(
 
 export async function generateCalculatorScriptWithGeminiChat(
   messages: AiChatMessage[],
-): Promise<{ text: string; usedCache: boolean }> {
+): Promise<{ text: string; usedCache: boolean; usage: GeminiTokenUsage }> {
   if (messages.length === 0) {
     throw new Error("Prompt is required");
   }
