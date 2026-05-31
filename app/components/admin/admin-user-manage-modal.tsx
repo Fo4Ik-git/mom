@@ -18,7 +18,7 @@ export type UserRowForManage = {
   id: string;
   email: string;
   name: string | null;
-  role: "USER" | "ADMIN";
+  role: "USER" | "ADMIN" | "SUPERADMIN";
   banned: boolean;
 };
 
@@ -179,7 +179,11 @@ export function AdminUserManageModal({
   emailSaving,
   emailSuccess,
   emailError,
+  canManageStaffRoles,
+  canManageTarget,
+  canGrantAi,
   onToggleRole,
+  onAssignSuperadmin,
   onUnban,
   onStartBan,
   onCancelBan,
@@ -203,7 +207,11 @@ export function AdminUserManageModal({
   emailSaving: boolean;
   emailSuccess: boolean;
   emailError: string | null;
+  canManageStaffRoles: boolean;
+  canManageTarget: boolean;
+  canGrantAi: boolean;
   onToggleRole: () => void;
+  onAssignSuperadmin: () => void;
   onUnban: () => void;
   onStartBan: () => void;
   onCancelBan: () => void;
@@ -231,19 +239,37 @@ export function AdminUserManageModal({
       label: t("manageSectionAccount"),
       content: (
         <div className="space-y-4">
+          {!canManageTarget && (
+            <p className="rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+              {t("elevatedUserReadOnly")}
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={onToggleRole}>
-              {user.role === "ADMIN" ? t("removeAdmin") : t("makeAdmin")}
-            </Button>
-            {user.banned ? (
+            {canManageTarget && canManageStaffRoles && user.role !== "SUPERADMIN" && (
+              <>
+                <Button type="button" variant="outline" onClick={onToggleRole}>
+                  {user.role === "ADMIN" ? t("removeAdmin") : t("makeAdmin")}
+                </Button>
+                {user.role === "USER" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onAssignSuperadmin}
+                  >
+                    {t("assignSuperadmin")}
+                  </Button>
+                )}
+              </>
+            )}
+            {canManageTarget && user.banned ? (
               <Button type="button" variant="outline" onClick={onUnban}>
                 {t("unban")}
               </Button>
-            ) : pendingBanId === user.id ? (
+            ) : canManageTarget && pendingBanId === user.id ? (
               <Button type="button" variant="ghost" onClick={onCancelBan}>
                 {t("banCancel")}
               </Button>
-            ) : (
+            ) : canManageTarget && user.role !== "SUPERADMIN" ? (
               <Button
                 type="button"
                 variant="outline"
@@ -252,9 +278,9 @@ export function AdminUserManageModal({
               >
                 {t("ban")}
               </Button>
-            )}
+            ) : null}
           </div>
-          {pendingBanId === user.id && !user.banned && (
+          {canManageTarget && pendingBanId === user.id && !user.banned && (
             <div className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium">{t("banSelectReason")}</span>
@@ -293,14 +319,20 @@ export function AdminUserManageModal({
             <input
               type="checkbox"
               checked={edit.useDefaultLimit}
-              disabled={user.role === "ADMIN"}
+              disabled={
+                !canManageTarget ||
+                user.role === "ADMIN" ||
+                user.role === "SUPERADMIN"
+              }
               onChange={(e) =>
                 onEditChange({ useDefaultLimit: e.target.checked })
               }
             />
             {t("useDefaultLimit", { max: defaultMax })}
           </label>
-          {!edit.useDefaultLimit && user.role !== "ADMIN" && (
+          {!edit.useDefaultLimit &&
+            user.role !== "ADMIN" &&
+            user.role !== "SUPERADMIN" && (
             <label className="block space-y-1">
               <span className="text-sm text-muted-foreground">
                 {t("maxCalculators")}
@@ -329,6 +361,7 @@ export function AdminUserManageModal({
             <input
               type="date"
               value={edit.accessExpiresAt}
+              disabled={!canManageTarget}
               onChange={(e) =>
                 onEditChange({ accessExpiresAt: e.target.value })
               }
@@ -340,6 +373,7 @@ export function AdminUserManageModal({
               type="button"
               variant="outline"
               className="h-10 text-xs sm:text-sm"
+              disabled={!canManageTarget}
               onClick={() => onExtendAccess(1)}
             >
               {t("extend1Month")}
@@ -348,6 +382,7 @@ export function AdminUserManageModal({
               type="button"
               variant="outline"
               className="h-10 text-xs sm:text-sm"
+              disabled={!canManageTarget}
               onClick={() => onExtendAccess(12)}
             >
               {t("extend1Year")}
@@ -356,6 +391,7 @@ export function AdminUserManageModal({
               type="button"
               variant="outline"
               className="h-10 text-xs sm:text-sm"
+              disabled={!canManageTarget}
               onClick={() => onEditChange({ accessExpiresAt: "" })}
             >
               {t("accessUnlimited")}
@@ -367,7 +403,7 @@ export function AdminUserManageModal({
     {
       id: "credentials",
       label: t("manageSectionCredentials"),
-      content: (
+      content: canManageTarget ? (
         <div className="grid max-w-2xl gap-6 sm:grid-cols-2">
           <div className="space-y-3">
             <p className="text-sm font-semibold">{t("changePasswordTitle")}</p>
@@ -429,6 +465,8 @@ export function AdminUserManageModal({
             )}
           </div>
         </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">{t("elevatedUserReadOnly")}</p>
       ),
     },
     {
@@ -440,22 +478,33 @@ export function AdminUserManageModal({
           <textarea
             rows={4}
             value={edit.adminNotes}
+            disabled={!canManageTarget}
             onChange={(e) => onEditChange({ adminNotes: e.target.value })}
             className="block w-full rounded-xl border border-border bg-input px-3 py-2 text-base sm:text-sm"
           />
         </label>
       ),
     },
-    {
-      id: "ai",
-      label: t("manageSectionAi"),
-      content: <AdminUserAiSection userId={user.id} />,
-    },
-    {
-      id: "referral",
-      label: t("manageSectionReferral"),
-      content: <UserReferralSection userId={user.id} email={user.email} />,
-    },
+    ...(canGrantAi
+      ? [
+          {
+            id: "ai" as const,
+            label: t("manageSectionAi"),
+            content: <AdminUserAiSection userId={user.id} />,
+          },
+        ]
+      : []),
+    ...(canManageTarget
+      ? [
+          {
+            id: "referral" as const,
+            label: t("manageSectionReferral"),
+            content: (
+              <UserReferralSection userId={user.id} email={user.email} />
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -466,9 +515,11 @@ export function AdminUserManageModal({
       subtitle={user.name}
       sections={sections}
       footer={
-        <Button type="button" className="h-11 w-full sm:w-auto" onClick={onSave}>
-          {tc("save")}
-        </Button>
+        canManageTarget ? (
+          <Button type="button" className="h-11 w-full sm:w-auto" onClick={onSave}>
+            {tc("save")}
+          </Button>
+        ) : null
       }
     />
   );

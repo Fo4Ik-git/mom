@@ -30,7 +30,7 @@ interface Quota {
   canCreate: boolean;
   accessActive: boolean;
   accessExpiresAt: string | null;
-  role: "USER" | "ADMIN";
+  role: "USER" | "ADMIN" | "SUPERADMIN";
 }
 
 export function Dashboard() {
@@ -122,7 +122,9 @@ export function Dashboard() {
         <div className="grid gap-3 sm:grid-cols-2">
           <Card
             className={`p-4 ${
-              !quota.accessActive && quota.role !== "ADMIN"
+              !quota.accessActive &&
+              quota.role !== "ADMIN" &&
+              quota.role !== "SUPERADMIN"
                 ? "border-destructive/40 bg-destructive/5"
                 : accessUrgent
                   ? "border-amber-500/40 bg-amber-500/5"
@@ -132,7 +134,7 @@ export function Dashboard() {
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
               {tl("accessStatus")}
             </p>
-            {quota.role === "ADMIN" ? (
+            {quota.role === "ADMIN" || quota.role === "SUPERADMIN" ? (
               <p className="mt-1 text-lg font-semibold">{tl("accessAdmin")}</p>
             ) : !quota.accessExpiresAt ? (
               <p className="mt-1 text-lg font-semibold">{tl("accessUnlimitedTime")}</p>

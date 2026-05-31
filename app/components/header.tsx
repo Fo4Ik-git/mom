@@ -28,7 +28,10 @@ export async function Header() {
         <HeaderNav
           signedIn={Boolean(session?.user)}
           banned={Boolean(session?.user?.banned)}
-          isAdmin={session?.user?.role === "ADMIN"}
+          isAdmin={
+            session?.user?.role === "ADMIN" ||
+            session?.user?.role === "SUPERADMIN"
+          }
         />
       </div>
     </header>

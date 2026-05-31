@@ -74,8 +74,10 @@ export default auth((request) => {
   const { locale, pathname: barePath } = stripLocalePrefix(pathname);
 
   const isLoggedIn = Boolean(request.auth);
-  const isAdmin = request.auth?.user?.role === "ADMIN";
-  const isBanned = Boolean(request.auth?.user?.banned) && !isAdmin;
+  const role = request.auth?.user?.role;
+  const isStaff =
+    role === "ADMIN" || role === "SUPERADMIN";
+  const isBanned = Boolean(request.auth?.user?.banned) && !isStaff;
 
   if (isBanned && barePath.startsWith("/builder")) {
     return nextWithTrace(
@@ -84,7 +86,7 @@ export default auth((request) => {
     );
   }
 
-  if (barePath.startsWith("/admin") && !isAdmin) {
+  if (barePath.startsWith("/admin") && !isStaff) {
     return nextWithTrace(
       tracedRequest,
       NextResponse.redirect(

@@ -17,7 +17,8 @@ export default async function AdminLayout({
   const session = await auth();
   const t = await getTranslations("admin");
 
-  if (session?.user?.role !== "ADMIN") {
+  const role = session?.user?.role;
+  if (role !== "ADMIN" && role !== "SUPERADMIN") {
     redirect({ href: "/auth/signin?callbackUrl=/admin", locale });
   }
 

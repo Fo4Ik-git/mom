@@ -11,6 +11,7 @@ import {
 } from "@/lib/platform/platform-settings";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
+import { assertCanGrantAiAccess } from "@/lib/auth/permissions";
 import { withApiRoute } from "@/lib/api/with-api-route";
 import { setAuditDetail } from "@/lib/logger/audit";
 import { AI_TOKEN_QUOTA_MAX } from "@/lib/ai/ai-quota-limits";
@@ -69,8 +70,18 @@ export const GET = withApiRoute(async function GET() {
 
 export const PATCH = withApiRoute(async function PATCH(request: Request) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const body = updateSchema.parse(await request.json());
+
+    const touchesAiDefaults =
+      body.defaultAiTokenQuota !== undefined ||
+      body.defaultAiTokenQuotaPeriod !== undefined;
+    if (touchesAiDefaults) {
+      const aiError = assertCanGrantAiAccess(session.user.role);
+      if (aiError) {
+        return NextResponse.json({ error: aiError }, { status: 403 });
+      }
+    }
     const settings = await updatePlatformSettings(body);
     setAuditDetail({
       changes: {

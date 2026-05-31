@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { Role } from "@prisma/client";
 import { ensureAdminReferralKey } from "@/lib/access/ensure-admin-referral";
+import { isStaffRole } from "@/lib/auth/staff-role";
 import { resolveReferrerBonusDays } from "@/lib/access/referrer-reward";
 import { getDisplayableUserReferral } from "@/lib/access/user-referral";
 import { getPlatformSettings } from "@/lib/platform/platform-settings";
@@ -16,8 +16,8 @@ export const GET = withApiRoute(async function GET() {
       where: { id: session.user.id },
       select: { role: true },
     });
-    if (dbUser?.role === Role.ADMIN) {
-      await ensureAdminReferralKey(session.user.id, Role.ADMIN);
+    if (dbUser && isStaffRole(dbUser.role)) {
+      await ensureAdminReferralKey(session.user.id, dbUser.role);
     }
     const key = await getDisplayableUserReferral(session.user.id);
 

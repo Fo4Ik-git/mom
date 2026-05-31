@@ -1,4 +1,5 @@
 import { CalculatorShareRole, Role, type Calculator } from "@prisma/client";
+import { isStaffRole } from "@/lib/auth/staff-role";
 import { db } from "@/lib/platform/db";
 
 export type CalculatorAccessKind = "owner" | "admin" | "edit" | "view";
@@ -33,6 +34,9 @@ export async function resolveUserRole(
   userId: string,
   userRole?: Role | string | null,
 ): Promise<Role> {
+  if (userRole === Role.SUPERADMIN || userRole === "SUPERADMIN") {
+    return Role.SUPERADMIN;
+  }
   if (userRole === Role.ADMIN || userRole === "ADMIN") {
     return Role.ADMIN;
   }
@@ -61,7 +65,7 @@ export async function getCalculatorAccess(
 
   const role = await resolveUserRole(userId, userRole);
 
-  if (role === Role.ADMIN) {
+  if (isStaffRole(role)) {
     return { calculator, kind: "admin", shareRole: null };
   }
 

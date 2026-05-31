@@ -1,5 +1,6 @@
 import { Role, type User } from "@prisma/client";
 import { isAccessExpiredByCalendarDay } from "@/lib/access/access-dates";
+import { hasStaffPlatformPrivileges } from "@/lib/auth/staff-role";
 import { db } from "@/lib/platform/db";
 import { getPlatformSettings } from "@/lib/platform/platform-settings";
 
@@ -20,7 +21,7 @@ export class UserAccessError extends Error {
 }
 
 export function isAccessActive(user: Pick<User, "role" | "accessExpiresAt">): boolean {
-  if (user.role === Role.ADMIN) {
+  if (hasStaffPlatformPrivileges(user.role)) {
     return true;
   }
   if (!user.accessExpiresAt) {
@@ -32,7 +33,7 @@ export function isAccessActive(user: Pick<User, "role" | "accessExpiresAt">): bo
 export async function getEffectiveMaxCalculators(
   user: Pick<User, "role" | "maxCalculators">,
 ): Promise<number | null> {
-  if (user.role === Role.ADMIN) {
+  if (hasStaffPlatformPrivileges(user.role)) {
     return null;
   }
   if (user.maxCalculators != null) {

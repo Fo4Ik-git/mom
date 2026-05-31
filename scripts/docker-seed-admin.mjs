@@ -17,7 +17,15 @@ async function main() {
   });
 
   if (existing) {
-    console.log(`Admin already exists: ${adminEmail}`);
+    if (existing.role !== "SUPERADMIN") {
+      await prisma.user.update({
+        where: { email: adminEmail },
+        data: { role: "SUPERADMIN" },
+      });
+      console.log(`Promoted existing user to SUPERADMIN: ${adminEmail}`);
+    } else {
+      console.log(`Superadmin already exists: ${adminEmail}`);
+    }
     return;
   }
 
@@ -37,13 +45,13 @@ async function main() {
     data: {
       email: adminEmail,
       name: "Admin",
-      role: "ADMIN",
+      role: "SUPERADMIN",
       emailVerified: new Date(),
       passwordHash,
     },
   });
 
-  console.log(`Created admin: ${adminEmail}`);
+  console.log(`Created superadmin: ${adminEmail}`);
 }
 
 main()

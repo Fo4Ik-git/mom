@@ -1,4 +1,5 @@
-import { AccessKeyKind, Role, type AccessKey, type User } from "@prisma/client";
+import { AccessKeyKind, type AccessKey, type User } from "@prisma/client";
+import { hasStaffPlatformPrivileges } from "@/lib/auth/staff-role";
 import {
   extendAccessExpiresAt,
   resolveReferrerBonusDays,
@@ -31,7 +32,7 @@ export async function applyReferrerSignupReward(
   const referrer = await loadReferrer();
   if (
     !referrer ||
-    referrer.role === Role.ADMIN ||
+    hasStaffPlatformPrivileges(referrer.role) ||
     referrer.accessExpiresAt === null
   ) {
     return 0;

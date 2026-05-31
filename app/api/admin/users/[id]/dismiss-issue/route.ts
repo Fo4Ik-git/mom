@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/platform/db";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
+import { assertCanManageUser } from "@/lib/auth/permissions";
 import { withApiRoute } from "@/lib/api/with-api-route";
 import {
   isBanIssueVisible,
@@ -18,7 +19,7 @@ export const POST = withApiRoute(async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const { id } = await params;
     const { kind } = bodySchema.parse(await request.json());
 
@@ -35,6 +36,16 @@ export const POST = withApiRoute(async function POST(
 
     if (!user) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+
+    const manageError = assertCanManageUser(
+      session.user.role,
+      user.role,
+      session.user.id,
+      id,
+    );
+    if (manageError) {
+      return NextResponse.json({ error: manageError }, { status: 403 });
     }
 
     if (kind === "banned") {

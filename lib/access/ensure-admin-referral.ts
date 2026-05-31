@@ -1,11 +1,12 @@
 import { AccessKeyKind, Role } from "@prisma/client";
 import { createAccessKey } from "@/lib/access/access-keys";
+import { isStaffRole } from "@/lib/auth/staff-role";
 import { findUserReferralKey } from "@/lib/access/user-referral";
 import { db } from "@/lib/platform/db";
 
-/** Admins always have an active referral with no use/expiry limits. */
+/** Staff (ADMIN / SUPERADMIN) always have an active referral with no use/expiry limits. */
 export async function ensureAdminReferralKey(userId: string, role: Role) {
-  if (role !== Role.ADMIN) {
+  if (!isStaffRole(role)) {
     return null;
   }
 

@@ -2,6 +2,7 @@ import "server-only";
 
 import type { AiTokenQuotaPeriod } from "@prisma/client";
 import { Role } from "@prisma/client";
+import { hasStaffPlatformPrivileges } from "@/lib/auth/staff-role";
 import {
   getQuotaPeriodEnd,
   getQuotaPeriodStart,
@@ -165,5 +166,5 @@ export async function getAiUsageStatsForUser(
 }
 
 export function isAdminUnlimitedAi(role: Role): boolean {
-  return role === Role.ADMIN;
+  return hasStaffPlatformPrivileges(role);
 }

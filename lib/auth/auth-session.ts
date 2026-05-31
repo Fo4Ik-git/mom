@@ -1,6 +1,7 @@
 import { Role } from "@prisma/client";
 import { auth } from "@/auth";
 import { assertActiveUser, UserAccessError } from "@/lib/access/user-limits";
+import { isStaffRole, isSuperAdminRole } from "@/lib/auth/staff-role";
 import { db } from "@/lib/platform/db";
 
 export async function requireAuth() {
@@ -34,9 +35,18 @@ export async function requireActiveUser() {
   return session;
 }
 
+/** ADMIN or SUPERADMIN — admin panel and staff APIs. */
 export async function requireAdmin() {
   const session = await requireAuth();
-  if (session.user.role !== Role.ADMIN) {
+  if (!isStaffRole(session.user.role)) {
+    throw new Error("Forbidden");
+  }
+  return session;
+}
+
+export async function requireSuperAdmin() {
+  const session = await requireAuth();
+  if (!isSuperAdminRole(session.user.role)) {
     throw new Error("Forbidden");
   }
   return session;

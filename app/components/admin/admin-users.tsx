@@ -18,6 +18,11 @@ import {
   type UserEdit,
 } from "@/app/components/admin/admin-user-manage-modal";
 import { appFetch } from "@/lib/api/api-client";
+import {
+  canGrantAiAccess,
+  canManageUser,
+} from "@/lib/auth/permissions";
+import { Role } from "@prisma/client";
 import { adminApiErrorMessage } from "@/lib/admin/admin-api-error";
 import {
   accessExpiresAtFromDateInput,
@@ -25,11 +30,34 @@ import {
   formatDateInputLocal,
 } from "@/lib/access/access-dates";
 
+export type AdminUserRole = "USER" | "ADMIN" | "SUPERADMIN";
+
+function isStaffUserRole(role: AdminUserRole): boolean {
+  return role === "ADMIN" || role === "SUPERADMIN";
+}
+
+function roleBadgeTone(role: AdminUserRole): "accent" | "neutral" {
+  return isStaffUserRole(role) ? "accent" : "neutral";
+}
+
+function roleDisplayLabel(
+  role: AdminUserRole,
+  t: ReturnType<typeof useTranslations<"admin">>,
+): string {
+  if (role === "SUPERADMIN") {
+    return t("roleSuperadmin");
+  }
+  if (role === "ADMIN") {
+    return t("roleAdmin");
+  }
+  return t("roleUser");
+}
+
 interface UserRow {
   id: string;
   email: string;
   name: string | null;
-  role: "USER" | "ADMIN";
+  role: AdminUserRole;
   banned: boolean;
   banReason: "ACCESS_EXPIRED" | null;
   maxCalculators: number | null;
@@ -105,7 +133,21 @@ function UserStatusSection({
   );
 }
 
-export function AdminUsers() {
+export function AdminUsers({
+  actorRole,
+  actorUserId,
+}: {
+  actorRole: AdminUserRole | "USER";
+  actorUserId: string;
+}) {
+  const actorRoleEnum =
+    actorRole === "SUPERADMIN"
+      ? Role.SUPERADMIN
+      : actorRole === "ADMIN"
+        ? Role.ADMIN
+        : Role.USER;
+  const canManageStaffRoles = actorRole === "SUPERADMIN";
+  const canGrantAi = canGrantAiAccess(actorRoleEnum);
   const t = useTranslations("admin");
   const tc = useTranslations("common");
   const locale = useLocale();
@@ -121,7 +163,7 @@ export function AdminUsers() {
     email: "",
     password: "",
     name: "",
-    role: "USER" as "USER" | "ADMIN",
+    role: "USER" as AdminUserRole,
     maxCalculators: "",
     accessExpiresAt: "",
   });
@@ -372,14 +414,14 @@ export function AdminUsers() {
   }
 
   function quotaLabel(user: UserRow) {
-    if (user.role === "ADMIN" || user.effectiveMaxCalculators == null) {
+    if (isStaffUserRole(user.role) || user.effectiveMaxCalculators == null) {
       return t("unlimited");
     }
     return `${user.calculatorsCount} / ${user.effectiveMaxCalculators}`;
   }
 
   function aiTokensLabel(user: UserRow) {
-    if (!user.aiAccessActive && user.role !== "ADMIN") {
+    if (!user.aiAccessActive && !isStaffUserRole(user.role)) {
       return "—";
     }
     if (user.aiTokensUnlimited) {
@@ -442,8 +484,8 @@ export function AdminUsers() {
       id: "role",
       header: t("role"),
       cell: (user) => (
-        <StatusBadge tone={user.role === "ADMIN" ? "accent" : "neutral"}>
-          {user.role}
+        <StatusBadge tone={roleBadgeTone(user.role)}>
+          {roleDisplayLabel(user.role, t)}
         </StatusBadge>
       ),
     },
@@ -503,8 +545,8 @@ export function AdminUsers() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <StatusBadge tone={user.role === "ADMIN" ? "accent" : "neutral"}>
-              {user.role}
+            <StatusBadge tone={roleBadgeTone(user.role)}>
+              {roleDisplayLabel(user.role, t)}
             </StatusBadge>
             <UserStatusSection user={user} t={t} tc={tc} />
           </div>
@@ -597,13 +639,19 @@ export function AdminUsers() {
               onChange={(e) =>
                 setNewUser((u) => ({
                   ...u,
-                  role: e.target.value as "USER" | "ADMIN",
+                  role: e.target.value as AdminUserRole,
                 }))
               }
               className={inputClass}
+              disabled={!canManageStaffRoles}
             >
-              <option value="USER">USER</option>
-              <option value="ADMIN">ADMIN</option>
+              <option value="USER">{t("roleUser")}</option>
+              {canManageStaffRoles && (
+                <>
+                  <option value="ADMIN">{t("roleAdmin")}</option>
+                  <option value="SUPERADMIN">{t("roleSuperadmin")}</option>
+                </>
+              )}
             </select>
           </label>
           <label className="space-y-1">
@@ -691,11 +739,31 @@ export function AdminUsers() {
           emailSaving={emailSavingId === manageUser.id}
           emailSuccess={emailSuccessId === manageUser.id}
           emailError={emailErrors[manageUser.id] ?? null}
+          canManageStaffRoles={canManageStaffRoles}
+          canManageTarget={canManageUser(
+            actorRoleEnum,
+            manageUser.role === "SUPERADMIN"
+              ? Role.SUPERADMIN
+              : manageUser.role === "ADMIN"
+                ? Role.ADMIN
+                : Role.USER,
+            actorUserId,
+            manageUser.id,
+          )}
+          canGrantAi={canGrantAi}
           onToggleRole={() =>
             updateUser(manageUser.id, {
               role: manageUser.role === "ADMIN" ? "USER" : "ADMIN",
             })
           }
+          onAssignSuperadmin={() => {
+            if (
+              !confirm(t("assignSuperadminConfirm", { email: manageUser.email }))
+            ) {
+              return;
+            }
+            updateUser(manageUser.id, { role: "SUPERADMIN" });
+          }}
           onUnban={() => {
             setPendingBanId(null);
             updateUser(manageUser.id, { banned: false });

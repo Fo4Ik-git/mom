@@ -10,7 +10,11 @@ import {
   resolveAiAccessExpiresAt,
 } from "@/lib/ai/ai-access";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
-import { requireAdmin } from "@/lib/auth/auth-session";
+import { requireAdmin, requireSuperAdmin } from "@/lib/auth/auth-session";
+import {
+  assertCanGrantAiAccess,
+  assertCanManageUser,
+} from "@/lib/auth/permissions";
 import { getPlatformSettings } from "@/lib/platform/platform-settings";
 import { db } from "@/lib/platform/db";
 import { withApiRoute } from "@/lib/api/with-api-route";
@@ -49,7 +53,7 @@ export const GET = withApiRoute(async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const { id } = await params;
 
     const user = await db.user.findUnique({
@@ -59,6 +63,11 @@ export const GET = withApiRoute(async function GET(
 
     if (!user) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+
+    const aiReadError = assertCanGrantAiAccess(session.user.role);
+    if (aiReadError) {
+      return NextResponse.json({ error: aiReadError }, { status: 403 });
     }
 
     const [usage, quota, platform] = await Promise.all([
@@ -102,7 +111,7 @@ export const PATCH = withApiRoute(async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireAdmin();
+    const session = await requireSuperAdmin();
     const { id } = await params;
     const body = patchSchema.parse(await request.json());
 
@@ -113,6 +122,16 @@ export const PATCH = withApiRoute(async function PATCH(
 
     if (!existing) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+
+    const manageError = assertCanManageUser(
+      session.user.role,
+      existing.role,
+      session.user.id,
+      id,
+    );
+    if (manageError) {
+      return NextResponse.json({ error: manageError }, { status: 403 });
     }
 
     const platform = await getPlatformSettings();

@@ -1,4 +1,5 @@
 import { BanReason, Role, type User } from "@prisma/client";
+import { hasStaffPlatformPrivileges } from "@/lib/auth/staff-role";
 import { db } from "@/lib/platform/db";
 import { getSupportContact, type SupportContact } from "@/lib/platform/support-contact";
 
@@ -33,5 +34,5 @@ export async function getUserAccountStatus(
 }
 
 export function shouldBlockUser(user: Pick<User, "banned" | "role">): boolean {
-  return user.role !== Role.ADMIN && user.banned;
+  return !hasStaffPlatformPrivileges(user.role) && user.banned;
 }

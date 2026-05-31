@@ -11,6 +11,7 @@ import {
 } from "@/lib/access/user-referral";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
+import { assertCanManageUser } from "@/lib/auth/permissions";
 import { db } from "@/lib/platform/db";
 import { withApiRoute } from "@/lib/api/with-api-route";
 
@@ -56,7 +57,7 @@ export const PUT = withApiRoute(async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const { id: userId } = await params;
     const body = upsertSchema.parse(await request.json());
 
@@ -66,6 +67,16 @@ export const PUT = withApiRoute(async function PUT(
     });
     if (!user) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+
+    const manageError = assertCanManageUser(
+      session.user.role,
+      user.role,
+      session.user.id,
+      userId,
+    );
+    if (manageError) {
+      return NextResponse.json({ error: manageError }, { status: 403 });
     }
 
     if (!body.granted) {

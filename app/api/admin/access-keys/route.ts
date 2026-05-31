@@ -102,7 +102,8 @@ export const POST = withApiRoute(async function POST(request: Request) {
     if (!referrer) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
     }
-    const adminReferrer = referrer.role === Role.ADMIN;
+    const adminReferrer =
+      referrer.role === Role.ADMIN || referrer.role === Role.SUPERADMIN;
 
     const key = await createAccessKey({
       kind: AccessKeyKind.REFERRAL,

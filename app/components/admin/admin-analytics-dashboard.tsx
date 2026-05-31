@@ -664,6 +664,7 @@ export function AdminAnalyticsDashboard() {
       expired: t("distExpired"),
       USER: "User",
       ADMIN: "Admin",
+      SUPERADMIN: "Superadmin",
       user: t("distUserCalcs"),
       template: t("distTemplates"),
     }),

@@ -10,6 +10,11 @@ import {
 } from "@/lib/ui/table-pagination";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
+import { applyUserRoleChange } from "@/lib/auth/role-policy";
+import {
+  canManageStaffRoles,
+  hasStaffPlatformPrivileges,
+} from "@/lib/auth/permissions";
 import { hashPassword } from "@/lib/auth/password";
 import { resolveDefaultAccessExpiresAt } from "@/lib/access/access-keys";
 import { getPlatformSettings } from "@/lib/platform/platform-settings";
@@ -92,7 +97,8 @@ async function mapUserRow(
     adminNotes: user.adminNotes,
     createdAt: user.createdAt.toISOString(),
     calculatorsCount,
-    usesDefaultLimit: user.maxCalculators == null && user.role !== Role.ADMIN,
+    usesDefaultLimit:
+      user.maxCalculators == null && !hasStaffPlatformPrivileges(user.role),
     aiAccessActive: isAiAssistantAccessActive(user),
     aiTokensUsedPeriod,
     aiTokenQuota: user.aiTokenQuota,
@@ -159,8 +165,19 @@ export const GET = withApiRoute(async function GET(request: Request) {
 
 export const POST = withApiRoute(async function POST(request: Request) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const body = createSchema.parse(await request.json());
+    const requestedRole = body.role ?? Role.USER;
+
+    if (
+      (requestedRole === Role.ADMIN || requestedRole === Role.SUPERADMIN) &&
+      !canManageStaffRoles(session.user.role)
+    ) {
+      return NextResponse.json(
+        { error: "forbidden_role_change" },
+        { status: 403 },
+      );
+    }
     const email = body.email.toLowerCase();
 
     const existing = await db.user.findUnique({ where: { email } });
@@ -173,13 +190,16 @@ export const POST = withApiRoute(async function POST(request: Request) {
       ? new Date(body.accessExpiresAt)
       : await resolveDefaultAccessExpiresAt();
 
+    const createRole =
+      requestedRole === Role.SUPERADMIN ? Role.USER : requestedRole;
+
     const user = await db.user.create({
       data: {
         email,
         name: body.name,
         passwordHash,
         emailVerified: new Date(),
-        role: body.role ?? Role.USER,
+        role: createRole,
         maxCalculators: body.maxCalculators ?? undefined,
         accessExpiresAt,
         adminNotes: body.adminNotes,
@@ -187,7 +207,19 @@ export const POST = withApiRoute(async function POST(request: Request) {
       select: userSelect,
     });
 
-    const row = await mapUserRow(user, 0);
+    if (requestedRole === Role.SUPERADMIN) {
+      await applyUserRoleChange(user.id, Role.SUPERADMIN);
+    }
+
+    const saved =
+      requestedRole === Role.SUPERADMIN
+        ? await db.user.findUniqueOrThrow({
+            where: { id: user.id },
+            select: userSelect,
+          })
+        : user;
+
+    const row = await mapUserRow(saved, 0);
 
     return NextResponse.json({ user: row }, { status: 201 });
   } catch (error) {

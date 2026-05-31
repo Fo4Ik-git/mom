@@ -4,6 +4,15 @@ import { z } from "zod";
 import { db } from "@/lib/platform/db";
 import { handleAdminApiError } from "@/lib/admin/admin-api-response";
 import { requireAdmin } from "@/lib/auth/auth-session";
+import {
+  applyUserRoleChange,
+  assertRoleChangeAllowed,
+} from "@/lib/auth/role-policy";
+import {
+  assertCanManageUser,
+  hasStaffPlatformPrivileges,
+  isSuperAdminRole,
+} from "@/lib/auth/permissions";
 import { hashPassword } from "@/lib/auth/password";
 import { withApiRoute } from "@/lib/api/with-api-route";
 import { setAuditDetail } from "@/lib/logger/audit";
@@ -38,8 +47,45 @@ export const PATCH = withApiRoute(async function PATCH(
       return NextResponse.json({ error: "cannot_ban_self" }, { status: 400 });
     }
 
-    if (id === session.user.id && body.role === Role.USER) {
+    if (
+      id === session.user.id &&
+      body.role !== undefined &&
+      body.role !== session.user.role
+    ) {
       return NextResponse.json({ error: "cannot_demote_self" }, { status: 400 });
+    }
+
+    const targetBefore = await db.user.findUnique({
+      where: { id },
+      select: { role: true },
+    });
+    if (!targetBefore) {
+      return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+
+    const manageError = assertCanManageUser(
+      session.user.role,
+      targetBefore.role,
+      session.user.id,
+      id,
+    );
+    const hasUserPatch =
+      body.role !== undefined ||
+      body.banned !== undefined ||
+      body.banReason !== undefined ||
+      body.name !== undefined ||
+      body.maxCalculators !== undefined ||
+      body.accessExpiresAt !== undefined ||
+      body.adminNotes !== undefined ||
+      body.password !== undefined ||
+      body.email !== undefined;
+
+    if (hasUserPatch && manageError) {
+      return NextResponse.json({ error: manageError }, { status: 403 });
+    }
+
+    if (body.banned === true && targetBefore.role === Role.SUPERADMIN) {
+      return NextResponse.json({ error: "cannot_ban_superadmin" }, { status: 400 });
     }
 
     if (body.banned === true && !body.banReason) {
@@ -61,7 +107,17 @@ export const PATCH = withApiRoute(async function PATCH(
     } = {};
 
     if (body.role !== undefined) {
-      data.role = body.role;
+      const roleError = await assertRoleChangeAllowed(
+        session.user.id,
+        session.user.role,
+        id,
+        body.role,
+      );
+      if (roleError) {
+        const status =
+          roleError === "cannot_modify_superadmin" ? 403 : 400;
+        return NextResponse.json({ error: roleError }, { status });
+      }
     }
     if (body.banned !== undefined) {
       data.banned = body.banned;
@@ -126,6 +182,10 @@ export const PATCH = withApiRoute(async function PATCH(
       }
     }
 
+    if (body.role !== undefined && body.role !== targetBefore.role) {
+      await applyUserRoleChange(id, body.role);
+    }
+
     const user = await db.user.update({
       where: { id },
       data,
@@ -180,7 +240,8 @@ export const PATCH = withApiRoute(async function PATCH(
         calculatorsCount,
         effectiveMaxCalculators,
         usesDefaultLimit:
-          user.maxCalculators == null && user.role !== Role.ADMIN,
+          user.maxCalculators == null &&
+          !hasStaffPlatformPrivileges(user.role),
       },
     });
   } catch (error) {

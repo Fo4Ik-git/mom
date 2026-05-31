@@ -237,7 +237,9 @@ export async function getAdminAnalytics(
     db.calculator.count({ where: { isTemplate: true } }),
     db.calculator.count({ where: { isPublic: true, isTemplate: false } }),
     db.user.count({ where: { banned: true } }),
-    db.user.count({ where: { role: Role.ADMIN } }),
+    db.user.count({
+      where: { role: { in: [Role.ADMIN, Role.SUPERADMIN] } },
+    }),
     db.user.count({
       where: { role: Role.USER, accessExpiresAt: { lt: now } },
     }),
