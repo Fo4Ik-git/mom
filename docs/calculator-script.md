@@ -33,9 +33,19 @@ input field_item {
   property var_price {
     label = "Price"
     value = 0
+    auto_total = true
+  }
+
+  property var_rate {
+    label = "Hourly rate"
+    value = 25
+    auto_total = false
   }
 }
 ```
+
+- **auto_total** on a property: platform auto-creates `calc_{field_id}_{property_id}` = `qty × property` (shown in read-only `auto-calculations.calc`). Default **true** for `var_cost` / `var_price` and cost/price-like labels. Use **false** for rates, durations, page counts, etc.
+- In formulas prefer `calc_field_item_var_price` over `field_item.qty * field_item.var_price` when `auto_total = true`.
 
 - **Blocks:** add the field in the sidebar; palette shows `qty` and each property under the field group.
 - **Code:** reference `field_item.qty`, `field_item.var_cost`, `field_item.var_price`.

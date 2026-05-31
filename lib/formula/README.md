@@ -55,7 +55,7 @@ formula/
 
 1. Copy `primitives/_template.primitive.node.ts` → `my-fn.node.ts`
 2. Implement `evaluate`, optional `formatCode`, `parseCodeCall`, `paletteItems`, `doc.example`
-3. Register in `primitives/index.ts` → `ALL_PRIMITIVES`
+3. Save the file — `ALL_PRIMITIVES` picks it up automatically (`collect-primitives.ts`)
 4. Extend `BlockExpression` in `types/calculator.ts` if new AST shape
 5. For composite nodes (like IF): add entry to `block-ui-registry.ts`, implement `*.node.ts`
 6. Add i18n: `messages/en.json` + `uk.json` → `docs.primitives.<id>` (title, description, `codeUsage`, `blockUsage`)

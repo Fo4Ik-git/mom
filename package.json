@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0",
-    "build": "prisma generate && next build",
+    "generate:primitives": "tsx scripts/generate-primitive-modules.ts",
+    "predev": "npm run generate:primitives",
+    "build": "prisma generate && npm run generate:primitives && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",

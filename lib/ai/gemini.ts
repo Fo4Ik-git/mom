@@ -2,6 +2,7 @@ import "server-only";
 
 import type { AiChatMessage } from "@/lib/ai/chat-types";
 import { buildCalculatorGeneratorSystemInstruction } from "@/lib/ai/calculator-generator-prompt";
+import { getRegisteredPrimitiveIds } from "@/lib/formula/docs/formula-catalog";
 import type { GeminiTokenUsage } from "@/lib/ai/token-usage-types";
 
 const DEFAULT_MODEL = "gemini-2.0-flash";
@@ -69,7 +70,7 @@ export async function ensureCalculatorGeminiCache(): Promise<string | null> {
     const systemInstruction = buildCalculatorGeneratorSystemInstruction();
     const data = await geminiFetch("/cachedContents", {
       model: `models/${model}`,
-      displayName: "mcb-calculator-generator",
+      displayName: `mcb-calculator-generator-p${getRegisteredPrimitiveIds().length}`,
       systemInstruction: {
         parts: [{ text: systemInstruction }],
       },

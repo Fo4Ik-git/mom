@@ -1,5 +1,5 @@
 /**
- * Template: copy to `my-fn.node.ts` and register in `primitives/index.ts`.
+ * Template: copy to `my-fn.node.ts` (auto-registered — no index.ts edit needed).
  *
  * `_helpers.ts` — лише parse/format/palette boilerplate.
  * Логіку evaluate пиши прямо тут у файлі примітиву.
