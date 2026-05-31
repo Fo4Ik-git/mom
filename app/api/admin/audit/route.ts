@@ -56,6 +56,7 @@ export const GET = withApiRoute(async function GET(request: Request) {
       level: parseLevel(searchParams.get("level")),
       traceId: searchParams.get("trace_id") ?? undefined,
       event: searchParams.get("event") ?? undefined,
+      actionsOnly: searchParams.get("actionsOnly") === "1",
       page,
       pageSize,
     });

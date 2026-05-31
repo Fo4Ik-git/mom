@@ -53,6 +53,7 @@ describe("read-logs", () => {
     const all = readLogs({ file: "app-2026-05-30.jsonl", pageSize: 50 });
     expect(all?.entries).toHaveLength(2);
     expect(all?.entries[0]?.trace_id).toBe("trace-b");
+    expect(all?.entries[0]?.payload?.trace_id).toBe("trace-b");
     expect(all?.pagination.total).toBe(2);
 
     const filtered = readLogs({
@@ -76,6 +77,34 @@ describe("read-logs", () => {
       limit: 10,
     });
     expect(withNested?.entries).toHaveLength(1);
+  });
+
+  it("filters actionsOnly (no GET reads)", async () => {
+    const file = path.join(tmpDir, "app-2026-05-30.jsonl");
+    const lines = [
+      JSON.stringify({
+        level: "info",
+        event: "audit.request",
+        action: "admin.stats.read",
+        http: { method: "GET", path: "/api/admin/stats", status_code: 200 },
+      }),
+      JSON.stringify({
+        level: "info",
+        event: "audit.request",
+        action: "calculator.create",
+        http: { method: "POST", path: "/api/calculators", status_code: 201 },
+      }),
+    ];
+    fs.writeFileSync(file, `${lines.join("\n")}\n`);
+
+    const { readLogs } = await import("@/lib/logger/read-logs");
+    const filtered = readLogs({
+      file: "app-2026-05-30.jsonl",
+      actionsOnly: true,
+      pageSize: 50,
+    });
+    expect(filtered?.entries).toHaveLength(1);
+    expect(filtered?.entries[0]?.action).toBe("calculator.create");
   });
 
   it("paginates matches newest first", async () => {

@@ -14,6 +14,10 @@ import {
   parseLogPageSize,
 } from "@/lib/logger/log-pagination";
 import type { TablePagination } from "@/lib/ui/table-pagination";
+import type { LogEntry } from "@/lib/logger/log-entry";
+import { matchesActionsOnlyFilter } from "@/lib/logger/log-actions-filter";
+
+export type { LogEntry } from "@/lib/logger/log-entry";
 
 export {
   LOG_PAGE_SIZES,
@@ -35,35 +39,14 @@ export type LogFileMeta = {
   updatedAt: string;
 };
 
-export type LogEntry = {
-  lineNumber: number;
-  time?: string;
-  level?: string;
-  trace_id?: string;
-  user_id?: string;
-  user_email?: string;
-  user_name?: string;
-  user_role?: string;
-  action?: string;
-  event?: string;
-  path?: string;
-  status?: number;
-  duration_ms?: number;
-  msg?: string;
-  component?: string;
-  calculator_id?: string;
-  target_user_id?: string;
-  share_user_id?: string;
-  access_key_id?: string;
-  raw: string;
-};
-
 export type ReadLogsOptions = {
   file: string;
   q?: string;
   level?: LogLevel;
   traceId?: string;
   event?: string;
+  /** Hide GET/HEAD/OPTIONS and log viewer reads; keep POST/PATCH/DELETE and audit.action */
+  actionsOnly?: boolean;
   /** @deprecated Use page + pageSize */
   limit?: number;
   page?: number;
@@ -171,6 +154,8 @@ function parseLogLine(
       user_role: typeof user?.role === "string" ? user.role : undefined,
       action: typeof row.action === "string" ? row.action : undefined,
       event: typeof row.event === "string" ? row.event : undefined,
+      http_method:
+        typeof http?.method === "string" ? http.method.toUpperCase() : undefined,
       path:
         typeof http?.path === "string" ? http.path
         : typeof row.path === "string" ? row.path
@@ -192,6 +177,7 @@ function parseLogLine(
         pickString(row, "target_user_id") ?? pickNestedId(row, "target_user"),
       share_user_id: pickString(row, "share_user_id"),
       access_key_id: pickString(row, "access_key_id"),
+      payload: row,
       raw: trimmed,
     };
     return { entry, searchBlob: buildLogSearchBlob(row) };
@@ -212,9 +198,13 @@ function matchesFilters(
     q?: string;
     level?: LogLevel;
     event?: string;
+    actionsOnly?: boolean;
   },
 ): boolean {
   if (filters.level && entry.level !== filters.level) {
+    return false;
+  }
+  if (filters.actionsOnly && !matchesActionsOnlyFilter(entry)) {
     return false;
   }
   if (filters.event && entry.event !== filters.event) {
@@ -271,7 +261,8 @@ export function readLogs(options: ReadLogsOptions): ReadLogsResult | null {
   const filters = {
     q: mergeLogSearchQuery(options.q, options.traceId),
     level: options.level,
-    event: options.event?.trim() || undefined,
+    event: options.actionsOnly ? undefined : options.event?.trim() || undefined,
+    actionsOnly: options.actionsOnly,
   };
 
   const { buffer, truncated, scannedBytes, fileSizeBytes } = readTailBuffer(

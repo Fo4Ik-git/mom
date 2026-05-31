@@ -1,43 +1,24 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
+import { LogEntryDetail } from "@/app/components/admin/log-entry-detail";
+import { LogDetailShell } from "@/app/components/admin/log-detail-shell";
 import { appFetch } from "@/lib/api/api-client";
 import { adminApiErrorMessage } from "@/lib/admin/admin-api-error";
+import type { LogEntry } from "@/lib/logger/log-entry";
 import { LOG_PAGE_SIZES, type LogPageSize } from "@/lib/logger/log-pagination";
 import { tableRange, type TablePagination } from "@/lib/ui/table-pagination";
+import { formatLogEntryTitle } from "@/lib/i18n/log-action-labels";
 
 type LogFileMeta = {
   name: string;
   date: string;
   sizeBytes: number;
   updatedAt: string;
-};
-
-type LogEntry = {
-  lineNumber: number;
-  time?: string;
-  level?: string;
-  trace_id?: string;
-  user_id?: string;
-  user_email?: string;
-  user_name?: string;
-  user_role?: string;
-  action?: string;
-  event?: string;
-  path?: string;
-  status?: number;
-  duration_ms?: number;
-  msg?: string;
-  component?: string;
-  calculator_id?: string;
-  target_user_id?: string;
-  share_user_id?: string;
-  access_key_id?: string;
-  raw: string;
 };
 
 type LogsResponse = {
@@ -77,6 +58,34 @@ function levelClass(level?: string): string {
   }
 }
 
+function levelBorderClass(level?: string): string {
+  switch (level) {
+    case "fatal":
+    case "error":
+      return "border-l-destructive";
+    case "warn":
+      return "border-l-amber-500";
+    case "debug":
+    case "trace":
+      return "border-l-muted-foreground/30";
+    default:
+      return "border-l-accent/70";
+  }
+}
+
+function statusBadgeClass(status: number): string {
+  if (status >= 500) {
+    return "bg-destructive/15 text-destructive";
+  }
+  if (status >= 400) {
+    return "bg-amber-500/15 text-amber-700 dark:text-amber-400";
+  }
+  if (status >= 200) {
+    return "bg-success-muted text-success";
+  }
+  return "bg-muted text-muted-foreground";
+}
+
 function SearchChip({
   label,
   value,
@@ -87,25 +96,18 @@ function SearchChip({
   onSearch: (value: string) => void;
 }) {
   return (
-    <span
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       onClick={(e) => {
         e.stopPropagation();
         onSearch(value);
       }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.stopPropagation();
-          onSearch(value);
-        }
-      }}
-      className="font-mono text-[11px] text-muted-foreground hover:text-accent"
-      title={value}
+      className="max-w-[200px] truncate rounded-md bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground transition hover:bg-accent/10 hover:text-accent"
+      title={`${label}: ${value}`}
     >
-      {label}:{" "}
-      <span className="text-accent underline decoration-dotted">{value}</span>
-    </span>
+      <span className="text-muted-foreground/80">{label}</span>{" "}
+      <span className="text-foreground/90">{value}</span>
+    </button>
   );
 }
 
@@ -114,14 +116,124 @@ function formatTime(iso?: string): string {
     return "—";
   }
   try {
-    return new Date(iso).toLocaleString();
+    return new Date(iso).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
   } catch {
     return iso;
   }
 }
 
+function LogEntryRow({
+  entry,
+  selected,
+  onSelect,
+  onFilter,
+  locale,
+}: {
+  entry: LogEntry;
+  selected: boolean;
+  onSelect: () => void;
+  onFilter: (value: string) => void;
+  locale: string;
+}) {
+  const { primary, secondary } = formatLogEntryTitle(entry, locale);
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onSelect}
+        className={`flex w-full gap-3 border-l-4 px-4 py-3 text-left transition ${levelBorderClass(entry.level)} ${
+          selected
+            ? "bg-accent/8 ring-1 ring-inset ring-accent/25"
+            : "hover:bg-muted/40"
+        }`}
+      >
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="font-mono text-[10px] text-muted-foreground">
+              #{entry.lineNumber}
+            </span>
+            <span
+              className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${levelClass(entry.level)}`}
+            >
+              {entry.level ?? "?"}
+            </span>
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {formatTime(entry.time)}
+            </span>
+            {entry.status != null && (
+              <span
+                className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold ${statusBadgeClass(entry.status)}`}
+              >
+                {entry.status}
+              </span>
+            )}
+            {entry.duration_ms != null && (
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {entry.duration_ms}ms
+              </span>
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-foreground">
+              {primary}
+            </p>
+            {secondary && (
+              <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                {secondary}
+              </p>
+            )}
+            {!secondary && entry.msg && entry.msg !== primary && (
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                {entry.msg}
+              </p>
+            )}
+            {(entry.user_name || entry.user_email) && (
+              <p className="mt-1 text-xs text-foreground/75">
+                {entry.user_name ?? entry.user_email}
+                {entry.user_role ? ` · ${entry.user_role}` : ""}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {entry.trace_id && (
+              <SearchChip label="trace" value={entry.trace_id} onSearch={onFilter} />
+            )}
+            {entry.user_id && (
+              <SearchChip label="user" value={entry.user_id} onSearch={onFilter} />
+            )}
+            {entry.calculator_id && (
+              <SearchChip
+                label="calc"
+                value={entry.calculator_id}
+                onSearch={onFilter}
+              />
+            )}
+          </div>
+        </div>
+
+        <span
+          className={`mt-1 shrink-0 text-xs text-muted-foreground ${selected ? "text-accent" : ""}`}
+          aria-hidden
+        >
+          {selected ? "◀" : "▶"}
+        </span>
+      </button>
+    </li>
+  );
+}
+
 export function AdminLogsViewer() {
   const t = useTranslations("admin");
+  const locale = useLocale();
   const [files, setFiles] = useState<LogFileMeta[]>([]);
   const [selectedFile, setSelectedFile] = useState("");
   const [query, setQuery] = useState("");
@@ -139,7 +251,7 @@ export function AdminLogsViewer() {
   });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<LogPageSize>(50);
-  const [expandedLine, setExpandedLine] = useState<number | null>(null);
+  const [selectedLine, setSelectedLine] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -185,7 +297,7 @@ export function AdminLogsViewer() {
         params.set("level", level);
       }
       if (actionsOnly) {
-        params.set("event", "audit.request");
+        params.set("actionsOnly", "1");
       }
 
       try {
@@ -204,6 +316,13 @@ export function AdminLogsViewer() {
           setPage(data.pagination.page);
           setPageSize(data.pagination.pageSize as LogPageSize);
         }
+        setSelectedLine((current) => {
+          const lines = (data.entries ?? []).map((e) => e.lineNumber);
+          if (current != null && lines.includes(current)) {
+            return current;
+          }
+          return null;
+        });
       } catch {
         setError(t("logsLoadFailed"));
       } finally {
@@ -228,6 +347,20 @@ export function AdminLogsViewer() {
     return () => window.clearTimeout(timer);
   }, [selectedFile, fetchEntries, page]);
 
+  useEffect(() => {
+    if (selectedLine == null) {
+      return;
+    }
+    if (window.matchMedia("(min-width: 1280px)").matches) {
+      return;
+    }
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [selectedLine]);
+
   function handlePageSizeChange(next: LogPageSize) {
     setPageSize(next);
     setPage(1);
@@ -248,6 +381,11 @@ export function AdminLogsViewer() {
   const activeFileMeta = useMemo(
     () => files.find((f) => f.name === selectedFile),
     [files, selectedFile],
+  );
+
+  const selectedEntry = useMemo(
+    () => entries.find((e) => e.lineNumber === selectedLine) ?? null,
+    [entries, selectedLine],
   );
 
   async function copyTrace(id: string) {
@@ -375,200 +513,139 @@ export function AdminLogsViewer() {
         )}
       </Card>
 
-      <Card className="overflow-hidden p-0">
-        {loading ? (
-          <p className="p-4 text-sm text-muted-foreground">{t("logsLoading")}</p>
-        ) : entries.length === 0 ? (
-          <p className="p-4 text-sm text-muted-foreground">{t("logsEmpty")}</p>
-        ) : (
-          <>
-          <ul className="divide-y divide-border">
-            {entries.map((entry) => {
-              const expanded = expandedLine === entry.lineNumber;
-              return (
-                <li key={`${entry.lineNumber}-${entry.time}`} className="text-sm">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedLine(expanded ? null : entry.lineNumber)
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
+        <Card className="overflow-hidden p-0">
+          {loading ? (
+            <p className="p-4 text-sm text-muted-foreground">{t("logsLoading")}</p>
+          ) : entries.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground">{t("logsEmpty")}</p>
+          ) : (
+            <>
+              <ul className="divide-y divide-border/60">
+                {entries.map((entry) => (
+                  <LogEntryRow
+                    key={`${entry.lineNumber}-${entry.time}`}
+                    entry={entry}
+                    selected={selectedLine === entry.lineNumber}
+                    onSelect={() =>
+                      setSelectedLine((current) =>
+                        current === entry.lineNumber ? null : entry.lineNumber,
+                      )
                     }
-                    className="flex w-full flex-col gap-1 px-4 py-3 text-left hover:bg-muted/50"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${levelClass(entry.level)}`}
-                      >
-                        {entry.level ?? "?"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatTime(entry.time)}
-                      </span>
-                      {entry.action && (
-                        <span className="font-mono text-xs font-medium text-accent">
-                          {entry.action}
-                        </span>
-                      )}
-                      {!entry.action && entry.event && (
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {entry.event}
-                        </span>
-                      )}
-                      {(entry.user_email || entry.user_name) && (
-                        <span className="text-xs text-foreground/80">
-                          {entry.user_name ?? entry.user_email}
-                          {entry.user_role ? ` (${entry.user_role})` : ""}
-                        </span>
-                      )}
-                      {entry.status != null && (
-                        <span className="text-xs">HTTP {entry.status}</span>
-                      )}
-                      {entry.duration_ms != null && (
-                        <span className="text-xs text-muted-foreground">
-                          {entry.duration_ms} ms
-                        </span>
-                      )}
-                    </div>
-                    <p className="line-clamp-2 font-mono text-xs text-foreground/90">
-                      {entry.msg ?? entry.path ?? entry.raw}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      {entry.user_id && (
-                        <SearchChip
-                          label="user_id"
-                          value={entry.user_id}
-                          onSearch={filterBySearch}
-                        />
-                      )}
-                      {entry.user_email && (
-                        <SearchChip
-                          label="email"
-                          value={entry.user_email}
-                          onSearch={filterBySearch}
-                        />
-                      )}
-                      {entry.target_user_id && (
-                        <SearchChip
-                          label="target_user_id"
-                          value={entry.target_user_id}
-                          onSearch={filterBySearch}
-                        />
-                      )}
-                      {entry.calculator_id && (
-                        <SearchChip
-                          label="calculator_id"
-                          value={entry.calculator_id}
-                          onSearch={filterBySearch}
-                        />
-                      )}
-                      {entry.trace_id && (
-                        <>
-                          <SearchChip
-                            label="trace_id"
-                            value={entry.trace_id}
-                            onSearch={filterBySearch}
-                          />
-                          <span
-                            role="button"
-                            tabIndex={0}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void copyTrace(entry.trace_id!);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.stopPropagation();
-                                void copyTrace(entry.trace_id!);
-                              }
-                            }}
-                            className="text-[11px] text-accent underline"
-                          >
-                            {copiedTrace === entry.trace_id
-                              ? t("logsCopied")
-                              : t("logsCopyTrace")}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </button>
-                  {expanded && (
-                    <pre className="max-h-64 overflow-auto border-t border-border bg-muted/30 px-4 py-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-all">
-                      {(() => {
-                        try {
-                          return JSON.stringify(JSON.parse(entry.raw), null, 2);
-                        } catch {
-                          return entry.raw;
-                        }
-                      })()}
-                    </pre>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          <div className="flex flex-col gap-3 border-t border-border p-4">
-            <p className="text-sm text-muted-foreground">
-              {pagination.total > 0
-                ? t("usersShowing", {
-                    from: listRange.from,
-                    to: listRange.to,
-                    total: pagination.total,
-                  })
-                : t("logsEmpty")}
-              {" · "}
-              {t("usersPage", {
-                page: pagination.page,
-                pages: pagination.totalPages,
-              })}
-            </p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
-                <span className="text-muted-foreground">{t("usersPageSize")}</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) =>
-                    handlePageSizeChange(Number(e.target.value) as LogPageSize)
-                  }
-                  className="h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:h-10 sm:w-32 sm:text-sm"
-                  disabled={searching}
-                >
-                  {LOG_PAGE_SIZES.map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-10 flex-1 sm:flex-none"
-                  disabled={searching || pagination.page <= 1}
-                  onClick={() => handlePageChange(Math.max(1, pagination.page - 1))}
-                >
-                  {t("usersPrev")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-10 flex-1 sm:flex-none"
-                  disabled={
-                    searching || pagination.page >= pagination.totalPages
-                  }
-                  onClick={() =>
-                    handlePageChange(
-                      Math.min(pagination.totalPages, pagination.page + 1),
-                    )
-                  }
-                >
-                  {t("usersNext")}
-                </Button>
+                    onFilter={filterBySearch}
+                    locale={locale}
+                  />
+                ))}
+              </ul>
+              <div className="flex flex-col gap-3 border-t border-border p-4">
+                <p className="text-sm text-muted-foreground">
+                  {pagination.total > 0
+                    ? t("usersShowing", {
+                        from: listRange.from,
+                        to: listRange.to,
+                        total: pagination.total,
+                      })
+                    : t("logsEmpty")}
+                  {" · "}
+                  {t("usersPage", {
+                    page: pagination.page,
+                    pages: pagination.totalPages,
+                  })}
+                </p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
+                    <span className="text-muted-foreground">{t("usersPageSize")}</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) =>
+                        handlePageSizeChange(Number(e.target.value) as LogPageSize)
+                      }
+                      className="h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:h-10 sm:w-32 sm:text-sm"
+                      disabled={searching}
+                    >
+                      {LOG_PAGE_SIZES.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10 flex-1 sm:flex-none"
+                      disabled={searching || pagination.page <= 1}
+                      onClick={() => handlePageChange(Math.max(1, pagination.page - 1))}
+                    >
+                      {t("usersPrev")}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10 flex-1 sm:flex-none"
+                      disabled={
+                        searching || pagination.page >= pagination.totalPages
+                      }
+                      onClick={() =>
+                        handlePageChange(
+                          Math.min(pagination.totalPages, pagination.page + 1),
+                        )
+                      }
+                    >
+                      {t("usersNext")}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </Card>
+
+        {selectedEntry ? (
+          <>
+            <div className="hidden xl:block xl:sticky xl:top-4">
+              <LogDetailShell variant="side">
+                <LogEntryDetail
+                  entry={selectedEntry}
+                  onClose={() => setSelectedLine(null)}
+                  onFilter={filterBySearch}
+                  onCopyTrace={(id) => void copyTrace(id)}
+                  copiedTrace={copiedTrace}
+                />
+              </LogDetailShell>
+            </div>
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 xl:hidden"
+              role="presentation"
+              onClick={() => setSelectedLine(null)}
+            >
+              <div
+                className="mx-auto w-full max-w-[1100px] overflow-hidden"
+                role="dialog"
+                aria-modal="true"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <LogDetailShell variant="modal">
+                  <LogEntryDetail
+                    entry={selectedEntry}
+                    onClose={() => setSelectedLine(null)}
+                    onFilter={filterBySearch}
+                    onCopyTrace={(id) => void copyTrace(id)}
+                    copiedTrace={copiedTrace}
+                  />
+                </LogDetailShell>
               </div>
             </div>
-          </div>
           </>
+        ) : (
+          entries.length > 0 && (
+            <Card className="hidden border-dashed p-6 text-center text-sm text-muted-foreground xl:flex xl:flex-col xl:items-center xl:justify-center">
+              <p>{t("logsSelectEntry")}</p>
+            </Card>
+          )
         )}
-      </Card>
+      </div>
     </div>
   );
 }
