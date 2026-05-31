@@ -3,7 +3,6 @@ import {
   type AiTokenQuotaPeriod,
   type User,
 } from "@prisma/client";
-import { hasStaffPlatformPrivileges } from "@/lib/auth/staff-role";
 
 export type AiAccessUserFields = Pick<
   User,
@@ -52,9 +51,9 @@ export function isAiAssistantAccessActive(
 }
 
 export function hasUnlimitedAiTokens(
-  user: Pick<User, "role" | "aiTokenQuota">,
+  user: Pick<User, "aiTokenQuota">,
 ): boolean {
-  return hasStaffPlatformPrivileges(user.role) || user.aiTokenQuota == null;
+  return user.aiTokenQuota == null;
 }
 
 export type AiAccessQuotaUserFields = AiAccessUserFields &

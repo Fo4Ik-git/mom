@@ -1,6 +1,7 @@
 import { AiAccessMode, Role } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import {
+  hasUnlimitedAiTokens,
   isAiAssistantAccessActive,
   resolveAiAccessExpiresAt,
 } from "@/lib/ai/ai-access";
@@ -60,6 +61,22 @@ describe("ai access", () => {
         new Date("2026-01-01T00:00:00.000Z"),
       ),
     ).toBe(false);
+  });
+
+  it("admin with token quota is not unlimited", () => {
+    expect(
+      hasUnlimitedAiTokens({
+        aiTokenQuota: 10_000,
+      }),
+    ).toBe(false);
+  });
+
+  it("null token quota is unlimited regardless of role", () => {
+    expect(
+      hasUnlimitedAiTokens({
+        aiTokenQuota: null,
+      }),
+    ).toBe(true);
   });
 
   it("duration mode computes expiry", () => {
