@@ -98,7 +98,7 @@ export function ConfigCodeSheet({
       SHEET_WIDTH_STORAGE_KEY,
       DEFAULT_SHEET_WIDTH,
       clampSheetWidth,
-      "x",
+      "left",
     );
   const {
     size: problemsWidth,
@@ -107,7 +107,7 @@ export function ConfigCodeSheet({
     PROBLEMS_WIDTH_STORAGE_KEY,
     DEFAULT_PROBLEMS_WIDTH,
     clampProblemsWidth,
-    "x",
+    "left",
   );
   const {
     size: snippetsHeight,
@@ -116,7 +116,7 @@ export function ConfigCodeSheet({
     SNIPPETS_HEIGHT_STORAGE_KEY,
     DEFAULT_SNIPPETS_HEIGHT,
     clampSnippetsHeight,
-    "y",
+    "bottom",
   );
   const [project, setProject] = useState<ScriptProject>(emptyProject);
   const [activeFile, setActiveFile] = useState<ScriptProjectFileId>(

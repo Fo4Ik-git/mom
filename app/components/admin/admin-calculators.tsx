@@ -8,7 +8,12 @@ import {
   AdminUserSelect,
   type UserOption,
 } from "@/app/components/admin/admin-user-select";
+import { AdminConfirmDialog } from "@/app/components/admin/admin-confirm-dialog";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
+import {
+  AdminManageModal,
+  type AdminManageSection,
+} from "@/app/components/admin/admin-manage-modal";
 import { Button } from "@/app/components/ui/button";
 import { DataTable } from "@/app/components/ui/data-table";
 import type { DataTableColumn } from "@/app/components/ui/data-table";
@@ -38,12 +43,13 @@ export function AdminCalculators() {
   const tc = useTranslations("common");
   const router = useRouter();
   const [actionError, setActionError] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [transferUserId, setTransferUserId] = useState<Record<string, string>>({});
-  const [transferUserEmail, setTransferUserEmail] = useState<
-    Record<string, string>
-  >({});
-  const [transferringId, setTransferringId] = useState<string | null>(null);
+  const [manageId, setManageId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [transferConfirmOpen, setTransferConfirmOpen] = useState(false);
+  const [transferUserId, setTransferUserId] = useState("");
+  const [transferUserEmail, setTransferUserEmail] = useState("");
+  const [transferring, setTransferring] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchPage = useCallback(
     async ({
@@ -92,6 +98,11 @@ export function AdminCalculators() {
     refresh,
   } = usePaginatedTable<CalculatorRow>({ fetchPage });
 
+  const manageCalculator = useMemo(
+    () => calculators.find((row) => row.id === manageId) ?? null,
+    [calculators, manageId],
+  );
+
   const tableLabels = useMemo(
     () => ({
       loading: tc("loading"),
@@ -108,62 +119,128 @@ export function AdminCalculators() {
     [t, tc],
   );
 
+  function openManage(calculator: CalculatorRow) {
+    setTransferUserId("");
+    setTransferUserEmail("");
+    setManageId(calculator.id);
+  }
+
+  function closeManage() {
+    setManageId(null);
+    setDeleteConfirmOpen(false);
+    setTransferConfirmOpen(false);
+  }
+
   async function remove(id: string) {
-    if (!confirm(t("deleteConfirm"))) {
-      return;
-    }
     setActionError(null);
+    setDeleting(true);
     const response = await appFetch(`/api/admin/calculators/${id}`, {
       method: "DELETE",
     });
+    setDeleting(false);
     if (!response.ok) {
       const data = await response.json();
       setActionError(adminApiErrorMessage(data, t));
       return;
     }
-    if (expandedId === id) {
-      setExpandedId(null);
-    }
+    closeManage();
     await refresh();
   }
 
-  function setTransferPick(
-    calculatorId: string,
-    userId: string,
-    user: UserOption | null,
-  ) {
-    setTransferUserId((current) => ({ ...current, [calculatorId]: userId }));
-    setTransferUserEmail((current) => ({
-      ...current,
-      [calculatorId]: user?.email ?? "",
-    }));
-  }
-
   async function transfer(id: string) {
-    const email = transferUserEmail[id]?.trim();
+    const email = transferUserEmail.trim();
     if (!email) {
       return;
     }
-    if (!confirm(t("transferConfirm", { email }))) {
-      return;
-    }
     setActionError(null);
-    setTransferringId(id);
+    setTransferring(true);
     const response = await appFetch(`/api/admin/calculators/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ownerEmail: email }),
     });
     const data = await response.json();
-    setTransferringId(null);
+    setTransferring(false);
+    setTransferConfirmOpen(false);
     if (!response.ok) {
       setActionError(transferErrorMessage(data.error, t));
       return;
     }
-    setTransferUserId((current) => ({ ...current, [id]: "" }));
-    setTransferUserEmail((current) => ({ ...current, [id]: "" }));
+    setTransferUserId("");
+    setTransferUserEmail("");
     await refresh();
   }
+
+  const manageSections = useMemo((): AdminManageSection[] => {
+    if (!manageCalculator) {
+      return [];
+    }
+    return [
+      {
+        id: "transfer",
+        label: t("manageSectionTransfer"),
+        content: (
+          <div className="max-w-lg space-y-3">
+            <p className="text-sm text-muted-foreground">{t("transferTitle")}</p>
+            <label className="block space-y-1">
+              <span className="text-sm text-muted-foreground">{ts("pickUser")}</span>
+              <AdminUserSelect
+                key={manageCalculator.id}
+                value={transferUserId}
+                onChange={(userId, user) => {
+                  setTransferUserId(userId);
+                  setTransferUserEmail(user?.email ?? "");
+                }}
+                disabled={transferring}
+                placeholder={ts("pickUserPlaceholder")}
+                emptyLabel={ts("pickUserEmpty")}
+              />
+            </label>
+            <Button
+              type="button"
+              disabled={transferring || !transferUserId}
+              onClick={() => setTransferConfirmOpen(true)}
+            >
+              {transferring ? t("transferring") : t("transferBtn")}
+            </Button>
+          </div>
+        ),
+      },
+      {
+        id: "sharing",
+        label: t("manageSectionSharing"),
+        content: (
+          <CalculatorSharesPanel
+            calculatorId={manageCalculator.id}
+            apiBase="/api/admin/calculators"
+          />
+        ),
+      },
+      {
+        id: "danger",
+        label: t("manageSectionDanger"),
+        content: (
+          <div className="max-w-lg space-y-3">
+            <p className="text-sm text-muted-foreground">{t("deleteConfirm")}</p>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setDeleteConfirmOpen(true)}
+            >
+              {t("manageDeleteCalculator")}
+            </Button>
+          </div>
+        ),
+      },
+    ];
+  }, [
+    manageCalculator,
+    t,
+    ts,
+    transferUserId,
+    transferring,
+    transferUserEmail,
+  ]);
 
   const columns = useMemo((): DataTableColumn<CalculatorRow>[] => {
     return [
@@ -212,7 +289,6 @@ export function AdminCalculators() {
           if (calculator.isTemplate) {
             return null;
           }
-          const isExpanded = expandedId === calculator.id;
           return (
             <div className="flex flex-wrap justify-end gap-2">
               <Button
@@ -225,28 +301,18 @@ export function AdminCalculators() {
               </Button>
               <Button
                 type="button"
-                variant={isExpanded ? "primary" : "outline"}
+                variant="outline"
                 className={tableActionClass}
-                onClick={() =>
-                  setExpandedId(isExpanded ? null : calculator.id)
-                }
+                onClick={() => openManage(calculator)}
               >
-                {isExpanded ? t("manageClose") : t("manage")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                className={tableActionClass}
-                onClick={() => remove(calculator.id)}
-              >
-                {tc("delete")}
+                {t("manage")}
               </Button>
             </div>
           );
         },
       },
     ];
-  }, [t, tc, expandedId, router]);
+  }, [t, tc, router]);
 
   const inputClass =
     "block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm";
@@ -268,55 +334,6 @@ export function AdminCalculators() {
         onPageSizeChange={setPageSize}
         onRefresh={() => void refresh()}
         minTableWidth="720px"
-        renderRowDetail={(calculator) => {
-          if (expandedId !== calculator.id || calculator.isTemplate) {
-            return null;
-          }
-          return (
-            <div className="border-b border-border/60 bg-muted/20 px-4 py-4">
-              <div className="mx-auto max-w-xl space-y-4">
-                <div>
-                  <p className="mb-2 text-sm font-medium">{t("transferTitle")}</p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="space-y-1 sm:col-span-2">
-                      <span className="text-sm text-muted-foreground">
-                        {ts("pickUser")}
-                      </span>
-                      <AdminUserSelect
-                        key={calculator.id}
-                        value={transferUserId[calculator.id] ?? ""}
-                        onChange={(userId, user) =>
-                          setTransferPick(calculator.id, userId, user)
-                        }
-                        disabled={transferringId === calculator.id}
-                        placeholder={ts("pickUserPlaceholder")}
-                        emptyLabel={ts("pickUserEmpty")}
-                      />
-                    </label>
-                    <div className="flex items-end sm:col-span-2">
-                      <Button
-                        type="button"
-                        disabled={
-                          transferringId === calculator.id ||
-                          !transferUserId[calculator.id]
-                        }
-                        onClick={() => transfer(calculator.id)}
-                      >
-                        {transferringId === calculator.id
-                          ? t("transferring")
-                          : t("transferBtn")}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                <CalculatorSharesPanel
-                  calculatorId={calculator.id}
-                  apiBase="/api/admin/calculators"
-                />
-              </div>
-            </div>
-          );
-        }}
         toolbar={
           <label className="block space-y-1">
             <span className="sr-only">{t("calculatorsSearchPlaceholder")}</span>
@@ -331,6 +348,39 @@ export function AdminCalculators() {
           </label>
         }
       />
+
+      {manageCalculator && (
+        <>
+          <AdminManageModal
+            open={manageId !== null}
+            onClose={closeManage}
+            title={manageCalculator.name}
+            subtitle={
+              <span className="font-mono text-xs">{manageCalculator.slug}</span>
+            }
+            sections={manageSections}
+          />
+          <AdminConfirmDialog
+            open={deleteConfirmOpen}
+            title={t("manageDeleteCalculator")}
+            message={t("deleteConfirm")}
+            confirmLabel={tc("delete")}
+            loading={deleting}
+            onCancel={() => setDeleteConfirmOpen(false)}
+            onConfirm={() => remove(manageCalculator.id)}
+          />
+          <AdminConfirmDialog
+            open={transferConfirmOpen}
+            title={t("transferTitle")}
+            message={t("transferConfirm", { email: transferUserEmail })}
+            confirmLabel={t("transferBtn")}
+            variant="primary"
+            loading={transferring}
+            onCancel={() => setTransferConfirmOpen(false)}
+            onConfirm={() => transfer(manageCalculator.id)}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -2,7 +2,12 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { AdminConfirmDialog } from "@/app/components/admin/admin-confirm-dialog";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
+import {
+  AdminManageModal,
+  type AdminManageSection,
+} from "@/app/components/admin/admin-manage-modal";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardTitle } from "@/app/components/ui/card";
 import { DataTable } from "@/app/components/ui/data-table";
@@ -79,206 +84,6 @@ function StatusBadge({
   );
 }
 
-function AccessKeyManagePanel({
-  keyRow,
-  edit,
-  saving,
-  t,
-  tc,
-  onEditChange,
-  onExtendExpiry,
-  onSave,
-  onResetUses,
-}: {
-  keyRow: AccessKeyRow;
-  edit: AccessKeyEdit;
-  saving: boolean;
-  t: ReturnType<typeof useTranslations<"admin">>;
-  tc: ReturnType<typeof useTranslations<"common">>;
-  onEditChange: (patch: Partial<AccessKeyEdit>) => void;
-  onExtendExpiry: (months: number) => void;
-  onSave: () => void;
-  onResetUses: () => void;
-}) {
-  const inputClass =
-    "block h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:max-w-xs sm:text-sm";
-
-  return (
-    <div className="border-t border-border/60 bg-muted/25 px-4 py-5">
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant={edit.active ? "outline" : "primary"}
-          className="h-10 text-sm"
-          onClick={() => onEditChange({ active: !edit.active })}
-        >
-          {edit.active ? t("accessKeyDeactivate") : t("accessKeyActivate")}
-        </Button>
-        <StatusBadge tone={edit.active ? "success" : "neutral"}>
-          {edit.active ? t("accessKeyActive") : t("accessKeyInactive")}
-        </StatusBadge>
-      </div>
-
-      <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
-        {keyRow.referrerEmail && (
-          <p className="text-sm text-muted-foreground sm:col-span-2">
-            {t("accessKeyReferrer")}:{" "}
-            <span className="font-medium text-foreground">
-              {keyRow.referrerEmail}
-            </span>
-          </p>
-        )}
-        <label className="block space-y-1 sm:col-span-2">
-          <span className="text-sm text-muted-foreground">{t("accessKeyLabel")}</span>
-          <input
-            value={edit.label}
-            onChange={(e) => onEditChange({ label: e.target.value })}
-            placeholder={t("accessKeyLabelPlaceholder")}
-            className={inputClass}
-          />
-        </label>
-
-        <div className="space-y-3 sm:col-span-2">
-          <p className="text-sm font-semibold">{t("accessKeyExpires")}</p>
-          <label className="block space-y-1">
-            <span className="text-sm text-muted-foreground">
-              {t("accessKeyValidUntil")}
-            </span>
-            <input
-              type="date"
-              value={edit.expiresAt}
-              onChange={(e) => onEditChange({ expiresAt: e.target.value })}
-              className={inputClass}
-            />
-          </label>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 text-xs sm:text-sm"
-              onClick={() => onExtendExpiry(1)}
-            >
-              {t("extend1Month")}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 text-xs sm:text-sm"
-              onClick={() => onExtendExpiry(12)}
-            >
-              {t("extend1Year")}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 text-xs sm:text-sm"
-              onClick={() => onEditChange({ expiresAt: "" })}
-            >
-              {t("accessKeyExpiresUnlimited")}
-            </Button>
-          </div>
-        </div>
-
-        <label className="block space-y-1">
-          <span className="text-sm text-muted-foreground">{t("accessKeyMaxUses")}</span>
-          <input
-            type="number"
-            min={1}
-            value={edit.maxUses}
-            onChange={(e) => onEditChange({ maxUses: e.target.value })}
-            placeholder="∞"
-            className={inputClass}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-2 h-9 text-xs"
-            onClick={() => onEditChange({ maxUses: "" })}
-          >
-            {t("accessKeyMaxUsesUnlimited")}
-          </Button>
-        </label>
-
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">{t("accessKeyUsedCount")}</p>
-          <p className="text-lg font-semibold tabular-nums">
-            {keyRow.usedCount}
-            {edit.maxUses !== "" && ` / ${edit.maxUses}`}
-            {edit.maxUses === "" && " / ∞"}
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-9 text-xs"
-            disabled={keyRow.usedCount === 0}
-            onClick={onResetUses}
-          >
-            {t("accessKeyResetUses")}
-          </Button>
-        </div>
-
-        <label className="block space-y-1 sm:col-span-2">
-          <span className="text-sm text-muted-foreground">{t("accessKeyAccessDays")}</span>
-          <input
-            type="number"
-            min={0}
-            value={edit.accessDays}
-            onChange={(e) => onEditChange({ accessDays: e.target.value })}
-            placeholder={t("accessKeyAccessDaysDefault")}
-            className={inputClass}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-2 h-9 text-xs"
-            onClick={() => onEditChange({ accessDays: "" })}
-          >
-            {t("accessKeyAccessDaysDefault")}
-          </Button>
-        </label>
-
-        <label className="block space-y-1 sm:col-span-2">
-          <span className="text-sm text-muted-foreground">
-            {t("accessKeyReferrerBonusDays")}
-          </span>
-          <input
-            type="number"
-            min={0}
-            value={edit.referrerBonusDays}
-            onChange={(e) =>
-              onEditChange({ referrerBonusDays: e.target.value })
-            }
-            placeholder={t("accessKeyReferrerBonusDaysDefault")}
-            className={inputClass}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-2 h-9 text-xs"
-            onClick={() => onEditChange({ referrerBonusDays: "" })}
-          >
-            {t("accessKeyReferrerBonusDaysDefault")}
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            {t("accessKeyReferrerBonusDaysHint")}
-          </p>
-        </label>
-
-        <div className="sm:col-span-2">
-          <Button
-            type="button"
-            className="h-11 w-full text-sm sm:w-auto"
-            disabled={saving}
-            onClick={onSave}
-          >
-            {saving ? tc("loading") : tc("save")}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function editFromKey(key: AccessKeyRow): AccessKeyEdit {
   return {
     label: key.label ?? "",
@@ -298,9 +103,11 @@ export function AdminAccessKeys() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [manageId, setManageId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [edits, setEdits] = useState<Record<string, AccessKeyEdit>>({});
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [resetUsesConfirmOpen, setResetUsesConfirmOpen] = useState(false);
 
   const [form, setForm] = useState({
     label: "",
@@ -346,7 +153,7 @@ export function AdminAccessKeys() {
         return next;
       });
 
-      setExpandedId((current) =>
+      setManageId((current) =>
         current && loadedKeys.some((k) => k.id === current) ? current : null,
       );
 
@@ -371,6 +178,12 @@ export function AdminAccessKeys() {
     refresh,
   } = usePaginatedTable<AccessKeyRow>({ fetchPage });
 
+  const manageKey = useMemo(
+    () => keys.find((row) => row.id === manageId) ?? null,
+    [keys, manageId],
+  );
+  const manageEdit = manageKey ? edits[manageKey.id] : undefined;
+
   const tableLabels = useMemo(
     () => ({
       loading: tc("loading"),
@@ -386,6 +199,9 @@ export function AdminAccessKeys() {
     }),
     [t, tc],
   );
+
+  const inputClass =
+    "block h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:max-w-md sm:text-sm";
 
   function setEdit(keyId: string, patch: Partial<AccessKeyEdit>) {
     setEdits((current) => ({
@@ -421,33 +237,34 @@ export function AdminAccessKeys() {
     }
 
     setSavingId(key.id);
-    const ok = await patchKey(key.id, {
+    await patchKey(key.id, {
       label: edit.label.trim() || null,
       active: edit.active,
       maxUses: edit.maxUses === "" ? null : Number(edit.maxUses),
       expiresAt: edit.expiresAt
         ? accessExpiresAtFromDateInput(edit.expiresAt)
         : null,
-      accessDays:
-        edit.accessDays === "" ? null : Number(edit.accessDays),
+      accessDays: edit.accessDays === "" ? null : Number(edit.accessDays),
       referrerBonusDays:
         edit.referrerBonusDays === ""
           ? null
           : Number(edit.referrerBonusDays),
     });
     setSavingId(null);
-    if (ok) {
-      setExpandedId((current) => (current === key.id ? key.id : current));
-    }
   }
 
   async function resetUses(key: AccessKeyRow) {
-    if (!confirm(t("accessKeyResetUsesConfirm"))) {
-      return;
-    }
+    setResetUsesConfirmOpen(false);
     setSavingId(key.id);
     await patchKey(key.id, { usedCount: 0 });
     setSavingId(null);
+  }
+
+  async function removeKey(id: string) {
+    setDeleteConfirmOpen(false);
+    await appFetch(`/api/admin/access-keys/${id}`, { method: "DELETE" });
+    setManageId(null);
+    await refresh();
   }
 
   async function createKey(event: React.FormEvent) {
@@ -507,17 +324,6 @@ export function AdminAccessKeys() {
     await refresh();
   }
 
-  async function removeKey(id: string) {
-    if (!confirm(t("accessKeyDeleteConfirm"))) {
-      return;
-    }
-    await appFetch(`/api/admin/access-keys/${id}`, { method: "DELETE" });
-    if (expandedId === id) {
-      setExpandedId(null);
-    }
-    await refresh();
-  }
-
   async function copyLink(key: AccessKeyRow) {
     const url = signupAbsoluteUrl(key.code, window.location.origin);
     await navigator.clipboard.writeText(url);
@@ -538,29 +344,239 @@ export function AdminAccessKeys() {
       : t("accessKeyExpiresUnlimited");
   }
 
-  function renderManagePanel(key: AccessKeyRow) {
-    const edit = edits[key.id];
-    if (!edit) {
-      return null;
+  const manageSections = useMemo((): AdminManageSection[] => {
+    if (!manageKey || !manageEdit) {
+      return [];
     }
-    return (
-      <AccessKeyManagePanel
-        keyRow={key}
-        edit={edit}
-        saving={savingId === key.id}
-        t={t}
-        tc={tc}
-        onEditChange={(patch) => setEdit(key.id, patch)}
-        onExtendExpiry={(months) =>
-          setEdit(key.id, {
-            expiresAt: extendDateInput(edit.expiresAt, months),
-          })
-        }
-        onSave={() => saveKey(key)}
-        onResetUses={() => resetUses(key)}
-      />
-    );
-  }
+
+    const edit = manageEdit;
+
+    return [
+      {
+        id: "status",
+        label: t("manageSectionStatus"),
+        content: (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant={edit.active ? "outline" : "primary"}
+              className="h-10 text-sm"
+              onClick={() => setEdit(manageKey.id, { active: !edit.active })}
+            >
+              {edit.active ? t("accessKeyDeactivate") : t("accessKeyActivate")}
+            </Button>
+            <StatusBadge tone={edit.active ? "success" : "neutral"}>
+              {edit.active ? t("accessKeyActive") : t("accessKeyInactive")}
+            </StatusBadge>
+          </div>
+        ),
+      },
+      {
+        id: "general",
+        label: t("manageSectionGeneral"),
+        content: (
+          <div className="max-w-md space-y-3">
+            {manageKey.referrerEmail && (
+              <p className="text-sm text-muted-foreground">
+                {t("accessKeyReferrer")}:{" "}
+                <span className="font-medium text-foreground">
+                  {manageKey.referrerEmail}
+                </span>
+              </p>
+            )}
+            <label className="block space-y-1">
+              <span className="text-sm text-muted-foreground">
+                {t("accessKeyLabel")}
+              </span>
+              <input
+                value={edit.label}
+                onChange={(e) => setEdit(manageKey.id, { label: e.target.value })}
+                placeholder={t("accessKeyLabelPlaceholder")}
+                className={inputClass}
+              />
+            </label>
+          </div>
+        ),
+      },
+      {
+        id: "expiry",
+        label: t("manageSectionExpiry"),
+        content: (
+          <div className="max-w-md space-y-3">
+            <label className="block space-y-1">
+              <span className="text-sm text-muted-foreground">
+                {t("accessKeyValidUntil")}
+              </span>
+              <input
+                type="date"
+                value={edit.expiresAt}
+                onChange={(e) =>
+                  setEdit(manageKey.id, { expiresAt: e.target.value })
+                }
+                className={inputClass}
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 text-xs sm:text-sm"
+                onClick={() =>
+                  setEdit(manageKey.id, {
+                    expiresAt: extendDateInput(edit.expiresAt, 1),
+                  })
+                }
+              >
+                {t("extend1Month")}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 text-xs sm:text-sm"
+                onClick={() =>
+                  setEdit(manageKey.id, {
+                    expiresAt: extendDateInput(edit.expiresAt, 12),
+                  })
+                }
+              >
+                {t("extend1Year")}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 text-xs sm:text-sm"
+                onClick={() => setEdit(manageKey.id, { expiresAt: "" })}
+              >
+                {t("accessKeyExpiresUnlimited")}
+              </Button>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "uses",
+        label: t("manageSectionUses"),
+        content: (
+          <div className="max-w-md space-y-3">
+            <label className="block space-y-1">
+              <span className="text-sm text-muted-foreground">
+                {t("accessKeyMaxUses")}
+              </span>
+              <input
+                type="number"
+                min={1}
+                value={edit.maxUses}
+                onChange={(e) =>
+                  setEdit(manageKey.id, { maxUses: e.target.value })
+                }
+                placeholder="∞"
+                className={inputClass}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-2 h-9 text-xs"
+                onClick={() => setEdit(manageKey.id, { maxUses: "" })}
+              >
+                {t("accessKeyMaxUsesUnlimited")}
+              </Button>
+            </label>
+            <div>
+              <p className="text-sm text-muted-foreground">{t("accessKeyUsedCount")}</p>
+              <p className="text-lg font-semibold tabular-nums">
+                {manageKey.usedCount}
+                {edit.maxUses !== "" && ` / ${edit.maxUses}`}
+                {edit.maxUses === "" && " / ∞"}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-2 h-9 text-xs"
+                disabled={manageKey.usedCount === 0}
+                onClick={() => setResetUsesConfirmOpen(true)}
+              >
+                {t("accessKeyResetUses")}
+              </Button>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "signup",
+        label: t("manageSectionSignupSettings"),
+        content: (
+          <div className="max-w-md space-y-4">
+            <label className="block space-y-1">
+              <span className="text-sm text-muted-foreground">
+                {t("accessKeyAccessDays")}
+              </span>
+              <input
+                type="number"
+                min={0}
+                value={edit.accessDays}
+                onChange={(e) =>
+                  setEdit(manageKey.id, { accessDays: e.target.value })
+                }
+                placeholder={t("accessKeyAccessDaysDefault")}
+                className={inputClass}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-2 h-9 text-xs"
+                onClick={() => setEdit(manageKey.id, { accessDays: "" })}
+              >
+                {t("accessKeyAccessDaysDefault")}
+              </Button>
+            </label>
+            <label className="block space-y-1">
+              <span className="text-sm text-muted-foreground">
+                {t("accessKeyReferrerBonusDays")}
+              </span>
+              <input
+                type="number"
+                min={0}
+                value={edit.referrerBonusDays}
+                onChange={(e) =>
+                  setEdit(manageKey.id, {
+                    referrerBonusDays: e.target.value,
+                  })
+                }
+                placeholder={t("accessKeyReferrerBonusDaysDefault")}
+                className={inputClass}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-2 h-9 text-xs"
+                onClick={() =>
+                  setEdit(manageKey.id, { referrerBonusDays: "" })
+                }
+              >
+                {t("accessKeyReferrerBonusDaysDefault")}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                {t("accessKeyReferrerBonusDaysHint")}
+              </p>
+            </label>
+          </div>
+        ),
+      },
+      {
+        id: "danger",
+        label: t("manageSectionDanger"),
+        content: (
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => setDeleteConfirmOpen(true)}
+          >
+            {t("manageDeleteReferral")}
+          </Button>
+        ),
+      },
+    ];
+  }, [manageKey, manageEdit, t, savingId, inputClass]);
 
   const columns = useMemo((): DataTableColumn<AccessKeyRow>[] => {
     return [
@@ -611,43 +627,31 @@ export function AdminAccessKeys() {
         header: t("actions"),
         headerClassName: "text-right",
         cellClassName: "text-right",
-        cell: (key) => {
-          const isExpanded = expandedId === key.id;
-          return (
-            <div className="flex flex-wrap justify-end gap-2">
-              <Button
-                type="button"
-                variant={copiedId === key.id ? "primary" : "outline"}
-                className={tableActionClass}
-                onClick={() => copyLink(key)}
-              >
-                {copiedId === key.id ? t("accessKeyCopied") : t("accessKeyCopyLink")}
-              </Button>
-              <Button
-                type="button"
-                variant={isExpanded ? "primary" : "outline"}
-                className={tableActionClass}
-                onClick={() => setExpandedId(isExpanded ? null : key.id)}
-              >
-                {isExpanded ? t("hideDetails") : t("manage")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                className={tableActionClass}
-                onClick={() => removeKey(key.id)}
-              >
-                {tc("delete")}
-              </Button>
-            </div>
-          );
-        },
+        cell: (key) => (
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant={copiedId === key.id ? "primary" : "outline"}
+              className={tableActionClass}
+              onClick={() => copyLink(key)}
+            >
+              {copiedId === key.id ? t("accessKeyCopied") : t("accessKeyCopyLink")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className={tableActionClass}
+              onClick={() => setManageId(key.id)}
+            >
+              {t("manage")}
+            </Button>
+          </div>
+        ),
       },
     ];
-  }, [t, tc, copiedId, expandedId, locale]);
+  }, [t, copiedId, locale]);
 
   function renderMobileCard(key: AccessKeyRow) {
-    const isExpanded = expandedId === key.id;
     return (
       <article key={key.id} className="bg-card/90">
         <div className="space-y-3 p-4">
@@ -679,20 +683,19 @@ export function AdminAccessKeys() {
             </Button>
             <Button
               type="button"
-              variant={isExpanded ? "primary" : "outline"}
+              variant="outline"
               className="h-10 flex-1 text-xs"
-              onClick={() => setExpandedId(isExpanded ? null : key.id)}
+              onClick={() => setManageId(key.id)}
             >
-              {isExpanded ? t("hideDetails") : t("manage")}
+              {t("manage")}
             </Button>
           </div>
         </div>
-        {isExpanded && renderManagePanel(key)}
       </article>
     );
   }
 
-  const inputClass =
+  const formInputClass =
     "block h-10 w-full rounded-xl border border-border bg-input px-3 text-sm";
 
   return (
@@ -727,7 +730,7 @@ export function AdminAccessKeys() {
                 }))
               }
               placeholder={t("userReferralCodePlaceholder")}
-              className={`${inputClass} font-mono tracking-wide`}
+              className={`${formInputClass} font-mono tracking-wide`}
               autoComplete="off"
             />
           </label>
@@ -741,7 +744,7 @@ export function AdminAccessKeys() {
                 setForm((f) => ({ ...f, label: e.target.value }))
               }
               placeholder={t("accessKeyLabelPlaceholder")}
-              className={inputClass}
+              className={formInputClass}
             />
           </label>
 
@@ -753,7 +756,7 @@ export function AdminAccessKeys() {
               value={form.maxUses}
               onChange={(e) => setForm((f) => ({ ...f, maxUses: e.target.value }))}
               placeholder="∞"
-              className={inputClass}
+              className={formInputClass}
             />
           </label>
           <label className="space-y-1">
@@ -762,7 +765,7 @@ export function AdminAccessKeys() {
               type="date"
               value={form.expiresAt}
               onChange={(e) => setForm((f) => ({ ...f, expiresAt: e.target.value }))}
-              className={inputClass}
+              className={formInputClass}
             />
           </label>
           <label className="space-y-1">
@@ -773,7 +776,7 @@ export function AdminAccessKeys() {
               value={form.accessDays}
               onChange={(e) => setForm((f) => ({ ...f, accessDays: e.target.value }))}
               placeholder={t("accessKeyAccessDaysDefault")}
-              className={inputClass}
+              className={formInputClass}
             />
           </label>
           <label className="space-y-1 sm:col-span-2">
@@ -788,7 +791,7 @@ export function AdminAccessKeys() {
                 setForm((f) => ({ ...f, referrerBonusDays: e.target.value }))
               }
               placeholder={t("accessKeyReferrerBonusDaysDefault")}
-              className={inputClass}
+              className={formInputClass}
             />
             <p className="text-xs text-muted-foreground">
               {t("accessKeyReferrerBonusDaysHint")}
@@ -816,9 +819,6 @@ export function AdminAccessKeys() {
         onRefresh={() => void refresh()}
         minTableWidth="880px"
         renderMobileCard={renderMobileCard}
-        renderRowDetail={(key) =>
-          expandedId === key.id ? renderManagePanel(key) : null
-        }
         toolbar={
           <label className="block space-y-1">
             <span className="sr-only">{t("accessKeysSearchPlaceholder")}</span>
@@ -827,12 +827,56 @@ export function AdminAccessKeys() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder={t("accessKeysSearchPlaceholder")}
-              className={inputClass}
+              className={formInputClass}
               autoComplete="off"
             />
           </label>
         }
       />
+
+      {manageKey && manageEdit && (
+        <>
+          <AdminManageModal
+            open={manageId !== null}
+            onClose={() => {
+              setManageId(null);
+              setDeleteConfirmOpen(false);
+              setResetUsesConfirmOpen(false);
+            }}
+            title={manageKey.code}
+            subtitle={manageKey.label ?? manageKey.referrerEmail}
+            sections={manageSections}
+            footer={
+              <Button
+                type="button"
+                className="h-11 w-full sm:w-auto"
+                disabled={savingId === manageKey.id}
+                onClick={() => saveKey(manageKey)}
+              >
+                {savingId === manageKey.id ? tc("loading") : tc("save")}
+              </Button>
+            }
+          />
+          <AdminConfirmDialog
+            open={deleteConfirmOpen}
+            title={t("manageDeleteReferral")}
+            message={t("accessKeyDeleteConfirm")}
+            confirmLabel={tc("delete")}
+            onCancel={() => setDeleteConfirmOpen(false)}
+            onConfirm={() => removeKey(manageKey.id)}
+          />
+          <AdminConfirmDialog
+            open={resetUsesConfirmOpen}
+            title={t("accessKeyResetUses")}
+            message={t("accessKeyResetUsesConfirm")}
+            confirmLabel={t("manageModalConfirm")}
+            variant="primary"
+            loading={savingId === manageKey.id}
+            onCancel={() => setResetUsesConfirmOpen(false)}
+            onConfirm={() => resetUses(manageKey)}
+          />
+        </>
+      )}
     </div>
   );
 }

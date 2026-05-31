@@ -2,13 +2,32 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type ResizeAxis = "x" | "y";
+export type ResizeEdge = "left" | "right" | "top" | "bottom";
+
+function resizeDelta(
+  edge: ResizeEdge,
+  startX: number,
+  startY: number,
+  moveX: number,
+  moveY: number,
+): number {
+  switch (edge) {
+    case "left":
+      return startX - moveX;
+    case "right":
+      return moveX - startX;
+    case "top":
+      return startY - moveY;
+    case "bottom":
+      return moveY - startY;
+  }
+}
 
 export function usePersistedResize(
   storageKey: string,
   defaultSize: number,
   clamp: (value: number) => number,
-  axis: ResizeAxis,
+  edge: ResizeEdge,
 ) {
   const [size, setSize] = useState(defaultSize);
   const sizeRef = useRef(size);
@@ -28,18 +47,21 @@ export function usePersistedResize(
   const handleResizePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       event.preventDefault();
-      const start =
-        axis === "x" ? event.clientX : event.clientY;
+      const startX = event.clientX;
+      const startY = event.clientY;
       const startSize = sizeRef.current;
       const handle = event.currentTarget;
 
       handle.setPointerCapture(event.pointerId);
 
       const onMove = (moveEvent: PointerEvent) => {
-        const delta =
-          axis === "x"
-            ? start - moveEvent.clientX
-            : moveEvent.clientY - start;
+        const delta = resizeDelta(
+          edge,
+          startX,
+          startY,
+          moveEvent.clientX,
+          moveEvent.clientY,
+        );
         setSize(clamp(startSize + delta));
       };
 
@@ -55,7 +77,7 @@ export function usePersistedResize(
       handle.addEventListener("pointerup", onUp);
       handle.addEventListener("pointercancel", onUp);
     },
-    [storageKey, clamp, axis],
+    [storageKey, clamp, edge],
   );
 
   return { size, handleResizePointerDown };

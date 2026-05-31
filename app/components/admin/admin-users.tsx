@@ -1,13 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { DataTable } from "@/app/components/ui/data-table";
 import type { DataTableColumn } from "@/app/components/ui/data-table";
 import { usePaginatedTable } from "@/lib/hooks/use-paginated-table";
@@ -19,6 +13,10 @@ import { Button } from "@/app/components/ui/button";
 import { Card, CardTitle } from "@/app/components/ui/card";
 import { PasswordInput } from "@/app/components/ui/password-input";
 import { AdminErrorAlert } from "@/app/components/admin/admin-error-alert";
+import {
+  AdminUserManageModal,
+  type UserEdit,
+} from "@/app/components/admin/admin-user-manage-modal";
 import { appFetch } from "@/lib/api/api-client";
 import { adminApiErrorMessage } from "@/lib/admin/admin-api-error";
 import {
@@ -26,7 +24,6 @@ import {
   formatAccessDateShort,
   formatDateInputLocal,
 } from "@/lib/access/access-dates";
-import { BAN_REASON_CODES } from "@/lib/access/ban-reasons";
 
 interface UserRow {
   id: string;
@@ -44,15 +41,6 @@ interface UserRow {
   usesDefaultLimit: boolean;
   createdAt: string;
 }
-
-type UserEdit = {
-  maxCalculators: string;
-  accessExpiresAt: string;
-  adminNotes: string;
-  useDefaultLimit: boolean;
-  newPassword: string;
-  newEmail: string;
-};
 
 function addMonths(base: Date, months: number): string {
   const next = new Date(base);
@@ -112,290 +100,12 @@ function UserStatusSection({
   );
 }
 
-function UserManagePanel({
-  user,
-  edit,
-  defaultMax,
-  pendingBanId,
-  banReason,
-  t,
-  tc,
-  onToggleRole,
-  onUnban,
-  onStartBan,
-  onCancelBan,
-  onConfirmBan,
-  onBanReasonChange,
-  onEditChange,
-  onExtendAccess,
-  onSave,
-  onSetPassword,
-  onSetEmail,
-  passwordSaving,
-  passwordSuccess,
-  emailSaving,
-  emailSuccess,
-  emailError,
-}: {
-  user: UserRow;
-  edit: UserEdit;
-  defaultMax: number;
-  pendingBanId: string | null;
-  banReason: "ACCESS_EXPIRED";
-  t: ReturnType<typeof useTranslations<"admin">>;
-  tc: ReturnType<typeof useTranslations<"common">>;
-  onToggleRole: () => void;
-  onUnban: () => void;
-  onStartBan: () => void;
-  onCancelBan: () => void;
-  onConfirmBan: () => void;
-  onBanReasonChange: (reason: "ACCESS_EXPIRED") => void;
-  onEditChange: (patch: Partial<UserEdit>) => void;
-  onExtendAccess: (months: number) => void;
-  onSave: () => void;
-  onSetPassword: () => void;
-  onSetEmail: () => void;
-  passwordSaving: boolean;
-  passwordSuccess: boolean;
-  emailSaving: boolean;
-  emailSuccess: boolean;
-  emailError: string | null;
-}) {
-  return (
-    <div className="border-t border-border/60 bg-muted/25 px-4 py-5">
-      <div className="mb-5 flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          className="h-10 min-h-[44px] flex-1 px-4 text-xs sm:flex-none sm:text-sm"
-          onClick={onToggleRole}
-        >
-          {user.role === "ADMIN" ? t("removeAdmin") : t("makeAdmin")}
-        </Button>
-        {user.banned ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="h-10 min-h-[44px] flex-1 px-4 text-xs sm:flex-none sm:text-sm"
-            onClick={onUnban}
-          >
-            {t("unban")}
-          </Button>
-        ) : pendingBanId === user.id ? (
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-10 min-h-[44px] flex-1 px-4 text-xs sm:flex-none sm:text-sm"
-            onClick={onCancelBan}
-          >
-            {t("banCancel")}
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            className="h-10 min-h-[44px] flex-1 border-destructive/40 px-4 text-xs text-destructive hover:bg-destructive/10 sm:flex-none sm:text-sm"
-            onClick={onStartBan}
-          >
-            {t("ban")}
-          </Button>
-        )}
-      </div>
-
-      {pendingBanId === user.id && !user.banned && (
-        <div className="mb-5 space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-foreground">
-              {t("banSelectReason")}
-            </span>
-            <select
-              value={banReason}
-              onChange={(e) =>
-                onBanReasonChange(e.target.value as "ACCESS_EXPIRED")
-              }
-              className="block h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:text-sm"
-            >
-              {BAN_REASON_CODES.map((code) => (
-                <option key={code} value={code}>
-                  {t(`banReason_${code}`)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Button
-            type="button"
-            className="h-11 w-full bg-destructive text-sm text-destructive-foreground hover:brightness-110 sm:w-auto"
-            onClick={onConfirmBan}
-          >
-            {t("banConfirm")}
-          </Button>
-        </div>
-      )}
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-3">
-          <p className="text-sm font-semibold">{t("limitsTitle")}</p>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={edit.useDefaultLimit}
-              disabled={user.role === "ADMIN"}
-              onChange={(e) =>
-                onEditChange({ useDefaultLimit: e.target.checked })
-              }
-            />
-            {t("useDefaultLimit", { max: defaultMax })}
-          </label>
-          {!edit.useDefaultLimit && user.role !== "ADMIN" && (
-            <label className="block space-y-1">
-              <span className="text-sm text-muted-foreground">
-                {t("maxCalculators")}
-              </span>
-              <input
-                type="number"
-                min={0}
-                value={edit.maxCalculators}
-                onChange={(e) =>
-                  onEditChange({ maxCalculators: e.target.value })
-                }
-                className="block h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:max-w-xs sm:text-sm"
-              />
-            </label>
-          )}
-        </div>
-        <div className="space-y-3">
-          <p className="text-sm font-semibold">{t("accessTitle")}</p>
-          <label className="block space-y-1">
-            <span className="text-sm text-muted-foreground">
-              {t("accessUntil")}
-            </span>
-            <input
-              type="date"
-              value={edit.accessExpiresAt}
-              onChange={(e) =>
-                onEditChange({ accessExpiresAt: e.target.value })
-              }
-              className="block h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:max-w-xs sm:text-sm"
-            />
-          </label>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 w-full text-xs sm:w-auto sm:text-sm"
-              onClick={() => onExtendAccess(1)}
-            >
-              {t("extend1Month")}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 w-full text-xs sm:w-auto sm:text-sm"
-              onClick={() => onExtendAccess(12)}
-            >
-              {t("extend1Year")}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 w-full text-xs sm:w-auto sm:text-sm"
-              onClick={() => onEditChange({ accessExpiresAt: "" })}
-            >
-              {t("accessUnlimited")}
-            </Button>
-          </div>
-        </div>
-        <label className="block space-y-1 lg:col-span-2">
-          <span className="text-sm text-muted-foreground">{t("adminNotes")}</span>
-          <textarea
-            rows={2}
-            value={edit.adminNotes}
-            onChange={(e) => onEditChange({ adminNotes: e.target.value })}
-            className="block w-full rounded-xl border border-border bg-input px-3 py-2 text-base sm:text-sm"
-          />
-        </label>
-        <div className="grid gap-4 lg:col-span-2 lg:grid-cols-2">
-          <div className="space-y-3">
-          <p className="text-sm font-semibold">{t("changePasswordTitle")}</p>
-          <p className="text-xs text-muted-foreground">{t("changePasswordHint")}</p>
-          <PasswordInput
-            id={`admin-user-password-${user.id}`}
-            minLength={8}
-            autoComplete="new-password"
-            value={edit.newPassword}
-            onChange={(e) => onEditChange({ newPassword: e.target.value })}
-            inputClassName="block h-11 w-full rounded-xl border border-border bg-input py-0 pl-3 pr-12 text-base sm:text-sm"
-            placeholder={t("changePasswordPlaceholder")}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            className="h-11 w-full text-sm sm:w-auto"
-            disabled={passwordSaving || edit.newPassword.length < 8}
-            onClick={onSetPassword}
-          >
-            {passwordSaving ? t("changingPassword") : t("changePassword")}
-          </Button>
-            {passwordSuccess && (
-              <p className="text-sm text-green-700 dark:text-green-400">
-                {t("passwordChanged")}
-              </p>
-            )}
-          </div>
-          <div className="space-y-3">
-            <p className="text-sm font-semibold">{t("changeEmailTitle")}</p>
-            <p className="text-xs text-muted-foreground">{t("changeEmailHint")}</p>
-            <input
-              type="email"
-              autoComplete="off"
-              value={edit.newEmail}
-              onChange={(e) => onEditChange({ newEmail: e.target.value })}
-              className="block h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:text-sm"
-              placeholder={t("changeEmailPlaceholder")}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 w-full text-sm sm:w-auto"
-              disabled={
-                emailSaving ||
-                edit.newEmail.trim().toLowerCase() === user.email.toLowerCase() ||
-                !edit.newEmail.includes("@")
-              }
-              onClick={onSetEmail}
-            >
-              {emailSaving ? t("changingEmail") : t("changeEmail")}
-            </Button>
-            {emailSuccess && (
-              <p className="text-sm text-green-700 dark:text-green-400">
-                {t("emailChanged")}
-              </p>
-            )}
-            {emailError && (
-              <p className="text-sm text-destructive">{emailError}</p>
-            )}
-          </div>
-        </div>
-        <div className="lg:col-span-2">
-          <Button
-            type="button"
-            className="h-11 w-full text-sm sm:w-auto"
-            onClick={onSave}
-          >
-            {tc("save")}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function AdminUsers() {
   const t = useTranslations("admin");
   const tc = useTranslations("common");
   const locale = useLocale();
   const [defaultMax, setDefaultMax] = useState(5);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [manageUserId, setManageUserId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -464,7 +174,7 @@ export function AdminUsers() {
         return next;
       });
 
-      setExpandedId((current) =>
+      setManageUserId((current) =>
         current && loadedUsers.some((u) => u.id === current) ? current : null,
       );
 
@@ -669,48 +379,8 @@ export function AdminUsers() {
       : t("accessUnlimited");
   }
 
-  function renderManagePanel(user: UserRow, edit: UserEdit) {
-    return (
-      <UserManagePanel
-        user={user}
-        edit={edit}
-        defaultMax={defaultMax}
-        pendingBanId={pendingBanId}
-        banReason={banReason}
-        t={t}
-        tc={tc}
-        onToggleRole={() =>
-          updateUser(user.id, {
-            role: user.role === "ADMIN" ? "USER" : "ADMIN",
-          })
-        }
-        onUnban={() => {
-          setPendingBanId(null);
-          updateUser(user.id, { banned: false });
-        }}
-        onStartBan={() => {
-          setBanReason("ACCESS_EXPIRED");
-          setPendingBanId(user.id);
-        }}
-        onCancelBan={() => setPendingBanId(null)}
-        onConfirmBan={() => {
-          updateUser(user.id, { banned: true, banReason });
-          setPendingBanId(null);
-        }}
-        onBanReasonChange={setBanReason}
-        onEditChange={(patch) => setEdit(user.id, patch)}
-        onExtendAccess={(months) => extendAccess(user.id, months)}
-        onSave={() => saveUserLimits(user)}
-        onSetPassword={() => saveUserPassword(user)}
-        onSetEmail={() => saveUserEmail(user)}
-        passwordSaving={passwordSavingId === user.id}
-        passwordSuccess={passwordSuccessId === user.id}
-        emailSaving={emailSavingId === user.id}
-        emailSuccess={emailSuccessId === user.id}
-        emailError={emailErrors[user.id] ?? null}
-      />
-    );
-  }
+  const manageUser = users.find((user) => user.id === manageUserId) ?? null;
+  const manageEdit = manageUser ? edits[manageUser.id] : undefined;
 
   const inputClass =
     "block h-11 w-full rounded-xl border border-border bg-input px-3 text-base sm:h-10 sm:text-sm";
@@ -771,26 +441,20 @@ export function AdminUsers() {
       header: t("actions"),
       headerClassName: "text-right",
       cellClassName: "text-right",
-      cell: (user) => {
-        const isExpanded = expandedId === user.id;
-        return (
-          <Button
-            type="button"
-            variant={isExpanded ? "primary" : "outline"}
-            className="h-8 px-3 text-xs"
-            onClick={() => setExpandedId(isExpanded ? null : user.id)}
-          >
-            {isExpanded ? t("hideDetails") : t("manage")}
-          </Button>
-        );
-      },
+      cell: (user) => (
+        <Button
+          type="button"
+          variant="outline"
+          className="h-8 px-3 text-xs"
+          onClick={() => setManageUserId(user.id)}
+        >
+          {t("manage")}
+        </Button>
+      ),
     },
   ];
 
   function renderUserMobileCard(user: UserRow) {
-    const edit = edits[user.id];
-    const isExpanded = expandedId === user.id;
-
     return (
       <article key={user.id} className="bg-card/90">
         <div className="space-y-3 p-4">
@@ -827,15 +491,13 @@ export function AdminUsers() {
 
           <Button
             type="button"
-            variant={isExpanded ? "primary" : "outline"}
+            variant="outline"
             className="h-11 w-full text-sm"
-            onClick={() => setExpandedId(isExpanded ? null : user.id)}
+            onClick={() => setManageUserId(user.id)}
           >
-            {isExpanded ? t("hideDetails") : t("manage")}
+            {t("manage")}
           </Button>
         </div>
-
-        {isExpanded && edit && renderManagePanel(user, edit)}
       </article>
     );
   }
@@ -960,12 +622,6 @@ export function AdminUsers() {
         onRefresh={() => void refresh()}
         minTableWidth="960px"
         renderMobileCard={renderUserMobileCard}
-        renderRowDetail={(user) => {
-          const edit = edits[user.id];
-          return expandedId === user.id && edit
-            ? renderManagePanel(user, edit)
-            : null;
-        }}
         toolbar={
           <label className="block space-y-1">
             <span className="sr-only">{t("usersSearchPlaceholder")}</span>
@@ -980,6 +636,50 @@ export function AdminUsers() {
           </label>
         }
       />
+
+      {manageUser && (
+        <AdminUserManageModal
+          user={manageUser}
+          open={manageUserId !== null}
+          onClose={() => {
+            setManageUserId(null);
+            setPendingBanId(null);
+          }}
+          edit={manageEdit}
+          defaultMax={defaultMax}
+          pendingBanId={pendingBanId}
+          banReason={banReason}
+          passwordSaving={passwordSavingId === manageUser.id}
+          passwordSuccess={passwordSuccessId === manageUser.id}
+          emailSaving={emailSavingId === manageUser.id}
+          emailSuccess={emailSuccessId === manageUser.id}
+          emailError={emailErrors[manageUser.id] ?? null}
+          onToggleRole={() =>
+            updateUser(manageUser.id, {
+              role: manageUser.role === "ADMIN" ? "USER" : "ADMIN",
+            })
+          }
+          onUnban={() => {
+            setPendingBanId(null);
+            updateUser(manageUser.id, { banned: false });
+          }}
+          onStartBan={() => {
+            setBanReason("ACCESS_EXPIRED");
+            setPendingBanId(manageUser.id);
+          }}
+          onCancelBan={() => setPendingBanId(null)}
+          onConfirmBan={() => {
+            updateUser(manageUser.id, { banned: true, banReason });
+            setPendingBanId(null);
+          }}
+          onBanReasonChange={setBanReason}
+          onEditChange={(patch) => setEdit(manageUser.id, patch)}
+          onExtendAccess={(months) => extendAccess(manageUser.id, months)}
+          onSave={() => saveUserLimits(manageUser)}
+          onSetPassword={() => saveUserPassword(manageUser)}
+          onSetEmail={() => saveUserEmail(manageUser)}
+        />
+      )}
     </div>
   );
 }
