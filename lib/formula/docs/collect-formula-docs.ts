@@ -111,6 +111,13 @@ const OPERAND_DOCS: FormulaDocEntry[] = [
     blockCategory: "operand",
   },
   {
+    id: "macro",
+    category: "operands",
+    syntax: "macro_id",
+    example: "macro_sheet_cost",
+    blockCategory: "operand",
+  },
+  {
     id: "calculation",
     category: "operands",
     syntax: "calc_id",
@@ -135,6 +142,10 @@ const SCRIPT_EXAMPLES: Record<string, string> = {
   constant: `constant const_factor {
   label = "Factor"
   value = 1.2
+}`,
+  macro: `macro macro_sheet_cost {
+  label = "Sheet cost"
+  formula { return field_item.var_pages * field_item.var_paper }
 }`,
   calc: `calc calc_subtotal {
   label = "Subtotal"

@@ -133,6 +133,20 @@ export function buildReferencePaletteItems(
     });
   }
 
+  for (const macro of config.macros ?? []) {
+    blocks.push({
+      id: `m-${macro.id}`,
+      label: macro.label.trim() || macro.id,
+      category: "operand",
+      color: "macro",
+      meta: { title: macro.label.trim() || macro.id, hint: macro.id },
+      dragData: {
+        kind: "operand",
+        operand: { kind: "macro", macroId: macro.id },
+      },
+    });
+  }
+
   return blocks;
 }
 
@@ -190,6 +204,12 @@ export function formatBlockOperandLabel(
     }
     case "local":
       return operand.localId;
+    case "macro": {
+      const macro = (config.macros ?? []).find(
+        (item) => item.id === operand.macroId,
+      );
+      return macro?.label.trim() || macro?.id || "?";
+    }
     default:
       return "?";
   }

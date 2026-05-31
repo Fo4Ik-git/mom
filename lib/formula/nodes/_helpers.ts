@@ -399,3 +399,103 @@ export function conditionalPaletteItem() {
     dragData: { kind: "conditional" as const },
   };
 }
+
+function roundDecimalsOperand(
+  node: BlockExpression,
+): BlockExpression {
+  if (node.type !== "round") {
+    return { type: "operand", operand: { kind: "number", value: 0 } };
+  }
+  return node.decimals;
+}
+
+function literalDecimalPlaces(decimals: BlockExpression): number | null {
+  if (
+    decimals.type === "operand" &&
+    decimals.operand.kind === "number" &&
+    Number.isFinite(decimals.operand.value)
+  ) {
+    return Math.max(0, Math.min(10, Math.round(decimals.operand.value)));
+  }
+  return null;
+}
+
+export function formatRoundCode(
+  node: BlockExpression,
+  ctx: FormulaCodeFormatContext,
+): string {
+  if (node.type !== "round") {
+    return "?";
+  }
+  const value = ctx.formatChild(node.value, { rowFieldId: ctx.rowFieldId });
+  const places = literalDecimalPlaces(node.decimals);
+  if (places == null || places === 0) {
+    const decimalsText = ctx.formatChild(node.decimals, { rowFieldId: ctx.rowFieldId });
+    if (decimalsText === "0") {
+      return `ROUND(${value})`;
+    }
+    return `ROUND(${value}, ${decimalsText})`;
+  }
+  if (places === 0) {
+    return `ROUND(${value})`;
+  }
+  return `ROUND(${value}, ${places})`;
+}
+
+export function formatRoundLabel(
+  node: BlockExpression,
+  ctx: FormulaDisplayContext,
+): string {
+  if (node.type !== "round") {
+    return "?";
+  }
+  const value = ctx.formatChild(node.value);
+  if (
+    node.decimals.type === "operand" &&
+    node.decimals.operand.kind === "number" &&
+    node.decimals.operand.value === 0
+  ) {
+    return `ROUND(${value})`;
+  }
+  const decimals = ctx.formatChild(node.decimals);
+  return `ROUND(${value}, ${decimals})`;
+}
+
+export function parseRoundCall(
+  keyword: string,
+  ctx: FormulaCodeParseContext,
+): BlockExpression | null {
+  if (keyword !== "ROUND") {
+    return null;
+  }
+  if (!ctx.peekIsLParen()) {
+    ctx.fail('Expected "(" after ROUND', ctx.identEnd);
+  }
+  ctx.expectLParen();
+  const args = ctx.parseArgumentList();
+  ctx.expectRParen();
+  if (args.length < 1 || args.length > 2) {
+    ctx.fail("ROUND requires 1 or 2 arguments: value, [decimals]", ctx.identEnd);
+  }
+  return {
+    type: "round",
+    value: args[0]!,
+    decimals:
+      args[1] ??
+      ({
+        type: "operand",
+        operand: { kind: "number", value: 0 },
+      } satisfies BlockExpression),
+  };
+}
+
+export function roundPaletteItem() {
+  return {
+    id: "round",
+    label: "ROUND",
+    category: "round" as const,
+    color: "round" as const,
+    meta: { title: "ROUND", hint: "ROUND(value, decimals?)" },
+    dragData: { kind: "round" as const },
+  };
+}

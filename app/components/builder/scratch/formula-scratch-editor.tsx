@@ -32,6 +32,7 @@ import {
   moveExpressionToSlot,
   removeAggregateAt,
   removeConditionalAt,
+  removeRoundAt,
   removeGroupAt,
   removeRowAggregateAt,
   removeOperationAt,
@@ -147,6 +148,15 @@ export function FormulaScratchEditor({
         }
         return;
       }
+      if (workspace.kind === "round") {
+        const roundExpr = getSlotExpression(expression, workspace.path);
+        if (roundExpr.type === "round") {
+          setActiveDragLabel(
+            formatBlockExpression(roundExpr, config, formulaTarget, quantityLabel),
+          );
+        }
+        return;
+      }
       if (workspace.kind === "slot") {
         const slotExpr = getSlotExpression(expression, workspace.path);
         if (slotExpr.type === "operand") {
@@ -246,6 +256,16 @@ export function FormulaScratchEditor({
         onChange(
           applyPaletteToSlot(expression, [...path, branch], dragData),
         );
+      } else if (
+        overData?.target === "round" &&
+        dragData.kind !== "round"
+      ) {
+        const roundExpr = getSlotExpression(expression, path);
+        const slot: SlotPath =
+          roundExpr.type === "round" && roundExpr.value.type === "empty"
+            ? "value"
+            : "decimals";
+        onChange(applyPaletteToSlot(expression, [...path, slot], dragData));
       } else {
         applyToSlot(path, dragData);
       }
@@ -293,7 +313,8 @@ export function FormulaScratchEditor({
         (workspaceActive.kind === "slot" ||
           workspaceActive.kind === "group" ||
           workspaceActive.kind === "aggregate" ||
-          workspaceActive.kind === "conditional") &&
+          workspaceActive.kind === "conditional" ||
+          workspaceActive.kind === "round") &&
         overPath
       ) {
         const destination =
@@ -455,6 +476,9 @@ export function FormulaScratchEditor({
             }
             onConditionalRemove={(path) =>
               onChange(removeConditionalAt(expression, path))
+            }
+            onRoundRemove={(path) =>
+              onChange(removeRoundAt(expression, path))
             }
             onSlotTap={handleSlotTap}
           />

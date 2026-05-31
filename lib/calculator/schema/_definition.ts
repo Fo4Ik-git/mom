@@ -8,6 +8,7 @@ export type ScriptDeclaration =
       kind: "calculation";
       data: NonNullable<CalculatorConfig["calculations"]>[number];
     }
+  | { kind: "macro"; data: NonNullable<CalculatorConfig["macros"]>[number] }
   | { kind: "output"; data: CalculatorConfig["outputs"][number] };
 
 export interface ScriptFormatContext {

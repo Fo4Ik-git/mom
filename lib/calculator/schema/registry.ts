@@ -1,6 +1,7 @@
 import { constantEntity } from "@/lib/calculator/schema/entities/constant.entity";
 import { calculationEntity } from "@/lib/calculator/schema/entities/calculation.entity";
 import { inputEntity } from "@/lib/calculator/schema/entities/input.entity";
+import { macroEntity } from "@/lib/calculator/schema/entities/macro.entity";
 import { outputEntity } from "@/lib/calculator/schema/entities/output.entity";
 import type { ConfigEntityDefinition } from "@/lib/calculator/schema/_definition";
 
@@ -15,6 +16,7 @@ function register(entity: ConfigEntityDefinition) {
 
 register(inputEntity);
 register(constantEntity);
+register(macroEntity);
 register(calculationEntity);
 register(outputEntity);
 
@@ -23,7 +25,7 @@ export function getConfigEntity(keyword: string) {
 }
 
 export function getAllConfigEntities() {
-  return [inputEntity, constantEntity, calculationEntity, outputEntity];
+  return [inputEntity, constantEntity, macroEntity, calculationEntity, outputEntity];
 }
 
 export function matchDeclarationHeader(line: string) {

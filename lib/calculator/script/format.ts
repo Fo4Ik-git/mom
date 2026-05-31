@@ -3,6 +3,7 @@ import type { ScriptDeclaration, ScriptFormatContext } from "@/lib/calculator/sc
 import { constantEntity } from "@/lib/calculator/schema/entities/constant.entity";
 import { calculationEntity } from "@/lib/calculator/schema/entities/calculation.entity";
 import { inputEntity } from "@/lib/calculator/schema/entities/input.entity";
+import { macroEntity } from "@/lib/calculator/schema/entities/macro.entity";
 import { outputEntity } from "@/lib/calculator/schema/entities/output.entity";
 import type { CalculatorConfig } from "@/types/calculator";
 
@@ -23,6 +24,11 @@ export function formatCalculatorScript(config: CalculatorConfig): string {
     lines.push(
       ...constantEntity.format({ kind: "constant", data: constant }, {}),
     );
+    lines.push("");
+  }
+
+  for (const macro of config.macros ?? []) {
+    lines.push(...macroEntity.format({ kind: "macro", data: macro }, {}));
     lines.push("");
   }
 
@@ -53,6 +59,8 @@ export function formatDeclaration(
       return inputEntity.format(declaration, ctx).join("\n");
     case "constant":
       return constantEntity.format(declaration, ctx).join("\n");
+    case "macro":
+      return macroEntity.format(declaration, ctx).join("\n");
     case "calculation":
       return calculationEntity.format(declaration, ctx).join("\n");
     case "output":

@@ -29,6 +29,8 @@ export function formatOperandCode(
         : operand.calculationId;
     case "output":
       return operand.outputId === target.fieldId ? "?" : operand.outputId;
+    case "macro":
+      return operand.macroId;
     default:
       return "?";
   }
@@ -90,6 +92,10 @@ export function parseCodeReference(
       throw new FormulaParseError("Formula cannot reference itself", offset);
     }
     return { kind: "output", outputId: raw };
+  }
+
+  if (raw.startsWith("macro_")) {
+    return { kind: "macro", macroId: raw };
   }
 
   if (localIds?.has(raw)) {

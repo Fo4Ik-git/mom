@@ -25,6 +25,8 @@ export type SlotPath =
   | "condition"
   | "whenTrue"
   | "whenFalse"
+  | "value"
+  | "decimals"
   | typeof AGGREGATE_APPEND_SLOT
   | `${number}`;
 
@@ -211,6 +213,16 @@ export function applyContinueAtPath(
     });
   }
 
+  if (
+    parent.type === "round" &&
+    (slot === "value" || slot === "decimals")
+  ) {
+    return setSlotExpression(root, parentPath, {
+      ...parent,
+      [slot]: applyAfterExpression(anchor, item),
+    });
+  }
+
   return setSlotExpression(
     root,
     anchorPath,
@@ -245,6 +257,7 @@ export type PaletteDragData =
       function: AggregateFunction;
     }
   | { source: "palette"; kind: "conditional" }
+  | { source: "palette"; kind: "round" }
   | { source: "palette"; kind: "expression"; expression: BlockExpression };
 
 export function isExpressionFilled(expression: BlockExpression): boolean {
@@ -262,6 +275,12 @@ export function isExpressionFilled(expression: BlockExpression): boolean {
       isExpressionFilled(expression.condition) ||
       isExpressionFilled(expression.whenTrue) ||
       isExpressionFilled(expression.whenFalse)
+    );
+  }
+  if (expression.type === "round") {
+    return (
+      isExpressionFilled(expression.value) ||
+      isExpressionFilled(expression.decimals)
     );
   }
   return expression.type !== "empty";
@@ -304,6 +323,13 @@ export function getSlotExpression(
         slot !== "whenTrue" &&
         slot !== "whenFalse"
       ) {
+        return emptyBlockExpression();
+      }
+      current = current[slot];
+      continue;
+    }
+    if (current.type === "round") {
+      if (slot !== "value" && slot !== "decimals") {
         return emptyBlockExpression();
       }
       current = current[slot];
@@ -375,6 +401,20 @@ export function setSlotExpression(
       slot !== "whenTrue" &&
       slot !== "whenFalse"
     ) {
+      return root;
+    }
+    if (rest.length === 0) {
+      return { ...root, [slot]: value };
+    }
+    return {
+      ...root,
+      [slot]: setSlotExpression(root[slot], rest, value),
+    };
+  }
+
+  if (root.type === "round") {
+    const [slot, ...rest] = path;
+    if (slot !== "value" && slot !== "decimals") {
       return root;
     }
     if (rest.length === 0) {
@@ -593,6 +633,28 @@ export function removeConditionalAt(
   return setSlotExpression(root, conditionalPath, replacement);
 }
 
+export function removeRoundAt(
+  root: BlockExpression,
+  roundPath: SlotPath[],
+): BlockExpression {
+  const node =
+    roundPath.length === 0 ? root : getSlotExpression(root, roundPath);
+
+  if (node.type !== "round") {
+    return root;
+  }
+
+  const replacement = isExpressionFilled(node.value)
+    ? node.value
+    : emptyBlockExpression();
+
+  if (roundPath.length === 0) {
+    return replacement;
+  }
+
+  return setSlotExpression(root, roundPath, replacement);
+}
+
 /** Remove an operation node; keeps a filled child if any, otherwise empty. */
 export function removeOperationAt(
   root: BlockExpression,
@@ -699,6 +761,7 @@ export type WorkspaceDragData =
   | { source: "workspace"; kind: "group"; path: SlotPath[] }
   | { source: "workspace"; kind: "aggregate"; path: SlotPath[]; function: AggregateFunction }
   | { source: "workspace"; kind: "conditional"; path: SlotPath[] }
+  | { source: "workspace"; kind: "round"; path: SlotPath[] }
   | {
       source: "workspace";
       kind: "operator";

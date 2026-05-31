@@ -85,6 +85,7 @@ export const blockOperandSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("number"), value: z.number() }),
   z.object({ kind: z.literal("constant"), constantId: z.string() }),
   z.object({ kind: z.literal("local"), localId: z.string() }),
+  z.object({ kind: z.literal("macro"), macroId: z.string() }),
 ]);
 
 export type BlockOperand = z.infer<typeof blockOperandSchema>;
@@ -117,6 +118,11 @@ export const blockExpressionSchema: z.ZodType<BlockExpression> = z.lazy(() =>
       whenTrue: blockExpressionSchema,
       whenFalse: blockExpressionSchema,
     }),
+    z.object({
+      type: z.literal("round"),
+      value: blockExpressionSchema,
+      decimals: blockExpressionSchema,
+    }),
   ]),
 );
 
@@ -142,6 +148,11 @@ export type BlockExpression =
       condition: BlockExpression;
       whenTrue: BlockExpression;
       whenFalse: BlockExpression;
+    }
+  | {
+      type: "round";
+      value: BlockExpression;
+      decimals: BlockExpression;
     };
 
 export const formulaLocalSchema = z.object({
@@ -210,10 +221,20 @@ function normalizeExpressionFields(items: unknown) {
   });
 }
 
+export const formulaMacroSchema = z.object({
+  id: idSchema,
+  label: z.string().min(1).max(120),
+  expression: blockExpressionSchema,
+});
+
 export const calculatorConfigSchema = z.object({
   version: z.literal(2).optional().default(2),
   inputs: z.array(inputFieldSchema).min(1).max(50),
   constants: z.array(calculatorConstantSchema).max(30).optional().default([]),
+  macros: z
+    .preprocess(normalizeExpressionFields, z.array(formulaMacroSchema).max(30))
+    .optional()
+    .default([]),
   calculations: z
     .preprocess(normalizeExpressionFields, z.array(expressionFieldSchema).max(30))
     .optional()
@@ -247,10 +268,19 @@ export type OutputField = {
   locals?: FormulaLocal[];
   highlight?: boolean;
 };
+
+/** Reusable formula fragment (not shown on calculator screen). */
+export type FormulaMacro = {
+  id: string;
+  label: string;
+  expression: BlockExpression;
+};
+
 export type CalculatorConfig = {
   version?: 2;
   inputs: InputField[];
   constants?: CalculatorConstant[];
+  macros?: FormulaMacro[];
   calculations?: CalculationField[];
   outputs: OutputField[];
 };
@@ -300,6 +330,17 @@ export function emptyConditionalExpression(): BlockExpression {
   };
 }
 
+export function emptyRoundExpression(): BlockExpression {
+  return {
+    type: "round",
+    value: emptyBlockExpression(),
+    decimals: {
+      type: "operand",
+      operand: { kind: "number", value: 0 },
+    },
+  };
+}
+
 export function isArgPathSegment(segment: string): boolean {
   return /^\d+$/.test(segment);
 }
@@ -321,7 +362,8 @@ export function normalizeBlockExpression(data: unknown): BlockExpression {
     record.type === "group" ||
     record.type === "aggregate" ||
     record.type === "rowAggregate" ||
-    record.type === "conditional"
+    record.type === "conditional" ||
+    record.type === "round"
   ) {
     return blockExpressionSchema.parse(data);
   }

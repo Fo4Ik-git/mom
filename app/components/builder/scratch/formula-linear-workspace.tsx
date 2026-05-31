@@ -25,6 +25,7 @@ import {
 } from "@/lib/formula/blocks/block-tree";
 import { AggregateBracket } from "@/app/components/builder/scratch/aggregate-bracket";
 import { ConditionalBracket } from "@/app/components/builder/scratch/conditional-bracket";
+import { RoundBracket } from "@/app/components/builder/scratch/round-bracket";
 import { RowAggregateBracket } from "@/app/components/builder/scratch/row-aggregate-bracket";
 import { DragHandle } from "@/app/components/builder/scratch/drag-handle";
 import { BlockSlot } from "@/app/components/builder/scratch/block-slot";
@@ -45,6 +46,7 @@ interface FormulaLinearWorkspaceProps {
   onAggregateRemove: (path: SlotPath[]) => void;
   onRowAggregateRemove: (path: SlotPath[]) => void;
   onConditionalRemove: (path: SlotPath[]) => void;
+  onRoundRemove: (path: SlotPath[]) => void;
   onSlotTap: (path: SlotPath[]) => void;
   activeSlotPath?: SlotPath[] | null;
 }
@@ -54,7 +56,8 @@ function hasGroups(expression: BlockExpression): boolean {
     expression.type === "group" ||
     expression.type === "aggregate" ||
     expression.type === "rowAggregate" ||
-    expression.type === "conditional"
+    expression.type === "conditional" ||
+    expression.type === "round"
   ) {
     return true;
   }
@@ -66,7 +69,7 @@ function hasGroups(expression: BlockExpression): boolean {
 
 function operandColor(
   token: FlatToken,
-): "quantity" | "property" | "output" | "calculation" | "constant" | "number" {
+): "quantity" | "property" | "output" | "calculation" | "constant" | "macro" | "number" {
   if (token.kind !== "operand") {
     return "number";
   }
@@ -81,6 +84,8 @@ function operandColor(
       return "calculation";
     case "constant":
       return "constant";
+    case "macro":
+      return "macro";
     default:
       return "number";
   }
@@ -234,9 +239,66 @@ function ExpressionNode({
   onAggregateRemove,
   onRowAggregateRemove,
   onConditionalRemove,
+  onRoundRemove,
   onSlotTap,
   activeSlotPath = null,
 }: ExpressionNodeProps) {
+  if (expression.type === "round") {
+    const slots: Array<{ key: "value" | "decimals"; label: string }> = [
+      { key: "value", label: "v" },
+      { key: "decimals", label: "d" },
+    ];
+
+    return (
+      <RoundBracket
+        outputKey={outputKey}
+        path={path}
+        onRemove={() => onRoundRemove(path)}
+      >
+        {slots.map((slot, index) => (
+          <span
+            key={`${path.join("-")}-${slot.key}`}
+            className="inline-flex items-center gap-1.5"
+          >
+            {index > 0 && (
+              <span className="select-none text-sm font-medium text-muted-foreground">
+                ,
+              </span>
+            )}
+            <span className="select-none text-[10px] font-semibold uppercase text-lime-700/80 dark:text-lime-300/80">
+              {slot.label}
+            </span>
+            <ExpressionNode
+              expression={expression[slot.key]}
+              path={[...path, slot.key]}
+              outputKey={outputKey}
+              config={config}
+              formulaTarget={formulaTarget}
+              quantityLabel={quantityLabel}
+              onSlotClear={onSlotClear}
+              onOperationRemove={onOperationRemove}
+              onGroupRemove={onGroupRemove}
+              onAggregateRemove={onAggregateRemove}
+              onRowAggregateRemove={onRowAggregateRemove}
+              onConditionalRemove={onConditionalRemove}
+              onRoundRemove={onRoundRemove}
+              onSlotTap={onSlotTap}
+              activeSlotPath={activeSlotPath}
+            />
+            {showContinuationAfter(expression[slot.key]) && (
+              <ContinuationSlot
+                outputKey={outputKey}
+                path={[...path, slot.key, "continue"]}
+                onSlotTap={onSlotTap}
+                activeSlotPath={activeSlotPath}
+              />
+            )}
+          </span>
+        ))}
+      </RoundBracket>
+    );
+  }
+
   if (expression.type === "conditional") {
     const branches: Array<{ key: "condition" | "whenTrue" | "whenFalse"; label: string }> = [
       { key: "condition", label: "?" },
@@ -276,6 +338,7 @@ function ExpressionNode({
               onAggregateRemove={onAggregateRemove}
               onRowAggregateRemove={onRowAggregateRemove}
               onConditionalRemove={onConditionalRemove}
+              onRoundRemove={onRoundRemove}
               onSlotTap={onSlotTap}
               activeSlotPath={activeSlotPath}
             />
@@ -319,6 +382,7 @@ function ExpressionNode({
           onAggregateRemove={onAggregateRemove}
           onRowAggregateRemove={onRowAggregateRemove}
           onConditionalRemove={onConditionalRemove}
+          onRoundRemove={onRoundRemove}
           onSlotTap={onSlotTap}
           activeSlotPath={activeSlotPath}
         />
@@ -360,6 +424,7 @@ function ExpressionNode({
               onAggregateRemove={onAggregateRemove}
               onRowAggregateRemove={onRowAggregateRemove}
               onConditionalRemove={onConditionalRemove}
+              onRoundRemove={onRoundRemove}
               onSlotTap={onSlotTap}
               activeSlotPath={activeSlotPath}
             />
@@ -390,6 +455,7 @@ function ExpressionNode({
           onAggregateRemove={onAggregateRemove}
           onRowAggregateRemove={onRowAggregateRemove}
           onConditionalRemove={onConditionalRemove}
+          onRoundRemove={onRoundRemove}
           onSlotTap={onSlotTap}
           activeSlotPath={activeSlotPath}
         />
@@ -467,6 +533,7 @@ function ExpressionNode({
         onAggregateRemove={onAggregateRemove}
         onRowAggregateRemove={onRowAggregateRemove}
         onConditionalRemove={onConditionalRemove}
+        onRoundRemove={onRoundRemove}
         onSlotTap={onSlotTap}
         activeSlotPath={activeSlotPath}
       />
@@ -497,6 +564,7 @@ function ExpressionNode({
         onAggregateRemove={onAggregateRemove}
         onRowAggregateRemove={onRowAggregateRemove}
         onConditionalRemove={onConditionalRemove}
+        onRoundRemove={onRoundRemove}
         onSlotTap={onSlotTap}
         activeSlotPath={activeSlotPath}
       />
@@ -510,6 +578,7 @@ export function FormulaLinearWorkspace({
   onAggregateRemove,
   onRowAggregateRemove,
   onConditionalRemove,
+  onRoundRemove,
   ...props
 }: FormulaLinearWorkspaceProps) {
   const { expression, outputKey } = props;
@@ -545,6 +614,7 @@ export function FormulaLinearWorkspace({
         onAggregateRemove={onAggregateRemove}
         onRowAggregateRemove={onRowAggregateRemove}
         onConditionalRemove={onConditionalRemove}
+        onRoundRemove={onRoundRemove}
       />
       {showContinuationAfter(expression) && (
         <ContinuationSlot

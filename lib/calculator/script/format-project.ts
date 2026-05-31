@@ -4,6 +4,7 @@ import {
   SCRIPT_FILE_AUTO_CALCULATIONS,
   SCRIPT_FILE_CALCULATIONS,
   SCRIPT_FILE_CONSTANTS,
+  SCRIPT_FILE_MACROS,
   SCRIPT_FILE_INPUTS,
   SCRIPT_FILE_OUTPUTS,
   type ScriptProject,
@@ -14,6 +15,7 @@ import type { CalculatorConfig } from "@/types/calculator";
 const FILE_HEADERS: Record<ScriptProjectFileId, string> = {
   [SCRIPT_FILE_INPUTS]: "// Input fields — поля для вводу користувача",
   [SCRIPT_FILE_CONSTANTS]: "// Constants — фіксовані значення",
+  [SCRIPT_FILE_MACROS]: "// Macros — повторювані фрагменти формул",
   [SCRIPT_FILE_AUTO_CALCULATIONS]:
     "// Auto-calculations — qty × property (autoTotal); можна змінити формулу",
   [SCRIPT_FILE_CALCULATIONS]: "// Calculations — проміжні формули",
@@ -36,6 +38,10 @@ export function formatScriptProject(config: CalculatorConfig): ScriptProject {
     formatDeclaration({ kind: "constant", data: constant }),
   );
 
+  const macroLines = (config.macros ?? []).map((macro) =>
+    formatDeclaration({ kind: "macro", data: macro }),
+  );
+
   const autoCalculationLines = (config.calculations ?? [])
     .filter((calc) => isAutoCalculationId(calc.id))
     .map((calc) =>
@@ -56,6 +62,7 @@ export function formatScriptProject(config: CalculatorConfig): ScriptProject {
   return {
     [SCRIPT_FILE_INPUTS]: sectionText(SCRIPT_FILE_INPUTS, inputLines),
     [SCRIPT_FILE_CONSTANTS]: sectionText(SCRIPT_FILE_CONSTANTS, constantLines),
+    [SCRIPT_FILE_MACROS]: sectionText(SCRIPT_FILE_MACROS, macroLines),
     [SCRIPT_FILE_AUTO_CALCULATIONS]: sectionText(
       SCRIPT_FILE_AUTO_CALCULATIONS,
       autoCalculationLines,
@@ -80,6 +87,7 @@ export function scriptProjectToMonolith(project: ScriptProject): string {
   return [
     project[SCRIPT_FILE_INPUTS].trimEnd(),
     project[SCRIPT_FILE_CONSTANTS].trimEnd(),
+    project[SCRIPT_FILE_MACROS].trimEnd(),
     project[SCRIPT_FILE_AUTO_CALCULATIONS].trimEnd(),
     project[SCRIPT_FILE_CALCULATIONS].trimEnd(),
     project[SCRIPT_FILE_OUTPUTS].trimEnd(),

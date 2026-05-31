@@ -6,6 +6,9 @@ import {
     BuilderSection,
 } from "@/app/components/builder/builder-collapsible";
 import { ConstantsCard } from "@/app/components/builder/constants-card";
+import { CalculatorTemplatePicker } from "@/app/components/builder/calculator-template-picker";
+import { MacrosCard } from "@/app/components/builder/macros-card";
+import { emptyMacro } from "@/lib/calculator/config/macros";
 import { ConfigCodeSheet } from "@/app/components/builder/config-code-sheet";
 import { DocsHelpLink } from "@/app/components/docs/docs-help-link";
 import { FormulaBuilder } from "@/app/components/builder/formula-builder";
@@ -159,6 +162,7 @@ export function CalculatorBuilder({
   const [config, setConfig] = useState<CalculatorConfig>({
     ...initialConfig,
     constants: initialConfig.constants ?? [],
+    macros: initialConfig.macros ?? [],
     calculations: initialConfig.calculations ?? [],
   });
   const [error, setError] = useState<string | null>(null);
@@ -322,6 +326,12 @@ export function CalculatorBuilder({
         <div className="min-w-0 flex-1 space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(280px,380px)] 2xl:grid-cols-[minmax(0,3.5fr)_minmax(300px,400px)]">
         <div className="min-w-0 space-y-5">
+          {!calculatorId && !readOnly && (
+            <CalculatorTemplatePicker
+              autoTotalSuffix={autoTotalSuffix}
+              onApply={setConfig}
+            />
+          )}
           <BuilderSection title={t("settings")} defaultOpen={false}>
             <div className="space-y-3 rounded-2xl border border-border bg-card p-4" aria-disabled={readOnly}>
               <label className="block space-y-1.5">
@@ -441,6 +451,58 @@ export function CalculatorBuilder({
                         constants: (c.constants ?? []).filter(
                           (_, i) => i !== index,
                         ),
+                      }))
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </BuilderSection>
+
+          <BuilderSection
+            title={t("macros")}
+            description={t("macrosDesc")}
+            count={(config.macros ?? []).length}
+            defaultOpen={false}
+            actions={
+              <button
+                type="button"
+                onClick={() =>
+                  setConfig((c) => ({
+                    ...c,
+                    macros: [...(c.macros ?? []), emptyMacro()],
+                  }))
+                }
+                className="shrink-0 rounded-xl bg-accent-muted px-3 py-2 text-sm font-medium text-accent"
+              >
+                {t("addMacro")}
+              </button>
+            }
+          >
+            {(config.macros ?? []).length === 0 ? (
+              <p className="rounded-xl border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
+                {t("macrosEmpty")}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {(config.macros ?? []).map((macro, index) => (
+                  <MacrosCard
+                    key={macro.id}
+                    macro={macro}
+                    config={config}
+                    canRemove
+                    onChange={(updated) =>
+                      setConfig((c) => ({
+                        ...c,
+                        macros: (c.macros ?? []).map((item, i) =>
+                          i === index ? updated : item,
+                        ),
+                      }))
+                    }
+                    onRemove={() =>
+                      setConfig((c) => ({
+                        ...c,
+                        macros: (c.macros ?? []).filter((_, i) => i !== index),
                       }))
                     }
                   />

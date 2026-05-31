@@ -33,5 +33,9 @@ export function paletteBlockDocId(block: PaletteBlock): string | null {
     return "if";
   }
 
+  if (block.category === "round") {
+    return "round";
+  }
+
   return null;
 }

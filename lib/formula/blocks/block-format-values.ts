@@ -126,6 +126,31 @@ export function formatBlockExpressionWithValues(
     return `IF(${condition}, ${whenTrue}, ${whenFalse})`;
   }
 
+  if (expression.type === "round") {
+    const value = formatBlockExpressionWithValues(
+      expression.value,
+      config,
+      quantities,
+      calculations,
+      outputValues,
+      lineItemRows,
+      localValues,
+    );
+    const decimals = formatBlockExpressionWithValues(
+      expression.decimals,
+      config,
+      quantities,
+      calculations,
+      outputValues,
+      lineItemRows,
+      localValues,
+    );
+    if (decimals === "0") {
+      return `ROUND(${value})`;
+    }
+    return `ROUND(${value}, ${decimals})`;
+  }
+
   if (expression.type === "operation") {
     const left = formatBlockExpressionWithValues(
       expression.left,

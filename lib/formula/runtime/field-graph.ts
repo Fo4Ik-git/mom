@@ -6,6 +6,10 @@ import {
   evaluateFormulaWithLocals,
 } from "@/lib/formula/runtime/block-evaluate";
 import { buildInitialLineItemRowsState } from "@/lib/calculator/fields/line-items";
+import {
+  evaluateMacros,
+  validateMacros,
+} from "@/lib/calculator/config/macros";
 
 export type FormulaFieldKind = "calculation" | "output";
 
@@ -66,9 +70,9 @@ function formatCycle(config: CalculatorConfig, keys: string[]): string {
 }
 
 export function validateFieldGraph(config: CalculatorConfig): string[] {
+  const errors: string[] = [...validateMacros(config)];
   const fields = listFormulaFields(config);
   const known = new Set(fields.map((field) => fieldNodeKey(field.kind, field.id)));
-  const errors: string[] = [];
 
   for (const field of fields) {
     const label = field.label.trim() || field.id;
@@ -231,6 +235,13 @@ export function evaluateAllFormulaFields(
   const rows =
     lineItemRows ?? buildInitialLineItemRowsState(config.inputs);
   const order = getFormulaEvaluationOrder(config);
+  const macroValues = evaluateMacros(
+    config,
+    quantities,
+    calculations,
+    outputs,
+    rows,
+  );
 
   for (const field of order) {
     try {
@@ -244,6 +255,7 @@ export function evaluateAllFormulaFields(
           constants,
           calculations,
           outputs,
+          macros: macroValues,
           onWarning: onWarning
             ? (message) => onWarning(field, message)
             : undefined,

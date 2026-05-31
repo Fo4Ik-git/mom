@@ -9,7 +9,7 @@ import type { FormulaSnippetPick } from "@/lib/formula/core/formula-snippets";
 export type PaletteBlock = {
   id: string;
   label: string;
-  category: "operand" | "operator" | "constant" | "group" | "snippet" | "aggregate" | "rowAggregate" | "conditional";
+  category: "operand" | "operator" | "constant" | "group" | "snippet" | "aggregate" | "rowAggregate" | "conditional" | "round";
   color:
     | "quantity"
     | "property"
@@ -18,11 +18,13 @@ export type PaletteBlock = {
     | "calculation"
     | "operator"
     | "constant"
+    | "macro"
     | "group"
     | "snippet"
     | "aggregate"
     | "rowAggregate"
-    | "conditional";
+    | "conditional"
+    | "round";
   dragData:
     | { kind: "operand"; operand: BlockOperand }
     | { kind: "operator"; operator: FormulaOperator }
@@ -30,6 +32,7 @@ export type PaletteBlock = {
     | { kind: "aggregate"; function: AggregateFunction }
     | { kind: "rowAggregate"; fieldId: string; function: AggregateFunction }
     | { kind: "conditional" }
+    | { kind: "round" }
     | { kind: "expression"; expression: BlockExpression };
   pick?: FormulaSnippetPick;
   meta?: {
@@ -48,6 +51,7 @@ export const BLOCK_COLORS = {
     "bg-orange-500/15 text-orange-800 border-orange-400/50 dark:text-orange-200",
   operator: "bg-amber-500/20 text-amber-900 border-amber-400/60 dark:text-amber-100",
   constant: "bg-violet-500/15 text-violet-800 border-violet-400/50 dark:text-violet-200",
+  macro: "bg-purple-500/15 text-purple-800 border-purple-400/50 dark:text-purple-200",
   group: "bg-violet-500/10 text-violet-800 border-violet-400/40 dark:text-violet-200",
   number: "bg-muted text-foreground border-border",
   snippet:
@@ -60,5 +64,7 @@ export const BLOCK_COLORS = {
     "bg-indigo-500/15 text-indigo-900 border-indigo-400/50 dark:text-indigo-100",
   conditional:
     "bg-rose-500/15 text-rose-900 border-rose-400/50 dark:text-rose-100",
+  round:
+    "bg-lime-500/15 text-lime-900 border-lime-400/50 dark:text-lime-100",
   empty: "border-dashed border-border bg-card/50 text-muted-foreground",
 };

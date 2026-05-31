@@ -27,6 +27,37 @@ describe("formula code completions (builder code editor)", () => {
     );
   });
 
+  it("includes macro ids in formula completions", () => {
+    const config = {
+      ...emptyCalculatorConfig,
+      macros: [
+        {
+          id: "macro_unit",
+          label: "Unit cost",
+          expression: { type: "empty" as const },
+        },
+      ],
+    };
+    const items = buildFormulaCompletions(config, { fieldId: "output_total" });
+    expect(items.some((item) => item.label === "macro_unit")).toBe(true);
+    expect(items.some((item) => item.type === "macro")).toBe(true);
+  });
+
+  it("excludes self when editing a macro formula", () => {
+    const config = {
+      ...emptyCalculatorConfig,
+      macros: [
+        {
+          id: "macro_self",
+          label: "Self",
+          expression: { type: "empty" as const },
+        },
+      ],
+    };
+    const items = buildFormulaCompletions(config, { fieldId: "macro_self" });
+    expect(items.some((item) => item.label === "macro_self")).toBe(false);
+  });
+
   it("excludes self-referencing calc/output target", () => {
     const config = {
       ...emptyCalculatorConfig,

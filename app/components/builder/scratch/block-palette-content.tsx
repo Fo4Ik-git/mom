@@ -150,6 +150,7 @@ export function BlockPaletteContent({
   const calculations = operands.filter((b) => b.color === "calculation");
   const outputs = operands.filter((b) => b.color === "output");
   const constants = blocks.filter((b) => b.category === "constant");
+  const macros = operands.filter((b) => b.color === "macro");
   const operators = blocks.filter((b) => b.category === "operator");
   const groups = blocks.filter((b) => b.category === "group");
   const aggregates = blocks.filter((b) => b.category === "aggregate");
@@ -189,15 +190,28 @@ export function BlockPaletteContent({
     [constants, query],
   );
 
+  const filteredMacros = useMemo(
+    () => filterPaletteBlocks(macros, query),
+    [macros, query],
+  );
+
   const rowAggregates = blocks.filter((b) => b.category === "rowAggregate");
   const conditionals = blocks.filter((b) => b.category === "conditional");
+  const rounds = blocks.filter((b) => b.category === "round");
   const filteredActions = useMemo(
     () =>
       filterPaletteBlocks(
-        [...operators, ...groups, ...aggregates, ...rowAggregates, ...conditionals],
+        [
+          ...operators,
+          ...groups,
+          ...aggregates,
+          ...rowAggregates,
+          ...conditionals,
+          ...rounds,
+        ],
         query,
       ),
-    [operators, groups, aggregates, rowAggregates, conditionals, query],
+    [operators, groups, aggregates, rowAggregates, conditionals, rounds, query],
   );
 
   const tabCounts = {
@@ -207,6 +221,7 @@ export function BlockPaletteContent({
         ...filteredCalculations,
         ...filteredOutputs,
         ...filteredConstants,
+        ...filteredMacros,
       ]),
     actions: filteredActions.length,
   };
@@ -433,6 +448,16 @@ export function BlockPaletteContent({
               defaultOpen={Boolean(query.trim())}
             >
               {filteredConstants.map(renderTapItem)}
+            </CollapsibleGroup>
+          )}
+
+          {filteredMacros.length > 0 && (
+            <CollapsibleGroup
+              label={t("blocksMacros")}
+              count={filteredMacros.length}
+              defaultOpen={Boolean(query.trim())}
+            >
+              {filteredMacros.map(renderTapItem)}
             </CollapsibleGroup>
           )}
 

@@ -13,6 +13,7 @@ export type ScriptCompletionContextKind =
   | "output-body"
   | "calculation-body"
   | "constant-body"
+  | "macro-body"
   | "property-body"
   | "formula-body"
   | "formula-expr";
@@ -29,6 +30,7 @@ type StackFrame =
   | { type: "output"; id: string }
   | { type: "calculation"; id: string }
   | { type: "constant" }
+  | { type: "macro"; id: string }
   | { type: "property" }
   | { type: "formula"; entityId: string };
 
@@ -41,6 +43,7 @@ const ENTITY_KIND_MAP: Record<
   output: "output-body",
   calculation: "calculation-body",
   constant: "constant-body",
+  macro: "macro-body",
   property: "property-body",
   formula: "formula-body",
 };
@@ -240,6 +243,20 @@ export function detectScriptCompletionContext(
       continue;
     }
 
+    if (keyword === "macro") {
+      const id = readIdentifier(source, i);
+      if (!id) {
+        continue;
+      }
+      i = id.end;
+      const open = skipUntilBlockOpen(source, i, limit);
+      if (open >= 0 && open < limit) {
+        stack.push({ type: "macro", id: id.value });
+        i = open + 1;
+      }
+      continue;
+    }
+
     if (keyword === "property") {
       const id = readIdentifier(source, i);
       if (!id) {
@@ -263,7 +280,9 @@ export function detectScriptCompletionContext(
             ? parent.id
             : parent?.type === "calculation"
               ? parent.id
-              : undefined;
+              : parent?.type === "macro"
+                ? parent.id
+                : undefined;
         if (entityId) {
           stack.push({ type: "formula", entityId });
         }
@@ -284,7 +303,11 @@ export function detectScriptCompletionContext(
 
   const kind = ENTITY_KIND_MAP[top.type] ?? "file-root";
   const entityId =
-    top.type === "output" || top.type === "calculation" ? top.id : undefined;
+    top.type === "output" ||
+    top.type === "calculation" ||
+    top.type === "macro"
+      ? top.id
+      : undefined;
   return { kind, entityId };
 }
 
@@ -339,6 +362,8 @@ function entityForKind(
       return getAllConfigEntities().find((entity) => entity.keyword === "calc");
     case "constant-body":
       return getAllConfigEntities().find((entity) => entity.keyword === "constant");
+    case "macro-body":
+      return getAllConfigEntities().find((entity) => entity.keyword === "macro");
     default:
       return undefined;
   }
@@ -365,7 +390,7 @@ function declarationsForFile(fileId?: ScriptProjectFileId): FormulaCompletionIte
     }));
 }
 
-type ScriptDeclarationKind = "input" | "constant" | "calculation" | "output";
+type ScriptDeclarationKind = "input" | "constant" | "macro" | "calculation" | "output";
 
 /** Script DSL completions for the current cursor context. */
 export function collectScriptCompletions(
@@ -414,6 +439,14 @@ export function collectScriptCompletions(
     case "constant-body": {
       const entity = entityForKind(context.kind)!;
       return entity.scriptCompletions.bodyFields.map(toCompletionItem);
+    }
+
+    case "macro-body": {
+      const entity = entityForKind(context.kind)!;
+      return [
+        ...entity.scriptCompletions.bodyFields.map(toCompletionItem),
+        ...FORMULA_BLOCK_FIELDS.map(toCompletionItem),
+      ];
     }
 
     case "formula-body":

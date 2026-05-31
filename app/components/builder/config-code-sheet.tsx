@@ -18,6 +18,7 @@ import {
   SCRIPT_FILE_AUTO_CALCULATIONS,
   SCRIPT_FILE_CALCULATIONS,
   SCRIPT_FILE_CONSTANTS,
+  SCRIPT_FILE_MACROS,
   SCRIPT_FILE_INPUTS,
   SCRIPT_FILE_OUTPUTS,
   SCRIPT_PROJECT_FILES,
@@ -48,6 +49,7 @@ const MIN_SNIPPETS_HEIGHT = 120;
 const MAX_SNIPPETS_HEIGHT = 480;
 
 const SCRIPT_SNIPPET_FILES: ScriptProjectFileId[] = [
+  SCRIPT_FILE_MACROS,
   SCRIPT_FILE_CALCULATIONS,
   SCRIPT_FILE_OUTPUTS,
 ];
@@ -67,6 +69,7 @@ function clampSnippetsHeight(value: number) {
 const TAB_LABEL_KEYS: Record<ScriptProjectFileId, string> = {
   [SCRIPT_FILE_INPUTS]: "codeModeTabInputs",
   [SCRIPT_FILE_CONSTANTS]: "codeModeTabConstants",
+  [SCRIPT_FILE_MACROS]: "codeModeTabMacros",
   [SCRIPT_FILE_AUTO_CALCULATIONS]: "codeModeTabAutoCalculations",
   [SCRIPT_FILE_CALCULATIONS]: "codeModeTabCalculations",
   [SCRIPT_FILE_OUTPUTS]: "codeModeTabOutputs",
@@ -76,6 +79,7 @@ function emptyProject(): ScriptProject {
   return {
     [SCRIPT_FILE_INPUTS]: "",
     [SCRIPT_FILE_CONSTANTS]: "",
+    [SCRIPT_FILE_MACROS]: "",
     [SCRIPT_FILE_AUTO_CALCULATIONS]: "",
     [SCRIPT_FILE_CALCULATIONS]: "",
     [SCRIPT_FILE_OUTPUTS]: "",

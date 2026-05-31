@@ -35,6 +35,7 @@ export const CALCULATOR_TEMPLATES: CalculatorTemplate[] = [
   label = "Markup factor"
   value = 1.2
 }`,
+      "macros.calc": "",
       "auto-calculations.calc": "",
       "calculations.calc": "",
       "outputs.calc": `output output_total {
@@ -42,6 +43,85 @@ export const CALCULATOR_TEMPLATES: CalculatorTemplate[] = [
   highlight = true
   formula {
     return field_item.var_price * field_item.qty * const_markup
+  }
+}`,
+    },
+  },
+  {
+    id: "typography",
+    label: "Typography / print job",
+    description:
+      "Pages, paper cost per sheet, binding fee, and rounded job total.",
+    project: {
+      "inputs.calc": `input field_job {
+  label = "Print job"
+  quantity = 1
+
+  property var_pages {
+    label = "Pages"
+    value = 1
+  }
+
+  property var_paper {
+    label = "Paper per sheet"
+    value = 0.05
+  }
+}`,
+      "constants.calc": `constant const_binding {
+  label = "Binding fee"
+  value = 2
+}`,
+      "macros.calc": "",
+      "auto-calculations.calc": "",
+      "calculations.calc": `calculation calc_sheets {
+  label = "Sheet cost"
+  formula {
+    return field_job.var_pages * field_job.var_paper
+  }
+}`,
+      "outputs.calc": `output output_total {
+  label = "Job total"
+  highlight = true
+  formula {
+    return ROUND((calc_sheets + const_binding) * field_job.qty, 2)
+  }
+}`,
+    },
+  },
+  {
+    id: "salon",
+    label: "Salon / services",
+    description:
+      "Service duration, hourly rate, and materials with rounded total.",
+    project: {
+      "inputs.calc": `input field_service {
+  label = "Service"
+  quantity = 1
+
+  property var_duration {
+    label = "Duration (hours)"
+    value = 1
+  }
+
+  property var_rate {
+    label = "Rate per hour"
+    value = 25
+  }
+
+  property var_materials {
+    label = "Materials"
+    value = 0
+  }
+}`,
+      "constants.calc": "",
+      "macros.calc": "",
+      "auto-calculations.calc": "",
+      "calculations.calc": "",
+      "outputs.calc": `output output_total {
+  label = "Total"
+  highlight = true
+  formula {
+    return ROUND(field_service.var_duration * field_service.var_rate * field_service.qty + field_service.var_materials, 2)
   }
 }`,
     },

@@ -5,10 +5,18 @@ import type { CalculatorConfig } from "@/types/calculator";
 export function normalizeConfig(config: CalculatorConfig): CalculatorConfig {
   return {
     ...config,
+    macros: (config.macros ?? []).length > 0 ? config.macros : undefined,
     inputs: config.inputs.map((input) => ({
       ...input,
       defaultQuantity:
         input.defaultQuantity === 0 ? undefined : input.defaultQuantity,
+      properties: input.properties.map((property) => {
+        const next = { ...property };
+        if (next.autoTotal === true) {
+          delete next.autoTotal;
+        }
+        return next;
+      }),
     })),
     calculations: (config.calculations ?? []).filter(
       (calc) => !isAutoCalculationId(calc.id),

@@ -32,6 +32,17 @@ export function collectExpressionFieldRefs(
       walk(node.inner);
       return;
     }
+    if (node.type === "conditional") {
+      walk(node.condition);
+      walk(node.whenTrue);
+      walk(node.whenFalse);
+      return;
+    }
+    if (node.type === "round") {
+      walk(node.value);
+      walk(node.decimals);
+      return;
+    }
     if (node.type === "operation") {
       walk(node.left);
       walk(node.right);

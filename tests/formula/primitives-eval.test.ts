@@ -24,6 +24,11 @@ describe("primitive evaluation", () => {
     expectFormulaEval("calc_subtotal", 100, ctx);
   });
 
+  it("evaluates ROUND", () => {
+    expectFormulaEval("ROUND(1.236, 2)", 1.24, ctx);
+    expectFormulaEval("ROUND(2.7)", 3, ctx);
+  });
+
   it("evaluates aggregates", () => {
     expectFormulaEval("SUM(10, 20, 5)", 35, ctx);
     expectFormulaEval("COUNT(10, 20, 5)", 3, ctx);

@@ -6,6 +6,7 @@ import {
   SCRIPT_FILE_AUTO_CALCULATIONS,
   SCRIPT_FILE_CALCULATIONS,
   SCRIPT_FILE_CONSTANTS,
+  SCRIPT_FILE_MACROS,
   SCRIPT_FILE_OUTPUTS,
   type ScriptProject,
 } from "@/lib/calculator/script/project-types";
@@ -441,6 +442,10 @@ export function rewriteScriptProjectSources(
     ...project,
     [SCRIPT_FILE_CONSTANTS]: rewriteScriptReferenceText(
       project[SCRIPT_FILE_CONSTANTS],
+      renames,
+    ),
+    [SCRIPT_FILE_MACROS]: rewriteScriptReferenceText(
+      project[SCRIPT_FILE_MACROS],
       renames,
     ),
     [SCRIPT_FILE_AUTO_CALCULATIONS]: rewriteScriptReferenceText(

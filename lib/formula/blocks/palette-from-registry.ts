@@ -3,6 +3,7 @@ import {
   emptyAggregateExpression,
   emptyBlockExpression,
   emptyConditionalExpression,
+  emptyRoundExpression,
   emptyRowAggregateExpression,
 } from "@/types/calculator";
 import type { PaletteDragData } from "@/lib/formula/blocks/block-tree";
@@ -20,6 +21,8 @@ export function createExpressionFromPaletteDrag(
       return emptyRowAggregateExpression(item.fieldId, item.function);
     case "conditional":
       return emptyConditionalExpression();
+    case "round":
+      return emptyRoundExpression();
     default:
       return null;
   }

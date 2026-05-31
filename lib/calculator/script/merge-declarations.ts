@@ -16,6 +16,7 @@ export function mergeScriptDeclarations(
 
   const inputs: CalculatorConfig["inputs"] = [];
   const constants: NonNullable<CalculatorConfig["constants"]> = [];
+  const macros: NonNullable<CalculatorConfig["macros"]> = [];
   const calculations: NonNullable<CalculatorConfig["calculations"]> = [];
   const outputs: CalculatorConfig["outputs"] = [];
 
@@ -40,6 +41,9 @@ export function mergeScriptDeclarations(
         case "constant":
           constants.push(decl.data);
           break;
+        case "macro":
+          macros.push(decl.data);
+          break;
         case "calculation":
           calculations.push(decl.data);
           break;
@@ -58,6 +62,7 @@ export function mergeScriptDeclarations(
         version: 2,
         inputs: baseConfig?.inputs ?? [],
         constants: baseConfig?.constants ?? [],
+        macros: baseConfig?.macros ?? [],
         calculations: baseConfig?.calculations ?? [],
         outputs: baseConfig?.outputs ?? [],
       },
@@ -71,6 +76,7 @@ export function mergeScriptDeclarations(
       inputs: inputs.length > 0 ? inputs : (baseConfig?.inputs ?? []),
       constants:
         constants.length > 0 ? constants : (baseConfig?.constants ?? []),
+      macros: macros.length > 0 ? macros : (baseConfig?.macros ?? []),
       calculations: calculations.length > 0
         ? calculations
         : (baseConfig?.calculations ?? []),

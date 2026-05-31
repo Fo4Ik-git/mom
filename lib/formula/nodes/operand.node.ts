@@ -60,6 +60,13 @@ function evaluateOperand(
       }
       return value;
     }
+    case "macro": {
+      const value = context.macros?.[operand.macroId];
+      if (value === undefined) {
+        throw new Error(`Unknown macro: ${operand.macroId}`);
+      }
+      return value;
+    }
     default: {
       const _exhaustive: never = operand;
       throw new Error(`Unknown operand kind: ${(_exhaustive as BlockOperand).kind}`);

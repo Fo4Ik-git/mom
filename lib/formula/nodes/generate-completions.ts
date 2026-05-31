@@ -36,6 +36,17 @@ export function generateDefaultCompletions(
     ];
   }
 
+  if (primitive.astType === "round") {
+    return [
+      {
+        label: keyword,
+        type: "keyword",
+        insertText: `${keyword}($0, 2)`,
+        detail: `${keyword}(value, decimals?)`,
+      },
+    ];
+  }
+
   if (primitive.astType === "aggregate") {
     return [
       {

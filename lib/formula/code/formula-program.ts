@@ -31,6 +31,7 @@ export function isValidFormulaLocalId(id: string): boolean {
   }
   if (
     id.startsWith("const_") ||
+    id.startsWith("macro_") ||
     id.startsWith("calc_") ||
     id.startsWith("calculation_") ||
     id.startsWith("output_") ||

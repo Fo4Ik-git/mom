@@ -16,6 +16,7 @@ import { countRowsPrimitive } from "@/lib/formula/nodes/primitives/count-rows.no
 import { dividePrimitive } from "@/lib/formula/nodes/primitives/divide.node";
 import { maxPrimitive } from "@/lib/formula/nodes/primitives/max.node";
 import { ifPrimitive } from "@/lib/formula/nodes/primitives/if.node";
+import { roundPrimitive } from "@/lib/formula/nodes/primitives/round.node";
 import { maxRowsPrimitive } from "@/lib/formula/nodes/primitives/max-rows.node";
 import { minPrimitive } from "@/lib/formula/nodes/primitives/min.node";
 import { minRowsPrimitive } from "@/lib/formula/nodes/primitives/min-rows.node";
@@ -41,6 +42,7 @@ export const ALL_PRIMITIVES: FormulaPrimitiveDefinition[] = [
   minRowsPrimitive,
   maxRowsPrimitive,
   ifPrimitive,
+  roundPrimitive,
   ...COMPARISON_PRIMITIVES,
 ];
 

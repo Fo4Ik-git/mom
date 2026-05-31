@@ -10,7 +10,14 @@ import type { ScriptProjectFileId } from "@/lib/calculator/script/project-types"
 
 export interface FormulaCompletionItem {
   label: string;
-  type: "field" | "property" | "constant" | "calculation" | "output" | "keyword";
+  type:
+    | "field"
+    | "property"
+    | "constant"
+    | "macro"
+    | "calculation"
+    | "output"
+    | "keyword";
   detail?: string;
   insertText: string;
 }
@@ -60,6 +67,18 @@ function buildDynamicCompletions(
       type: "constant",
       detail: constant.label,
       insertText: constant.id,
+    });
+  }
+
+  for (const macro of config.macros ?? []) {
+    if (macro.id === target.fieldId) {
+      continue;
+    }
+    items.push({
+      label: macro.id,
+      type: "macro",
+      detail: macro.label,
+      insertText: macro.id,
     });
   }
 

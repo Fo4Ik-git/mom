@@ -134,6 +134,15 @@
     "constantsDesc": "Numbers the user does not enter — add them to formulas (e.g. 1.2).",
     "constantsEmpty": "Add a constant to use it in formulas.",
     "addConstant": "+ Constant",
+    "macros": "Formula macros",
+    "macrosDesc": "Reusable formula fragments you can drag into any formula (not shown on the calculator screen).",
+    "macrosEmpty": "Add a macro to reuse the same expression in several formulas.",
+    "addMacro": "+ Macro",
+    "macroName": "Name",
+    "macroNamePlaceholder": "e.g. Sheet cost",
+    "blocksMacros": "Macros",
+    "templatesTitle": "Start from a preset",
+    "templatesDesc": "Replace the draft config with a ready-made calculator (typography, salon, print shop).",
     "constantName": "Name",
     "constantNamePlaceholder": "e.g. Markup factor",
     "constantValue": "Value",
@@ -265,6 +274,8 @@
     "removeAggregate": "Remove aggregate",
     "dragHandleConditional": "Drag conditional",
     "removeConditional": "Remove conditional",
+    "dragHandleRound": "Drag ROUND",
+    "removeRound": "Remove ROUND",
     "aggregateHint": "Add values separated by commas inside the function",
     "rowsLabel": "rows",
     "dragHandleRowAggregate": "Drag row aggregate",
@@ -291,6 +302,7 @@
     "codeModeProjectHint": "Calculator split into files by section. Apply validates the whole project.",
     "codeModeTabInputs": "Inputs",
     "codeModeTabConstants": "Constants",
+    "codeModeTabMacros": "Macros",
     "codeModeTabAutoCalculations": "Auto totals",
     "codeModeTabCalculations": "Calculations",
     "codeModeTabOutputs": "Outputs",
@@ -834,6 +846,11 @@
         "title": "IF",
         "description": "Picks the second value when the condition is non-zero, otherwise the third.",
         "blockUsage": "Drag **IF** and fill condition, then-branch, and else-branch."
+      },
+      "round": {
+        "title": "ROUND",
+        "description": "Rounds a numeric value to the given number of decimal places (0–10).",
+        "blockUsage": "Drag **ROUND** and fill value and optional decimals."
       }
     },
     "operands": {
@@ -851,6 +868,11 @@
         "title": "Constant",
         "description": "Fixed value defined in calculator constants.",
         "blockUsage": "Drag a constant from the palette into the formula."
+      },
+      "macro": {
+        "title": "Macro",
+        "description": "Reusable formula fragment defined in calculator macros.",
+        "blockUsage": "Drag a macro chip into any formula."
       },
       "calculation": {
         "title": "Calculation",

@@ -15,6 +15,7 @@ export interface EvalContext {
   constants: CalculatorConstant[];
   calculations: Record<string, number>;
   outputs: Record<string, number>;
+  macros?: Record<string, number>;
   locals?: Record<string, number>;
   onWarning?: (message: string) => void;
 }
